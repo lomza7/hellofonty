@@ -58,7 +58,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5">
         {/* Type de logement */}
         <div className="relative group">
-          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
+          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.propertyTypeLabel')}
           </label>
           <div className="relative">
@@ -78,7 +78,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date d'arrivée */}
         <div className="relative group">
-          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
+          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.checkIn')}
           </label>
           <div className="relative">
@@ -96,7 +96,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date de départ */}
         <div className="relative group">
-          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
+          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.checkOut')}
           </label>
           <div className="relative">
@@ -114,7 +114,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Nombre de personnes */}
         <div className="relative">
-          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
+          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.guestsLabel')}
           </label>
           <div className="relative">
@@ -132,7 +132,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
                   className="fixed inset-0 z-10"
                   onClick={() => setShowGuestPicker(false)}
                 />
-                <div className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto bg-white rounded-xl shadow-2xl p-4 z-20 w-full sm:w-64">
+                <div className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto bg-white rounded-xl shadow-2xl p-4 z-20 w-full sm:w-64 max-w-[calc(100vw-2rem)]">
                   <div className="flex items-center justify-between">
                     <span className="text-sm sm:text-base text-gray-700 font-medium">{t('search.guestsLabel')}</span>
                     <div className="flex items-center space-x-3">
