@@ -24,8 +24,8 @@ export default function Home({ onNavigate }: HomeProps) {
     const letters = text.split('');
     return letters.map((letter, index) => {
       const progress = index / (letters.length - 1);
-      const lightness = 100 - (progress * 8);
-      const saturation = progress * 30;
+      const lightness = 100 - (progress * 25);
+      const saturation = progress * 70;
       const hue = 350;
 
       return (
