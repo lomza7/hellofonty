@@ -13,11 +13,6 @@
   * {
     @apply box-border;
   }
-
-  .dark-mode {
-    background: #0a0e27;
-    color: #ffffff;
-  }
 }
 
 @layer utilities {

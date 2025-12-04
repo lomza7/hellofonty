@@ -3,7 +3,6 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Calendar, Clock, Tag, ChevronRight, Sun, Moon, MapPin, GraduationCap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext';
 import SEO from '../components/SEO';
 
 interface BlogPost {
@@ -34,7 +33,6 @@ const iconMap: Record<string, any> = {
 
 export default function BlogList() {
   const { language } = useLanguage();
-  const { isDarkMode, setDarkMode } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,14 +95,8 @@ export default function BlogList() {
     setSelectedCategory(category);
     if (category === 'all') {
       searchParams.delete('category');
-      setDarkMode(false);
     } else {
       searchParams.set('category', category);
-      if (category === 'night-life') {
-        setDarkMode(true);
-      } else {
-        setDarkMode(false);
-      }
     }
     setSearchParams(searchParams);
   };
@@ -124,12 +116,12 @@ export default function BlogList() {
         description={metaDescription}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h1 className={`text-4xl md:text-5xl font-bold mb-4 transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             {language === 'fr' ? 'Blog HELLOFONTY' : 'HELLOFONTY Blog'}
           </h1>
-          <p className={`text-xl max-w-3xl mx-auto transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             {language === 'fr'
               ? 'Découvrez la vie à Fontainebleau : guides, conseils et actualités pour les étudiants'
               : 'Discover life in Fontainebleau: guides, tips and news for students'}
@@ -138,17 +130,13 @@ export default function BlogList() {
 
         <div className="mb-8">
           <div className="relative">
-            <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder={language === 'fr' ? 'Rechercher un article...' : 'Search articles...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -159,8 +147,6 @@ export default function BlogList() {
             className={`px-6 py-2 rounded-full font-medium transition ${
               selectedCategory === 'all'
                 ? 'bg-blue-600 text-white'
-                : isDarkMode
-                ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700'
                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
             }`}
           >
@@ -168,18 +154,13 @@ export default function BlogList() {
           </button>
           {categories.map((category) => {
             const Icon = iconMap[category.icon] || Tag;
-            const isNightlife = category.slug === 'night-life';
             return (
               <button
                 key={category.slug}
                 onClick={() => handleCategoryChange(category.slug)}
                 className={`px-6 py-2 rounded-full font-medium transition flex items-center gap-2 ${
                   selectedCategory === category.slug
-                    ? isNightlife
-                      ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
-                      : 'bg-blue-600 text-white'
-                    : isDarkMode
-                    ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700'
+                    ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                 }`}
               >
@@ -196,7 +177,7 @@ export default function BlogList() {
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-20">
-            <p className={`text-xl transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className="text-xl text-gray-600">
               {language === 'fr' ? 'Aucun article trouvé' : 'No articles found'}
             </p>
           </div>
@@ -208,9 +189,7 @@ export default function BlogList() {
                 <Link
                   key={post.id}
                   to={`/blog/${post.slug}`}
-                  className={`rounded-xl shadow-md hover:shadow-xl transition group overflow-hidden ${
-                    isDarkMode ? 'bg-gray-800' : 'bg-white'
-                  }`}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition group overflow-hidden"
                 >
                   {post.featured_image && (
                     <div className="relative h-48 overflow-hidden">
@@ -228,15 +207,13 @@ export default function BlogList() {
                     </div>
                   )}
                   <div className="p-6">
-                    <h2 className={`text-xl font-bold mb-3 group-hover:text-blue-600 transition line-clamp-2 ${
-                      isDarkMode ? 'text-white' : 'text-gray-900'
-                    }`}>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition line-clamp-2">
                       {language === 'fr' ? post.title_fr : post.title_en}
                     </h2>
-                    <p className={`mb-4 line-clamp-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <p className="text-gray-600 mb-4 line-clamp-3">
                       {language === 'fr' ? post.excerpt_fr : post.excerpt_en}
                     </p>
-                    <div className={`flex items-center justify-between text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <div className="flex items-center justify-between text-sm text-gray-500">
                       <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
