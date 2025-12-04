@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image } from 'lucide-react';
+import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
 import FeatureCarouselManager from '../components/FeatureCarouselManager';
@@ -77,11 +78,8 @@ interface FinanceStats {
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
 }
 
-type AdminProps = {
-  onNavigate: (page: string, id?: string) => void;
-};
-
-export default function Admin({ onNavigate }: AdminProps) {
+export default function Admin() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const { t } = useLanguage();
   const [users, setUsers] = useState<UserData[]>([]);
@@ -694,11 +692,18 @@ export default function Admin({ onNavigate }: AdminProps) {
               <span className="text-sm md:text-base">Carousel</span>
             </button>
             <button
-              onClick={() => window.location.href = '/?page=supportAdmin'}
+              onClick={() => navigate('/admin/support')}
               className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
             >
               <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Support</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/blog')}
+              className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+            >
+              <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Blog</span>
             </button>
           </div>
         </div>
