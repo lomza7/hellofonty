@@ -1,18 +1,16 @@
-import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import NotificationBell from './NotificationBell';
 
-type NavbarProps = {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-};
-
-export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
+export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notificationCounts, setNotificationCounts] = useState({
     messages: 0,
@@ -73,14 +71,22 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
     setLanguage(language === 'fr' ? 'en' : 'fr');
   };
 
+  const handleAddListing = () => {
+    if (user && profile?.role === 'landlord') {
+      navigate('/ajouter-annonce');
+      setShowUserMenu(false);
+    } else if (user) {
+      alert(t('navbar.landlordOnlyMessage'));
+    } else {
+      navigate('/inscription');
+    }
+  };
+
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-20">
         <div className="flex justify-between items-center h-20">
-          <div
-            className="flex items-center cursor-pointer"
-            onClick={() => onNavigate('home')}
-          >
+          <Link to="/" className="flex items-center">
             <img
               src="/3.png"
               alt="Hellofonty Logo"
@@ -89,27 +95,26 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
             <span className="ml-2 text-xl font-semibold text-rose-500 hidden sm:block">
               hellofonty
             </span>
-          </div>
+          </Link>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => onNavigate('pricing')}
+            <Link
+              to="/blog"
+              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition flex items-center gap-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden md:inline">Blog</span>
+            </Link>
+
+            <Link
+              to="/tarifs"
               className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >
               {t('nav.pricing')}
-            </button>
+            </Link>
 
             <button
-              onClick={() => {
-                if (user && profile?.role === 'landlord') {
-                  onNavigate('addListing');
-                } else if (user) {
-                  alert(t('navbar.landlordOnlyMessage')
-                  );
-                } else {
-                  onNavigate('signup');
-                }
-              }}
+              onClick={handleAddListing}
               className="hidden md:block px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-full transition border border-gray-300"
             >
               {t('nav.addListing')}
@@ -123,7 +128,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
               {language === 'fr' ? '🇬🇧' : '🇫🇷'}
             </button>
 
-            {user && <NotificationBell onNavigate={onNavigate} />}
+            {user && <NotificationBell />}
 
             <div className="relative">
               <button
@@ -150,23 +155,19 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                       </div>
 
                       {profile?.role === 'admin' && (
-                        <button
-                          onClick={() => {
-                            onNavigate('admin');
-                            setShowUserMenu(false);
-                          }}
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowUserMenu(false)}
                           className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 font-semibold"
                         >
                           <Shield className="h-4 w-4" />
                           <span>Administration</span>
-                        </button>
+                        </Link>
                       )}
 
-                      <button
-                        onClick={() => {
-                          onNavigate('messages');
-                          setShowUserMenu(false);
-                        }}
+                      <Link
+                        to="/messages"
+                        onClick={() => setShowUserMenu(false)}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                       >
                         <div className="flex items-center space-x-3">
@@ -178,15 +179,13 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                             {notificationCounts.messages > 9 ? '9+' : notificationCounts.messages}
                           </span>
                         )}
-                      </button>
+                      </Link>
 
                       {profile?.role === 'student' && (
                         <>
-                          <button
-                            onClick={() => {
-                              onNavigate('myBookingRequestsStudent');
-                              setShowUserMenu(false);
-                            }}
+                          <Link
+                            to="/mes-reservations"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                           >
                             <div className="flex items-center space-x-3">
@@ -198,47 +197,39 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                                 {notificationCounts.bookingRequests > 9 ? '9+' : notificationCounts.bookingRequests}
                               </span>
                             )}
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('myDocuments');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/mes-documents"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <FolderOpen className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('favorites');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/favoris"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <Heart className="h-4 w-4" />
                             <span>{t('nav.favorites')}</span>
-                          </button>
+                          </Link>
                         </>
                       )}
 
                       {profile?.role === 'landlord' && (
                         <>
-                          <button
-                            onClick={() => {
-                              onNavigate('myListings');
-                              setShowUserMenu(false);
-                            }}
+                          <Link
+                            to="/mes-annonces"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <Home className="h-4 w-4" />
                             <span>{t('nav.myListings')}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('myBookingRequests');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/mes-demandes"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
                           >
                             <div className="flex items-center space-x-3">
@@ -250,65 +241,53 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                                 {notificationCounts.bookingRequests > 9 ? '9+' : notificationCounts.bookingRequests}
                               </span>
                             )}
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('myDocumentsLandlord');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/documents-proprietaire"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <FolderOpen className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('accessGuide');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/guide-acces"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <KeyRound className="h-4 w-4" />
                             <span>{language === 'fr' ? "Guide d'accès" : 'Access Guide'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('propertyInventory');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/etat-des-lieux"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <FileText className="h-4 w-4" />
                             <span>{language === 'fr' ? 'États des lieux' : 'Property Inventory'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('leases');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/mes-baux"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <FileSignature className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Baux' : 'Leases'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('mySubscription');
-                              setShowUserMenu(false);
-                            }}
+                          </Link>
+                          <Link
+                            to="/mon-abonnement"
+                            onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                           >
                             <CreditCard className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
-                          </button>
+                          </Link>
                         </>
                       )}
 
-                      <button
-                        onClick={() => {
-                          onNavigate('profile');
-                          setShowUserMenu(false);
-                        }}
+                      <Link
+                        to="/profil"
+                        onClick={() => setShowUserMenu(false)}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
                       >
                         <UserCircle className="h-4 w-4" />
@@ -324,7 +303,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                             )}
                           </div>
                         )}
-                      </button>
+                      </Link>
 
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <button
@@ -332,7 +311,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                             try {
                               await signOut();
                               setShowUserMenu(false);
-                              onNavigate('home');
+                              navigate('/');
                               setTimeout(() => {
                                 window.location.reload();
                               }, 100);
@@ -348,24 +327,20 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => {
-                          onNavigate('signup');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50"
+                      <Link
+                        to="/inscription"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full text-left px-4 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50 block"
                       >
                         {t('nav.signUp')}
-                      </button>
-                      <button
-                        onClick={() => {
-                          onNavigate('signin');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      </Link>
+                      <Link
+                        to="/connexion"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 block"
                       >
                         {t('nav.signIn')}
-                      </button>
+                      </Link>
                     </>
                   )}
                 </div>

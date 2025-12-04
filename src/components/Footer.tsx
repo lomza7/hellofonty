@@ -1,12 +1,9 @@
-import { MapPin, Mail, Phone, Facebook, Instagram, Linkedin } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MapPin, Mail, Phone, Facebook, Instagram, Linkedin, BookOpen } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-type FooterProps = {
-  onNavigate: (page: string) => void;
-};
-
-export default function Footer({ onNavigate }: FooterProps) {
-  const { t } = useLanguage();
+export default function Footer() {
+  const { language, t } = useLanguage();
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -22,28 +19,37 @@ export default function Footer({ onNavigate }: FooterProps) {
             <h3 className="text-white text-lg font-semibold mb-4">{t('footer.quickLinks')}</h3>
             <ul className="space-y-2">
               <li>
-                <button
-                  onClick={() => onNavigate('search')}
-                  className="text-sm hover:text-white transition-colors text-left"
+                <Link
+                  to="/recherche"
+                  className="text-sm hover:text-white transition-colors block"
                 >
                   {t('footer.searchListing')}
-                </button>
+                </Link>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('addListing')}
-                  className="text-sm hover:text-white transition-colors text-left"
+                <Link
+                  to="/ajouter-annonce"
+                  className="text-sm hover:text-white transition-colors block"
                 >
                   {t('footer.postListing')}
-                </button>
+                </Link>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('pricing')}
-                  className="text-sm hover:text-white transition-colors text-left"
+                <Link
+                  to="/tarifs"
+                  className="text-sm hover:text-white transition-colors block"
                 >
                   {t('footer.pricing')}
-                </button>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/blog"
+                  className="text-sm hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Blog</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -99,6 +105,11 @@ export default function Footer({ onNavigate }: FooterProps) {
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">
           <p className="text-sm">
             &copy; {new Date().getFullYear()} HELLOFONTY. {t('footer.rights')}.
+          </p>
+          <p className="text-xs mt-2 text-gray-500">
+            {language === 'fr'
+              ? 'Plateforme de logement pour étudiants INSEAD à Fontainebleau'
+              : 'Housing platform for INSEAD students in Fontainebleau'}
           </p>
         </div>
       </div>

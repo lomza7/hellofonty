@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,12 +15,9 @@ type Notification = {
   created_at: string;
 };
 
-type NotificationBellProps = {
-  onNavigate: (page: string, id?: string) => void;
-};
-
-export default function NotificationBell({ onNavigate }: NotificationBellProps) {
+export default function NotificationBell() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -170,12 +168,12 @@ export default function NotificationBell({ onNavigate }: NotificationBellProps) 
 
     if (notification.link) {
       if (notification.link === 'messages') {
-        onNavigate('messages');
+        navigate('/messages');
       } else if (notification.link === 'bookingRequests') {
         if (profile?.role === 'landlord') {
-          onNavigate('myBookingRequests');
+          navigate('/mes-demandes');
         } else {
-          onNavigate('myBookingRequestsStudent');
+          navigate('/mes-reservations');
         }
       }
     }
