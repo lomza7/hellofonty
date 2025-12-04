@@ -1,11 +1,14 @@
+import { lazy, Suspense } from 'react';
 import { Shield, Heart, MessageCircle, Lock, Home as HomeIcon, Calendar, FileText, Key, CheckCircle, Search, Star, Users, CreditCard, BarChart3, FileSignature, Banknote, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import FeaturedListings from '../components/FeaturedListings';
-import PlatformStats from '../components/PlatformStats';
 import SearchBar, { SearchFilters } from '../components/SearchBar';
-import FeaturesCarousel from '../components/FeaturesCarousel';
 import LazyLoad from '../components/LazyLoad';
+import OptimizedImage from '../components/OptimizedImage';
+
+const FeaturedListings = lazy(() => import('../components/FeaturedListings'));
+const PlatformStats = lazy(() => import('../components/PlatformStats'));
+const FeaturesCarousel = lazy(() => import('../components/FeaturesCarousel'));
 
 type HomeProps = {
   onNavigate: (page: string, listingId?: string) => void;
@@ -58,20 +61,25 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      <div className="bg-gray-50 py-12 sm:py-16">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20">
-          <PlatformStats />
+      <Suspense fallback={<div className="bg-gray-50 py-12 sm:py-16"><div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20 h-32 bg-gray-100 animate-pulse rounded-lg" /></div>}>
+        <div className="bg-gray-50 py-12 sm:py-16">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20">
+            <PlatformStats />
+          </div>
         </div>
-      </div>
+      </Suspense>
 
-      <FeaturedListings onNavigate={onNavigate} />
+      <Suspense fallback={<div className="py-12 h-96 bg-gray-100 animate-pulse" />}>
+        <FeaturedListings onNavigate={onNavigate} />
+      </Suspense>
 
-      <LazyLoad>
-        <FeaturesCarousel
-          title={t('features.landlords.title')}
-          subtitle={t('features.landlords.subtitle')}
-          accentColor="rose"
-          features={[
+      <LazyLoad height="h-[600px]">
+        <Suspense fallback={<div className="h-[600px] bg-gray-100 animate-pulse rounded-lg" />}>
+          <FeaturesCarousel
+            title={t('features.landlords.title')}
+            subtitle={t('features.landlords.subtitle')}
+            accentColor="rose"
+            features={[
             {
               icon: <FileSignature className="w-7 h-7" />,
               title: t('features.landlords.lease.title'),
@@ -127,15 +135,17 @@ export default function Home({ onNavigate }: HomeProps) {
               imageUrl: 'https://images.pexels.com/photos/7947664/pexels-photo-7947664.jpeg'
             }
           ]}
-        />
+          />
+        </Suspense>
       </LazyLoad>
 
-      <LazyLoad>
-        <FeaturesCarousel
-          title={t('features.students.title')}
-          subtitle={t('features.students.subtitle')}
-          accentColor="blue"
-          features={[
+      <LazyLoad height="h-[600px]">
+        <Suspense fallback={<div className="h-[600px] bg-gray-100 animate-pulse rounded-lg" />}>
+          <FeaturesCarousel
+            title={t('features.students.title')}
+            subtitle={t('features.students.subtitle')}
+            accentColor="blue"
+            features={[
             {
               icon: <Search className="w-7 h-7" />,
               title: t('features.students.search.title'),
@@ -185,7 +195,8 @@ export default function Home({ onNavigate }: HomeProps) {
               imageUrl: 'https://images.pexels.com/photos/259027/pexels-photo-259027.jpeg'
             }
           ]}
-        />
+          />
+        </Suspense>
       </LazyLoad>
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20 py-12 sm:py-20">
@@ -233,22 +244,18 @@ export default function Home({ onNavigate }: HomeProps) {
               {user ? t('nav.search') : t('nav.signUp')}
             </button>
           </div>
-          <div
-            className="h-64 sm:h-96 bg-cover bg-center rounded-2xl sm:rounded-3xl shadow-2xl"
-            style={{
-              backgroundImage:
-                'url(/Etat_lieux_AdobeStock_897x505.jpg)',
-            }}
+          <OptimizedImage
+            src="/Etat_lieux_AdobeStock_897x505.jpg"
+            alt="Student housing"
+            className="h-64 sm:h-96 w-full object-cover rounded-2xl sm:rounded-3xl shadow-2xl"
           />
         </div>
 
         <div className="mt-12 sm:mt-20 grid md:grid-cols-2 gap-8 sm:gap-16 items-center">
-          <div
-            className="h-64 sm:h-96 bg-cover bg-center rounded-2xl sm:rounded-3xl shadow-2xl order-2 md:order-1"
-            style={{
-              backgroundImage:
-                'url("/beymedias.brightspotcdn copy.jpg")',
-            }}
+          <OptimizedImage
+            src="/beymedias.brightspotcdn copy.jpg"
+            alt="Landlord dashboard"
+            className="h-64 sm:h-96 w-full object-cover rounded-2xl sm:rounded-3xl shadow-2xl order-2 md:order-1"
           />
           <div className="order-1 md:order-2">
             <div className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-rose-100 text-rose-700 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-6">

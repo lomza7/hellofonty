@@ -1,5 +1,5 @@
 import { Heart, MapPin, Home, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type ListingCardProps = {
@@ -20,7 +20,7 @@ type ListingCardProps = {
   onToggleFavorite?: (listingId: string) => void;
 };
 
-export default function ListingCard({
+function ListingCard({
   listing,
   onNavigate,
   isFavorite = false,
@@ -50,6 +50,8 @@ export default function ListingCard({
         <img
           src={imageError ? defaultImage : listing.image_url || defaultImage}
           alt={listing.title}
+          loading="lazy"
+          decoding="async"
           onError={() => setImageError(true)}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -119,3 +121,5 @@ export default function ListingCard({
     </div>
   );
 }
+
+export default memo(ListingCard);

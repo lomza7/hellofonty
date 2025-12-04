@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 type Feature = {
@@ -15,7 +15,7 @@ type FeaturesCarouselProps = {
   accentColor?: 'blue' | 'rose';
 };
 
-export default function FeaturesCarousel({
+function FeaturesCarousel({
   title,
   subtitle,
   features,
@@ -81,6 +81,7 @@ export default function FeaturesCarousel({
                     src={feature.imageUrl}
                     alt={feature.title}
                     loading="lazy"
+                    decoding="async"
                     className="h-48 w-full object-cover"
                   />
                 )}
@@ -108,6 +109,7 @@ export default function FeaturesCarousel({
                   src={features[currentIndex].imageUrl}
                   alt={features[currentIndex].title}
                   loading="lazy"
+                  decoding="async"
                   className="h-48 w-full object-cover"
                 />
               )}
@@ -159,3 +161,5 @@ export default function FeaturesCarousel({
     </div>
   );
 }
+
+export default memo(FeaturesCarousel);
