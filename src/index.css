@@ -56,12 +56,33 @@
     }
   }
 
+  @keyframes gradient-text {
+    0%, 100% {
+      text-shadow:
+        0 0 20px rgba(255, 255, 255, 0.8),
+        0 0 40px rgba(255, 255, 255, 0.5),
+        0 0 60px rgba(255, 255, 255, 0.3);
+      transform: scale(1);
+    }
+    50% {
+      text-shadow:
+        0 0 30px rgba(255, 255, 255, 1),
+        0 0 60px rgba(255, 255, 255, 0.7),
+        0 0 90px rgba(255, 255, 255, 0.5);
+      transform: scale(1.02);
+    }
+  }
+
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
   }
 
   .animate-bounce-slow {
     animation: bounce-slow 2s ease-in-out infinite;
+  }
+
+  .animate-gradient-text {
+    animation: gradient-text 3s ease-in-out infinite;
   }
 
   .confetti {
