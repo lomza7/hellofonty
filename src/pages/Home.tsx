@@ -26,7 +26,7 @@ export default function Home({ onNavigate }: HomeProps) {
         className="relative min-h-[700px] sm:min-h-[650px] bg-cover bg-center"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(/c247c1e3d0262d28f2b23c1fb19e4a31.png)',
+            'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(/_mdp_FR_INSEAD_016.jpg)',
         }}
       >
         <div className="absolute inset-0 flex items-center justify-center py-8 sm:py-16">
