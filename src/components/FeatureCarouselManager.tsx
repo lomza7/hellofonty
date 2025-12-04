@@ -31,6 +31,8 @@ export default function FeatureCarouselManager() {
   const [error, setError] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [imageDropZone, setImageDropZone] = useState<string | null>(null);
 
   useEffect(() => {
     loadFeatures();
@@ -132,6 +134,78 @@ export default function FeatureCarouselManager() {
     setDragOverIndex(null);
   }
 
+  async function handleImageUpload(featureId: string, file: File) {
+    try {
+      setUploadingImage(featureId);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `carousel-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      await updateFeature(featureId, { image_url: publicUrl });
+
+      const updatedFeatures = features.map(f =>
+        f.id === featureId ? { ...f, image_url: publicUrl } : f
+      );
+      setFeatures(updatedFeatures);
+
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      alert('Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploadingImage(null);
+      setImageDropZone(null);
+    }
+  }
+
+  function handleImageDragOver(e: React.DragEvent, featureId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setImageDropZone(featureId);
+  }
+
+  function handleImageDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setImageDropZone(null);
+  }
+
+  function handleImageDrop(e: React.DragEvent, featureId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        handleImageUpload(featureId, file);
+      } else {
+        alert('Veuillez déposer un fichier image (JPG, PNG, etc.)');
+        setImageDropZone(null);
+      }
+    }
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>, featureId: string) {
+    const files = e.target.files;
+    if (files && files[0]) {
+      handleImageUpload(featureId, files[0]);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -187,7 +261,12 @@ export default function FeatureCarouselManager() {
                 <div className="flex items-center justify-center lg:justify-start">
                   <GripVertical className="w-6 h-6 text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0" />
                 </div>
-                <div className="lg:w-48 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                <div
+                  className="lg:w-48 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative group"
+                  onDragOver={(e) => handleImageDragOver(e, feature.id)}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={(e) => handleImageDrop(e, feature.id)}
+                >
                   <img
                     src={feature.image_url}
                     alt={featureLabels[feature.feature_key]}
@@ -197,6 +276,43 @@ export default function FeatureCarouselManager() {
                       target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';
                     }}
                   />
+
+                  {uploadingImage === feature.id && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                        <p className="text-xs font-medium">Upload...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {imageDropZone === feature.id && uploadingImage !== feature.id && (
+                    <div className="absolute inset-0 bg-rose-500 bg-opacity-90 flex items-center justify-center border-4 border-rose-600 border-dashed">
+                      <div className="text-center text-white">
+                        <Upload className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-xs font-bold">Déposez l'image</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
+                    <label
+                      htmlFor={`upload-${feature.id}`}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <div className="bg-white rounded-full p-3 hover:bg-gray-100 transition-colors">
+                        <Upload className="w-5 h-5 text-gray-700" />
+                      </div>
+                      <input
+                        id={`upload-${feature.id}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileInputChange(e, feature.id)}
+                        disabled={uploadingImage === feature.id}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex-1 space-y-3">
@@ -310,8 +426,9 @@ export default function FeatureCarouselManager() {
             <h3 className="font-semibold text-blue-900 mb-2">Conseils d'utilisation</h3>
             <ul className="space-y-1 text-sm text-blue-800">
               <li>• <strong>Glissez-déposez</strong> les cartes pour réorganiser l'ordre d'affichage dans le carousel</li>
-              <li>• Les images doivent être hébergées en ligne (Pexels) ou placées dans le dossier /public</li>
-              <li>• Format recommandé : JPEG ou PNG, ratio 16:9, résolution minimale 800x450px</li>
+              <li>• <strong>Survolez une image</strong> et cliquez sur l'icône d'upload, ou glissez-déposez une image directement</li>
+              <li>• Les images uploadées sont automatiquement hébergées sur Supabase Storage</li>
+              <li>• Format recommandé : JPEG ou PNG, ratio 16:9, résolution minimale 800x450px, max 5MB</li>
               <li>• Les modifications sont appliquées immédiatement sur la page d'accueil</li>
               <li>• Désactivez une fonctionnalité pour la masquer temporairement sans supprimer l'image</li>
             </ul>
