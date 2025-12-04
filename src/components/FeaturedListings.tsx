@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import ListingCard from './ListingCard';
 import InteractiveMap from './InteractiveMap';
-import LazyLoad from './LazyLoad';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -199,20 +198,18 @@ export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) 
         </div>
 
         {/* Interactive Map Section */}
-        <LazyLoad>
-          <div className="mt-20">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
-                {t('home.map.title')}
-              </h2>
-              <p className="text-gray-600 text-lg">
-                {t('home.map.subtitle')}
-              </p>
-            </div>
-
-            <InteractiveMap onNavigate={onNavigate} />
+        <div className="mt-20">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
+              {t('home.map.title')}
+            </h2>
+            <p className="text-gray-600 text-lg">
+              {t('home.map.subtitle')}
+            </p>
           </div>
-        </LazyLoad>
+
+          <InteractiveMap onNavigate={onNavigate} />
+        </div>
       </div>
     </div>
   );
