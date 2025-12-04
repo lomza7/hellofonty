@@ -100,7 +100,7 @@ export default function BlogList() {
       setDarkMode(false);
     } else {
       searchParams.set('category', category);
-      if (category === 'nightlife') {
+      if (category === 'night-life') {
         setDarkMode(true);
       } else {
         setDarkMode(false);
@@ -168,7 +168,7 @@ export default function BlogList() {
           </button>
           {categories.map((category) => {
             const Icon = iconMap[category.icon] || Tag;
-            const isNightlife = category.slug === 'nightlife';
+            const isNightlife = category.slug === 'night-life';
             return (
               <button
                 key={category.slug}
