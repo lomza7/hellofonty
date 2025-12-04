@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Shield, Heart, MessageCircle, Lock, Home as HomeIcon, Calendar, FileText, Key, CheckCircle, Search, Star, Users, CreditCard, BarChart3, FileSignature, Banknote, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import SearchBar, { SearchFilters } from '../components/SearchBar';
 import OptimizedImage from '../components/OptimizedImage';
 import FeaturedListings from '../components/FeaturedListings';
@@ -11,13 +13,46 @@ type HomeProps = {
   onNavigate: (page: string, listingId?: string) => void;
 };
 
+interface FeatureImage {
+  feature_key: string;
+  image_url: string;
+}
+
 export default function Home({ onNavigate }: HomeProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const [featureImages, setFeatureImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    loadFeatureImages();
+  }, []);
+
+  async function loadFeatureImages() {
+    try {
+      const { data, error } = await supabase
+        .from('feature_carousel_images')
+        .select('feature_key, image_url')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const imageMap: Record<string, string> = {};
+      data?.forEach((item: FeatureImage) => {
+        imageMap[item.feature_key] = item.image_url;
+      });
+      setFeatureImages(imageMap);
+    } catch (error) {
+      console.error('Error loading feature images:', error);
+    }
+  }
 
   const handleSearch = (filters: SearchFilters) => {
     console.log('Search filters:', filters);
     onNavigate('search');
+  };
+
+  const getFeatureImage = (key: string, fallback: string) => {
+    return featureImages[key] || fallback;
   };
 
   const renderGradientText = (text: string) => {
@@ -97,55 +132,55 @@ export default function Home({ onNavigate }: HomeProps) {
           icon: <FileSignature className="w-7 h-7" />,
           title: t('features.landlords.lease.title'),
           description: t('features.landlords.lease.desc'),
-          imageUrl: 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg'
+          imageUrl: getFeatureImage('landlords.lease', 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg')
         },
         {
           icon: <Banknote className="w-7 h-7" />,
           title: t('features.landlords.payment.title'),
           description: t('features.landlords.payment.desc'),
-          imageUrl: 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg'
+          imageUrl: getFeatureImage('landlords.payment', 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg')
         },
         {
           icon: <ClipboardCheck className="w-7 h-7" />,
           title: t('features.landlords.inventory.title'),
           description: t('features.landlords.inventory.desc'),
-          imageUrl: 'https://images.pexels.com/photos/7078666/pexels-photo-7078666.jpeg'
+          imageUrl: getFeatureImage('landlords.inventory', 'https://images.pexels.com/photos/7078666/pexels-photo-7078666.jpeg')
         },
         {
           icon: <HomeIcon className="w-7 h-7" />,
           title: t('features.landlords.listings.title'),
           description: t('features.landlords.listings.desc'),
-          imageUrl: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'
+          imageUrl: getFeatureImage('landlords.listings', 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg')
         },
         {
           icon: <Calendar className="w-7 h-7" />,
           title: t('features.landlords.bookings.title'),
           description: t('features.landlords.bookings.desc'),
-          imageUrl: 'https://images.pexels.com/photos/5717546/pexels-photo-5717546.jpeg'
+          imageUrl: getFeatureImage('landlords.bookings', 'https://images.pexels.com/photos/5717546/pexels-photo-5717546.jpeg')
         },
         {
           icon: <Key className="w-7 h-7" />,
           title: t('features.landlords.access.title'),
           description: t('features.landlords.access.desc'),
-          imageUrl: 'https://images.pexels.com/photos/5705471/pexels-photo-5705471.jpeg'
+          imageUrl: getFeatureImage('landlords.access', 'https://images.pexels.com/photos/5705471/pexels-photo-5705471.jpeg')
         },
         {
           icon: <CheckCircle className="w-7 h-7" />,
           title: t('features.landlords.verification.title'),
           description: t('features.landlords.verification.desc'),
-          imageUrl: 'https://images.pexels.com/photos/5668838/pexels-photo-5668838.jpeg'
+          imageUrl: getFeatureImage('landlords.verification', 'https://images.pexels.com/photos/5668838/pexels-photo-5668838.jpeg')
         },
         {
           icon: <MessageCircle className="w-7 h-7" />,
           title: t('features.landlords.messaging.title'),
           description: t('features.landlords.messaging.desc'),
-          imageUrl: 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg'
+          imageUrl: getFeatureImage('landlords.messaging', 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg')
         },
         {
           icon: <BarChart3 className="w-7 h-7" />,
           title: t('features.landlords.stats.title'),
           description: t('features.landlords.stats.desc'),
-          imageUrl: 'https://images.pexels.com/photos/7947664/pexels-photo-7947664.jpeg'
+          imageUrl: getFeatureImage('landlords.stats', 'https://images.pexels.com/photos/7947664/pexels-photo-7947664.jpeg')
         }
       ]}
       />

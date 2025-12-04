@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban } from 'lucide-react';
+import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
+import FeatureCarouselManager from '../components/FeatureCarouselManager';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 
 interface UserData {
@@ -89,7 +90,7 @@ export default function Admin({ onNavigate }: AdminProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel'>('users');
   const [pendingVerifications, setPendingVerifications] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [verificationDocument, setVerificationDocument] = useState<string | null>(null);
@@ -680,6 +681,17 @@ export default function Admin({ onNavigate }: AdminProps) {
             >
               <Home className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Annonces</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('carousel')}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'carousel'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <Image className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Carousel</span>
             </button>
             <button
               onClick={() => window.location.href = '/?page=supportAdmin'}
@@ -2118,6 +2130,11 @@ export default function Admin({ onNavigate }: AdminProps) {
               </div>
             )}
           </div>
+        )}
+
+        {/* Carousel Tab */}
+        {activeTab === 'carousel' && (
+          <FeatureCarouselManager />
         )}
 
       </div>
