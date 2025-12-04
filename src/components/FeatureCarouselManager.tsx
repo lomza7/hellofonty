@@ -30,6 +30,9 @@ const featureLabels: Record<string, string> = {
   'students.reviews': 'Avis et évaluations',
   'students.favorites': 'Favoris',
   'students.profile': 'Gestion du profil',
+  'students.access': 'Guide d\'accès',
+  'students.community': 'Communauté',
+  'students.free': 'Plateforme gratuite',
 };
 
 export default function FeatureCarouselManager() {
@@ -86,6 +89,26 @@ export default function FeatureCarouselManager() {
 
   async function toggleActive(feature: FeatureImage) {
     await updateFeature(feature.id, { is_active: !feature.is_active });
+  }
+
+  async function deleteFeature(feature: FeatureImage) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${featureLabels[feature.feature_key]}" ?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('feature_carousel_images')
+        .delete()
+        .eq('id', feature.id);
+
+      if (error) throw error;
+
+      setFeatures(features.filter(f => f.id !== feature.id));
+    } catch (err) {
+      console.error('Error deleting feature:', err);
+      alert('Erreur lors de la suppression');
+    }
   }
 
   function handleDragStart(index: number) {
@@ -358,27 +381,37 @@ export default function FeatureCarouselManager() {
                         Position: {feature.display_order}
                       </p>
                     </div>
-                    <button
-                      onClick={() => toggleActive(feature)}
-                      disabled={saving === feature.id}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                        feature.is_active
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                      }`}
-                    >
-                      {feature.is_active ? (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <EyeOff className="w-4 h-4" />
-                          Inactive
-                        </>
-                      )}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleActive(feature)}
+                        disabled={saving === feature.id}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          feature.is_active
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        {feature.is_active ? (
+                          <>
+                            <Eye className="w-4 h-4" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="w-4 h-4" />
+                            Inactive
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => deleteFeature(feature)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        title="Supprimer définitivement"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
