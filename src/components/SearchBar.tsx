@@ -55,9 +55,9 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-2 sm:p-1.5 max-w-full overflow-hidden">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-1.5 max-w-full">
-        {/* Type de logement */}
-        <div className="relative group max-w-full overflow-hidden">
+      <div className="flex flex-col md:grid md:grid-cols-4 gap-2 sm:gap-1.5 max-w-full">
+        {/* Type de logement - Pleine largeur sur mobile */}
+        <div className="relative group max-w-full overflow-hidden md:col-span-1">
           <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.propertyTypeLabel')}
           </label>
@@ -76,44 +76,47 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
           </div>
         </div>
 
-        {/* Date d'arrivée */}
-        <div className="relative group max-w-full overflow-hidden">
-          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
-            {t('search.checkIn')}
-          </label>
-          <div className="relative max-w-full">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
-            <input
-              type="date"
-              min={today}
-              value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
-              placeholder={t('search.checkInPlaceholder')}
-            />
+        {/* Dates côte à côte sur mobile */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-1.5 md:col-span-2 md:contents">
+          {/* Date d'arrivée */}
+          <div className="relative group max-w-full overflow-hidden">
+            <label className="block text-[10px] sm:text-[11px] font-semibold text-white mb-1 px-1 sm:px-2 pt-1 truncate">
+              {t('search.checkIn')}
+            </label>
+            <div className="relative max-w-full">
+              <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
+              <input
+                type="date"
+                min={today}
+                value={checkIn}
+                onChange={(e) => setCheckIn(e.target.value)}
+                className="w-full max-w-full pl-8 sm:pl-8 pr-1 sm:pr-2 py-2.5 sm:py-1.5 text-xs sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+                placeholder={t('search.checkInPlaceholder')}
+              />
+            </div>
+          </div>
+
+          {/* Date de départ */}
+          <div className="relative group max-w-full overflow-hidden">
+            <label className="block text-[10px] sm:text-[11px] font-semibold text-white mb-1 px-1 sm:px-2 pt-1 truncate">
+              {t('search.checkOut')}
+            </label>
+            <div className="relative max-w-full">
+              <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
+              <input
+                type="date"
+                min={checkIn || today}
+                value={checkOut}
+                onChange={(e) => setCheckOut(e.target.value)}
+                className="w-full max-w-full pl-8 sm:pl-8 pr-1 sm:pr-2 py-2.5 sm:py-1.5 text-xs sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+                placeholder={t('search.checkOutPlaceholder')}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Date de départ */}
-        <div className="relative group max-w-full overflow-hidden">
-          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
-            {t('search.checkOut')}
-          </label>
-          <div className="relative max-w-full">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
-            <input
-              type="date"
-              min={checkIn || today}
-              value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
-              placeholder={t('search.checkOutPlaceholder')}
-            />
-          </div>
-        </div>
-
-        {/* Nombre de personnes */}
-        <div className="relative max-w-full overflow-hidden">
+        {/* Nombre de personnes - Pleine largeur sur mobile */}
+        <div className="relative max-w-full overflow-hidden md:col-span-1">
           <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.guestsLabel')}
           </label>
