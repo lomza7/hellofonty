@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import ImageUpload from '../components/ImageUpload';
 
 interface BlogPost {
   id: string;
@@ -288,14 +289,12 @@ export default function BlogAdmin() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {language === 'fr' ? 'Image mise en avant (URL)' : 'Featured image (URL)'}
+                  {language === 'fr' ? 'Image mise en avant' : 'Featured image'}
                 </label>
-                <input
-                  type="text"
-                  value={formData.featured_image}
-                  onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://example.com/image.jpg"
+                <ImageUpload
+                  onImageUploaded={(url) => setFormData({ ...formData, featured_image: url })}
+                  currentImageUrl={formData.featured_image}
+                  language={language}
                 />
               </div>
 
