@@ -2,9 +2,11 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import StarsBackground from './components/StarsBackground';
 
 const Home = lazy(() => import('./pages/Home'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -73,14 +75,18 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { loading } = useAuth();
+  const { isDarkMode } = useTheme();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
+    <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark-mode' : 'bg-gray-50'}`}>
+      {isDarkMode && <StarsBackground />}
+      <div className="relative z-10">
+        <Navbar />
+      </div>
       <ScrollToTop />
 
       <main className="flex-grow">
@@ -240,7 +246,9 @@ function AppContent() {
         </Suspense>
       </main>
 
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   );
 }
@@ -250,7 +258,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <LanguageProvider>
-          <AppContent />
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
         </LanguageProvider>
       </AuthProvider>
     </BrowserRouter>
