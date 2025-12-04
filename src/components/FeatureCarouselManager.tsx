@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle, GripVertical } from 'lucide-react';
+import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle, GripVertical, Plus } from 'lucide-react';
 
 interface FeatureImage {
   id: string;
@@ -8,6 +8,10 @@ interface FeatureImage {
   image_url: string;
   display_order: number;
   is_active: boolean;
+  title_fr?: string;
+  title_en?: string;
+  description_fr?: string;
+  description_en?: string;
   created_at: string;
   updated_at: string;
 }
@@ -108,6 +112,54 @@ export default function FeatureCarouselManager() {
     } catch (err) {
       console.error('Error deleting feature:', err);
       alert('Erreur lors de la suppression');
+    }
+  }
+
+  async function addNewFeature() {
+    const newFeatureKey = prompt('Entrez la clé de la nouvelle fonctionnalité (ex: landlords.new_feature ou students.new_feature):');
+
+    if (!newFeatureKey) return;
+
+    if (!newFeatureKey.startsWith('landlords.') && !newFeatureKey.startsWith('students.')) {
+      alert('La clé doit commencer par "landlords." ou "students."');
+      return;
+    }
+
+    const category = newFeatureKey.split('.')[0];
+    if ((selectedCategory === 'landlords' && category !== 'landlords') ||
+        (selectedCategory === 'students' && category !== 'students')) {
+      alert(`La clé doit commencer par "${selectedCategory}."`);
+      return;
+    }
+
+    try {
+      const maxOrder = features.length > 0 ? Math.max(...features.map(f => f.display_order)) : 0;
+
+      const { data, error } = await supabase
+        .from('feature_carousel_images')
+        .insert([{
+          feature_key: newFeatureKey,
+          image_url: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
+          display_order: maxOrder + 1,
+          is_active: true,
+          title_fr: '',
+          title_en: '',
+          description_fr: '',
+          description_en: ''
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await loadFeatures();
+    } catch (err: any) {
+      console.error('Error adding feature:', err);
+      if (err.code === '23505') {
+        alert('Cette clé existe déjà');
+      } else {
+        alert('Erreur lors de l\'ajout de la fonctionnalité');
+      }
     }
   }
 
@@ -260,7 +312,7 @@ export default function FeatureCarouselManager() {
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex gap-2 mb-6 border-b border-gray-200 items-center">
           <button
             onClick={() => setSelectedCategory('landlords')}
             className={`px-6 py-3 font-medium transition-all relative ${
@@ -280,6 +332,14 @@ export default function FeatureCarouselManager() {
             }`}
           >
             Étudiants
+          </button>
+          <div className="flex-1"></div>
+          <button
+            onClick={addNewFeature}
+            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter
           </button>
         </div>
 
@@ -414,11 +474,83 @@ export default function FeatureCarouselManager() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      URL de l'image
-                    </label>
-                    <div className="flex gap-2">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Titre (Français)
+                      </label>
+                      <input
+                        type="text"
+                        value={feature.title_fr || ''}
+                        onChange={(e) => {
+                          const newFeatures = features.map(f =>
+                            f.id === feature.id ? { ...f, title_fr: e.target.value } : f
+                          );
+                          setFeatures(newFeatures);
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        placeholder="Ex: Baux et contrats"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Titre (Anglais)
+                      </label>
+                      <input
+                        type="text"
+                        value={feature.title_en || ''}
+                        onChange={(e) => {
+                          const newFeatures = features.map(f =>
+                            f.id === feature.id ? { ...f, title_en: e.target.value } : f
+                          );
+                          setFeatures(newFeatures);
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        placeholder="Ex: Leases and contracts"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description (Français)
+                      </label>
+                      <textarea
+                        value={feature.description_fr || ''}
+                        onChange={(e) => {
+                          const newFeatures = features.map(f =>
+                            f.id === feature.id ? { ...f, description_fr: e.target.value } : f
+                          );
+                          setFeatures(newFeatures);
+                        }}
+                        rows={2}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
+                        placeholder="Description de la fonctionnalité..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description (Anglais)
+                      </label>
+                      <textarea
+                        value={feature.description_en || ''}
+                        onChange={(e) => {
+                          const newFeatures = features.map(f =>
+                            f.id === feature.id ? { ...f, description_en: e.target.value } : f
+                          );
+                          setFeatures(newFeatures);
+                        }}
+                        rows={2}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
+                        placeholder="Feature description..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        URL de l'image
+                      </label>
                       <input
                         type="text"
                         value={feature.image_url}
@@ -428,13 +560,48 @@ export default function FeatureCarouselManager() {
                           );
                           setFeatures(newFeatures);
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                         placeholder="https://example.com/image.jpg ou /local-image.png"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Utilisez une URL Pexels ou un chemin local (ex: /6.png)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Ordre d'affichage
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={feature.display_order}
+                          onChange={(e) => {
+                            const newOrder = parseInt(e.target.value);
+                            if (!isNaN(newOrder)) {
+                              const newFeatures = features.map(f =>
+                                f.id === feature.id ? { ...f, display_order: newOrder } : f
+                              );
+                              setFeatures(newFeatures);
+                            }
+                          }}
+                          className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        />
+                      </div>
+
                       <button
-                        onClick={() => updateFeature(feature.id, { image_url: feature.image_url })}
+                        onClick={() => updateFeature(feature.id, {
+                          title_fr: feature.title_fr,
+                          title_en: feature.title_en,
+                          description_fr: feature.description_fr,
+                          description_en: feature.description_en,
+                          image_url: feature.image_url,
+                          display_order: feature.display_order
+                        })}
                         disabled={saving === feature.id}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                       >
                         {saving === feature.id ? (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -445,30 +612,6 @@ export default function FeatureCarouselManager() {
                           </>
                         )}
                       </button>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Utilisez une URL Pexels ou un chemin local (ex: /6.png)
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Ordre d'affichage
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={feature.display_order}
-                        onChange={(e) => {
-                          const newOrder = parseInt(e.target.value);
-                          if (!isNaN(newOrder)) {
-                            updateFeature(feature.id, { display_order: newOrder });
-                          }
-                        }}
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                      />
                     </div>
                   </div>
                 </div>
@@ -491,12 +634,15 @@ export default function FeatureCarouselManager() {
           <div className="flex-1">
             <h3 className="font-semibold text-blue-900 mb-2">Conseils d'utilisation</h3>
             <ul className="space-y-1 text-sm text-blue-800">
+              <li>• <strong>Ajouter une nouvelle fonctionnalité</strong> : Cliquez sur "Ajouter" et entrez une clé unique</li>
+              <li>• <strong>Personnaliser les textes</strong> : Modifiez les titres et descriptions en français et anglais</li>
               <li>• <strong>Glissez-déposez</strong> les cartes pour réorganiser l'ordre d'affichage dans le carousel</li>
               <li>• <strong>Survolez une image</strong> et cliquez sur l'icône d'upload, ou glissez-déposez une image directement</li>
               <li>• Les images uploadées sont automatiquement hébergées sur Supabase Storage</li>
               <li>• Format recommandé : JPEG ou PNG, ratio 16:9, résolution minimale 800x450px, max 5MB</li>
               <li>• Les modifications sont appliquées immédiatement sur la page d'accueil</li>
-              <li>• Désactivez une fonctionnalité pour la masquer temporairement sans supprimer l'image</li>
+              <li>• <strong>Désactivez</strong> une fonctionnalité pour la masquer temporairement sans la supprimer</li>
+              <li>• <strong>Supprimez</strong> une fonctionnalité pour la retirer définitivement de la base de données</li>
             </ul>
           </div>
         </div>
