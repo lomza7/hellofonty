@@ -1,5 +1,6 @@
 import { Heart, MapPin, Home, Sparkles } from 'lucide-react';
 import { useState, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type ListingCardProps = {
@@ -15,18 +16,17 @@ type ListingCardProps = {
     image_url?: string;
     bonus_features?: string[];
   };
-  onNavigate: (page: string, listingId?: string) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (listingId: string) => void;
 };
 
 function ListingCard({
   listing,
-  onNavigate,
   isFavorite = false,
   onToggleFavorite,
 }: ListingCardProps) {
   const [imageError, setImageError] = useState(false);
+  const navigate = useNavigate();
   const { t, translateFeature } = useLanguage();
 
   const getPropertyTypeLabel = (type: string) => {
@@ -44,7 +44,7 @@ function ListingCard({
   return (
     <div
       className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col"
-      onClick={() => onNavigate('listing', listing.id)}
+      onClick={() => navigate(`/logement/${listing.id}`)}
     >
       <div className="relative h-48 overflow-hidden flex-shrink-0">
         <img

@@ -1,13 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import ListingCard from './ListingCard';
 import InteractiveMap from './InteractiveMap';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-
-type FeaturedListingsProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
 
 type Listing = {
   id: string;
@@ -22,8 +19,9 @@ type Listing = {
   bonus_features?: string[];
 };
 
-export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) {
+export default function FeaturedListings() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -142,7 +140,7 @@ export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) 
             </p>
           </div>
           <button
-            onClick={() => onNavigate('search')}
+            onClick={() => navigate('/recherche')}
             className="hidden md:flex items-center space-x-2 px-6 py-3 text-rose-600 hover:text-rose-700 font-medium group"
           >
             <span>Voir tout</span>
@@ -180,7 +178,6 @@ export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) 
               <div key={listing.id} className="flex-shrink-0 w-[280px] sm:w-[320px]">
                 <ListingCard
                   listing={listing}
-                  onNavigate={onNavigate}
                 />
               </div>
             ))}
@@ -189,7 +186,7 @@ export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) 
 
         <div className="mt-12 text-center md:hidden">
           <button
-            onClick={() => onNavigate('search')}
+            onClick={() => navigate('/recherche')}
             className="inline-flex items-center space-x-2 px-8 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium"
           >
             <span>{t('home.viewAllListings')}</span>
@@ -208,7 +205,7 @@ export default function FeaturedListings({ onNavigate }: FeaturedListingsProps) 
             </p>
           </div>
 
-          <InteractiveMap onNavigate={onNavigate} />
+          <InteractiveMap />
         </div>
       </div>
     </div>

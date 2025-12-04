@@ -1,12 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { MapPin, Home, Euro, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
-
-type InteractiveMapProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
 
 type Listing = {
   id: string;
@@ -21,8 +18,9 @@ type Listing = {
   longitude: number;
 };
 
-export default function InteractiveMap({ onNavigate }: InteractiveMapProps) {
+export default function InteractiveMap() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
@@ -249,7 +247,7 @@ export default function InteractiveMap({ onNavigate }: InteractiveMapProps) {
                 </div>
 
                 <button
-                  onClick={() => onNavigate('listing', selectedListing.id)}
+                  onClick={() => navigate(`/logement/${selectedListing.id}`)}
                   className="px-6 py-2.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition font-medium text-sm"
                 >
                   Voir détails

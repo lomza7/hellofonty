@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, Heart } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 
-type SearchProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
-
-export default function Search({ onNavigate }: SearchProps) {
+export default function Search() {
   const { t } = useLanguage();
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
@@ -232,7 +230,7 @@ export default function Search({ onNavigate }: SearchProps) {
               <div
                 key={listing.id}
                 className="group cursor-pointer"
-                onClick={() => onNavigate('listing', listing.id)}
+                onClick={() => navigate(`/logement/${listing.id}`)}
               >
                 <div className="relative aspect-square mb-3 rounded-xl overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (

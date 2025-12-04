@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, Heart, MessageCircle, Lock, Home as HomeIcon, Calendar, FileText, Key, CheckCircle, Search, Star, Users, CreditCard, BarChart3, FileSignature, Banknote, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,10 +9,6 @@ import OptimizedImage from '../components/OptimizedImage';
 import FeaturedListings from '../components/FeaturedListings';
 import PlatformStats from '../components/PlatformStats';
 import FeaturesCarousel from '../components/FeaturesCarousel';
-
-type HomeProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
 
 interface FeatureImage {
   feature_key: string;
@@ -30,9 +27,10 @@ interface FeatureData {
   description_en?: string;
 }
 
-export default function Home({ onNavigate }: HomeProps) {
+export default function Home() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [featureData, setFeatureData] = useState<Record<string, FeatureData>>({});
   const [activeFeatureKeys, setActiveFeatureKeys] = useState<Set<string>>(new Set());
 
@@ -70,7 +68,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const handleSearch = (filters: SearchFilters) => {
     console.log('Search filters:', filters);
-    onNavigate('search');
+    navigate('/recherche');
   };
 
   const getFeatureImage = (key: string, fallback: string) => {
@@ -161,7 +159,7 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      <FeaturedListings onNavigate={onNavigate} />
+      <FeaturedListings />
 
 {(() => {
         const landlordFeatures = [
@@ -349,7 +347,7 @@ export default function Home({ onNavigate }: HomeProps) {
             </div>
 
             <button
-              onClick={() => onNavigate(user ? 'search' : 'signup')}
+              onClick={() => navigate(user ? '/recherche' : '/inscription')}
               className="px-6 py-3 sm:px-8 sm:py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium text-sm sm:text-base"
             >
               {user ? t('nav.search') : t('nav.signUp')}
@@ -397,7 +395,7 @@ export default function Home({ onNavigate }: HomeProps) {
             </div>
 
             <button
-              onClick={() => onNavigate(user ? 'addListing' : 'signup')}
+              onClick={() => navigate(user ? '/ajouter-annonce' : '/inscription')}
               className="px-6 py-3 sm:px-8 sm:py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium text-sm sm:text-base"
             >
               {user ? t('nav.addListing') : t('nav.signUp')}
@@ -415,7 +413,7 @@ export default function Home({ onNavigate }: HomeProps) {
             {t('home.cta.subtitle')}
           </p>
           <button
-            onClick={() => onNavigate('signup')}
+            onClick={() => navigate('/inscription')}
             className="px-8 py-4 sm:px-10 sm:py-5 bg-rose-500 text-white text-base sm:text-lg font-semibold rounded-full hover:bg-rose-600 transform active:scale-95 sm:hover:scale-105 transition-all shadow-xl"
           >
             {t('nav.signUp')}
