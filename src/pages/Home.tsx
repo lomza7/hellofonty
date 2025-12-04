@@ -33,7 +33,7 @@ export default function Home({ onNavigate }: HomeProps) {
           key={index}
           style={{
             color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-            textShadow: '0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2)',
+            textShadow: '0 3px 12px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3)',
           }}
         >
           {letter}
