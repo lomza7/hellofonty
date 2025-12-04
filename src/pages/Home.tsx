@@ -40,7 +40,7 @@ export default function Home({ onNavigate }: HomeProps) {
               </div>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-white mb-2 sm:mb-4 tracking-tight text-center leading-tight px-2">
+            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold text-white mb-2 sm:mb-4 tracking-tight text-center leading-tight px-2">
               {t('home.hero.title')}
             </h1>
             <p className="text-xs sm:text-lg md:text-xl text-white mb-6 sm:mb-8 font-light text-center px-6">
