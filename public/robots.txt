@@ -1,0 +1,21 @@
+# robots.txt pour HELLOFONTY
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /profil
+Disallow: /messages
+Disallow: /mes-annonces
+Disallow: /mes-demandes
+Disallow: /mes-reservations
+Disallow: /mes-documents
+Disallow: /documents-proprietaire
+Disallow: /mon-abonnement
+Disallow: /guide-acces
+Disallow: /etat-des-lieux
+Disallow: /mes-baux
+Disallow: /modifier-annonce/*
+Disallow: /partage/*
+
+Sitemap: https://hellofonty.com/sitemap.xml
