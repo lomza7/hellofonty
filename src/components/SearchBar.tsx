@@ -54,19 +54,19 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-2xl p-2.5 sm:p-2">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2">
+    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5">
         {/* Type de logement */}
         <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-3 sm:px-4 pt-1 sm:pt-2">
+          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.propertyTypeLabel')}
           </label>
           <div className="relative">
-            <Home className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
+            <Home className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             <select
               value={propertyType}
               onChange={(e) => setPropertyType(e.target.value)}
-              className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 text-xs sm:text-base text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-xl transition"
+              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
             >
               <option value="all">🏘️ {t('search.propertyType.option.all')}</option>
               <option value="room">🛏️ {t('search.propertyType.option.room')}</option>
@@ -78,17 +78,17 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date d'arrivée */}
         <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-3 sm:px-4 pt-1 sm:pt-2">
+          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.checkIn')}
           </label>
           <div className="relative">
-            <Calendar className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             <input
               type="date"
               min={today}
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 text-xs sm:text-base text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-xl transition"
+              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkInPlaceholder')}
             />
           </div>
@@ -96,17 +96,17 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date de départ */}
         <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-3 sm:px-4 pt-1 sm:pt-2">
+          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.checkOut')}
           </label>
           <div className="relative">
-            <Calendar className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             <input
               type="date"
               min={checkIn || today}
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 text-xs sm:text-base text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-xl transition"
+              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkOutPlaceholder')}
             />
           </div>
@@ -114,14 +114,14 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Nombre de personnes */}
         <div className="relative">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-3 sm:px-4 pt-1 sm:pt-2">
+          <label className="block text-[9px] font-semibold text-white mb-0.5 px-2 pt-1">
             {t('search.guestsLabel')}
           </label>
           <div className="relative">
-            <Users className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
+            <Users className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             <button
               onClick={() => setShowGuestPicker(!showGuestPicker)}
-              className="w-full pl-9 sm:pl-12 pr-2 sm:pr-4 py-2.5 sm:py-3 text-left text-xs sm:text-base text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition outline-none"
+              className="w-full pl-8 pr-2 py-1.5 text-left text-xs text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition outline-none"
             >
               {guests} {guests === 1 ? t('search.guestSingular') : t('search.guestPlural')}
             </button>
@@ -161,12 +161,12 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
       </div>
 
       {/* Bouton de recherche */}
-      <div className="mt-2 sm:mt-2">
+      <div className="mt-1.5">
         <button
           onClick={handleSearch}
-          className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 sm:py-4 rounded-xl text-sm sm:text-base font-semibold hover:from-rose-600 hover:to-pink-600 transition-all transform active:scale-[0.98] sm:hover:scale-[1.02] shadow-lg flex items-center justify-center space-x-2"
+          className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-2 rounded-lg text-sm font-semibold hover:from-rose-600 hover:to-pink-600 transition-all shadow-lg flex items-center justify-center space-x-2"
         >
-          <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Search className="h-4 w-4" />
           <span>{t('search.searchButton')}</span>
         </button>
       </div>
