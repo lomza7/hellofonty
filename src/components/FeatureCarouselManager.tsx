@@ -22,6 +22,14 @@ const featureLabels: Record<string, string> = {
   'landlords.verification': 'Vérification',
   'landlords.messaging': 'Messagerie',
   'landlords.stats': 'Statistiques',
+  'students.search': 'Recherche de logements',
+  'students.booking': 'Système de réservation',
+  'students.verified': 'Annonces vérifiées',
+  'students.documents': 'Gestion des documents',
+  'students.messaging': 'Messagerie sécurisée',
+  'students.reviews': 'Avis et évaluations',
+  'students.favorites': 'Favoris',
+  'students.profile': 'Gestion du profil',
 };
 
 export default function FeatureCarouselManager() {
@@ -33,10 +41,11 @@ export default function FeatureCarouselManager() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [imageDropZone, setImageDropZone] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'landlords' | 'students'>('landlords');
 
   useEffect(() => {
     loadFeatures();
-  }, []);
+  }, [selectedCategory]);
 
   async function loadFeatures() {
     try {
@@ -44,6 +53,7 @@ export default function FeatureCarouselManager() {
       const { data, error } = await supabase
         .from('feature_carousel_images')
         .select('*')
+        .like('feature_key', `${selectedCategory}.%`)
         .order('display_order', { ascending: true });
 
       if (error) throw error;
@@ -219,12 +229,35 @@ export default function FeatureCarouselManager() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <Image className="w-6 h-6 text-rose-600" />
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900">Gestion du Carousel des Fonctionnalités</h2>
             <p className="text-sm text-gray-600 mt-1">
               Modifiez les images affichées dans le carousel de la page d'accueil
             </p>
           </div>
+        </div>
+
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setSelectedCategory('landlords')}
+            className={`px-6 py-3 font-medium transition-all relative ${
+              selectedCategory === 'landlords'
+                ? 'text-rose-600 border-b-2 border-rose-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Propriétaires
+          </button>
+          <button
+            onClick={() => setSelectedCategory('students')}
+            className={`px-6 py-3 font-medium transition-all relative ${
+              selectedCategory === 'students'
+                ? 'text-rose-600 border-b-2 border-rose-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Étudiants
+          </button>
         </div>
 
         {error && (

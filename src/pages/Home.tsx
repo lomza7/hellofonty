@@ -194,49 +194,49 @@ export default function Home({ onNavigate }: HomeProps) {
           icon: <Search className="w-7 h-7" />,
           title: t('features.students.search.title'),
           description: t('features.students.search.desc'),
-          imageUrl: 'https://images.pexels.com/photos/5582868/pexels-photo-5582868.jpeg'
+          imageUrl: getFeatureImage('students.search', 'https://images.pexels.com/photos/5582868/pexels-photo-5582868.jpeg')
         },
         {
           icon: <Shield className="w-7 h-7" />,
           title: t('features.students.verified.title'),
           description: t('features.students.verified.desc'),
-          imageUrl: 'https://images.pexels.com/photos/7821513/pexels-photo-7821513.jpeg'
+          imageUrl: getFeatureImage('students.verified', 'https://images.pexels.com/photos/7821513/pexels-photo-7821513.jpeg')
         },
         {
           icon: <Heart className="w-7 h-7" />,
           title: t('features.students.favorites.title'),
           description: t('features.students.favorites.desc'),
-          imageUrl: 'https://images.pexels.com/photos/1370704/pexels-photo-1370704.jpeg'
+          imageUrl: getFeatureImage('students.favorites', 'https://images.pexels.com/photos/1370704/pexels-photo-1370704.jpeg')
         },
         {
           icon: <Calendar className="w-7 h-7" />,
           title: t('features.students.booking.title'),
           description: t('features.students.booking.desc'),
-          imageUrl: 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg'
+          imageUrl: getFeatureImage('students.booking', 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg')
         },
         {
           icon: <FileText className="w-7 h-7" />,
           title: t('features.students.documents.title'),
           description: t('features.students.documents.desc'),
-          imageUrl: 'https://images.pexels.com/photos/8112195/pexels-photo-8112195.jpeg'
+          imageUrl: getFeatureImage('students.documents', 'https://images.pexels.com/photos/8112195/pexels-photo-8112195.jpeg')
         },
         {
           icon: <Key className="w-7 h-7" />,
           title: t('features.students.access.title'),
           description: t('features.students.access.desc'),
-          imageUrl: 'https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg'
+          imageUrl: getFeatureImage('students.access', 'https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg')
         },
         {
           icon: <Users className="w-7 h-7" />,
           title: t('features.students.community.title'),
           description: t('features.students.community.desc'),
-          imageUrl: 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg'
+          imageUrl: getFeatureImage('students.community', 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg')
         },
         {
           icon: <Star className="w-7 h-7" />,
           title: t('features.students.free.title'),
           description: t('features.students.free.desc'),
-          imageUrl: 'https://images.pexels.com/photos/259027/pexels-photo-259027.jpeg'
+          imageUrl: getFeatureImage('students.free', 'https://images.pexels.com/photos/259027/pexels-photo-259027.jpeg')
         }
       ]}
       />
