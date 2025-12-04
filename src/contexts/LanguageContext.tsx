@@ -637,7 +637,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { profile, updateProfile } = useAuth();
-  const [language, setLanguageState] = useState<Language>('fr');
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
     if (profile?.preferred_language) {
