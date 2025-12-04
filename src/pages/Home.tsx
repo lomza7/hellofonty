@@ -20,6 +20,27 @@ export default function Home({ onNavigate }: HomeProps) {
     onNavigate('search');
   };
 
+  const renderGradientText = (text: string) => {
+    const letters = text.split('');
+    return letters.map((letter, index) => {
+      const progress = index / (letters.length - 1);
+      const lightness = 100 - (progress * 8);
+      const saturation = progress * 30;
+      const hue = 350;
+
+      return (
+        <span
+          key={index}
+          style={{
+            color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+          }}
+        >
+          {letter}
+        </span>
+      );
+    });
+  };
+
   return (
     <div className="min-h-screen">
       <div
@@ -40,8 +61,8 @@ export default function Home({ onNavigate }: HomeProps) {
               </div>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-2 sm:mb-4 tracking-tight text-center leading-tight px-2 bg-gradient-to-r from-white via-rose-300 to-rose-500 bg-clip-text text-transparent">
-              {t('home.hero.title')}
+            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-2 sm:mb-4 tracking-tight text-center leading-tight px-2">
+              {renderGradientText(t('home.hero.title'))}
             </h1>
             <p className="text-xs sm:text-lg md:text-xl text-white mb-6 sm:mb-8 font-light text-center px-6">
               {t('home.hero.subtitle')}
