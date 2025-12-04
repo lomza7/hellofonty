@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, BedDouble, Bath, Users, Heart } from 'lucide-react';
 import { supabase, Favorite } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 
-type FavoritesProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
-
-export default function Favorites({ onNavigate }: FavoritesProps) {
+export default function Favorites() {
   const { t } = useLanguage();
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +58,7 @@ export default function Favorites({ onNavigate }: FavoritesProps) {
           <div className="text-center py-12 bg-white rounded-xl">
             <p className="text-xl text-gray-600 mb-6">{t('favorites.empty')}</p>
             <button
-              onClick={() => onNavigate('search')}
+              onClick={() => navigate('/recherche')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               {t('nav.search')}
@@ -78,7 +76,7 @@ export default function Favorites({ onNavigate }: FavoritesProps) {
                   className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                 >
                   <div
-                    onClick={() => onNavigate('listing', listing.id)}
+                    onClick={() => navigate(`/logement/${listing.id}`)}
                     className="relative h-48 bg-gradient-to-br from-blue-400 to-blue-600 cursor-pointer"
                   >
                     {listing.images && listing.images.length > 0 ? (
@@ -104,7 +102,7 @@ export default function Favorites({ onNavigate }: FavoritesProps) {
                   </div>
 
                   <div
-                    onClick={() => onNavigate('listing', listing.id)}
+                    onClick={() => navigate(`/logement/${listing.id}`)}
                     className="p-5 cursor-pointer"
                   >
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{listing.title}</h3>

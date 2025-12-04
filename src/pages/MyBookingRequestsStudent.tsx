@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,12 +23,9 @@ type Booking = {
   };
 };
 
-type MyBookingRequestsStudentProps = {
-  onNavigate: (page: string, id?: string) => void;
-};
-
-export default function MyBookingRequestsStudent({ onNavigate }: MyBookingRequestsStudentProps) {
+export default function MyBookingRequestsStudent() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -170,7 +168,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
               Vous n'avez pas encore effectué de demande de réservation.
             </p>
             <button
-              onClick={() => onNavigate('search')}
+              onClick={() => navigate('/recherche')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
             >
               Rechercher un logement
@@ -186,7 +184,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                 <div className="flex flex-col md:flex-row">
                   <div
                     className="md:w-64 h-48 md:h-auto cursor-pointer"
-                    onClick={() => onNavigate('listing', booking.listing.id)}
+                    onClick={() => navigate(`/logement/${booking.listing.id}`)}
                   >
                     {booking.listing.images && booking.listing.images.length > 0 ? (
                       <img
@@ -206,7 +204,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                       <div className="flex-1 mb-4 md:mb-0">
                         <h3
                           className="text-2xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition"
-                          onClick={() => onNavigate('listing', booking.listing.id)}
+                          onClick={() => navigate(`/logement/${booking.listing.id}`)}
                         >
                           {booking.listing.title}
                         </h3>

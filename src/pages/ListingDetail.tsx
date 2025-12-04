@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -6,14 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 import BookingCalendar from '../components/BookingCalendar';
 import ListingMap from '../components/ListingMap';
 
-type ListingDetailProps = {
-  listingId: string;
-  onNavigate: (page: string, id?: string) => void;
-};
-
-export default function ListingDetail({ listingId, onNavigate }: ListingDetailProps) {
+export default function ListingDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t, translateFeature } = useLanguage();
   const { user, profile } = useAuth();
+  const listingId = id!;
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -128,7 +127,7 @@ export default function ListingDetail({ listingId, onNavigate }: ListingDetailPr
 
   const handleContactClick = () => {
     if (!user) {
-      onNavigate('signin');
+      navigate('/connexion');
       return;
     }
     setShowContactForm(!showContactForm);
@@ -142,7 +141,7 @@ export default function ListingDetail({ listingId, onNavigate }: ListingDetailPr
     if (!bookingData || !listing) return;
 
     if (!user || !profile) {
-      onNavigate('signin');
+      navigate('/connexion');
       return;
     }
 
@@ -153,7 +152,7 @@ export default function ListingDetail({ listingId, onNavigate }: ListingDetailPr
           ? '⚠️ Vous devez valider votre compte avant de pouvoir réserver. Rendez-vous sur votre profil pour soumettre vos documents.'
           : '⚠️ You must validate your account before booking. Go to your profile to submit your documents.'
       );
-      onNavigate('profile');
+      navigate('/profil');
       return;
     }
 
@@ -257,7 +256,7 @@ En attente de votre confirmation.`;
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <button
-          onClick={() => onNavigate('home')}
+          onClick={() => navigate('/')}
           className="flex items-center space-x-2 mb-6 px-4 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
         >
           <ArrowLeft className="h-5 w-5" />

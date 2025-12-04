@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-
-type PricingProps = {
-  onNavigate: (page: string) => void;
-};
 
 interface PricingPlan {
   id: string;
@@ -22,9 +19,10 @@ interface PricingPlan {
   display_order: number;
 }
 
-export default function Pricing({ onNavigate }: PricingProps) {
+export default function Pricing() {
   const { language } = useLanguage();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -146,7 +144,7 @@ export default function Pricing({ onNavigate }: PricingProps) {
                   </div>
 
                   <button
-                    onClick={() => onNavigate(user ? 'mySubscription' : 'signup')}
+                    onClick={() => navigate(user ? '/mon-abonnement' : '/inscription')}
                     className={buttonClass}
                   >
                     {isPremium
@@ -209,7 +207,7 @@ export default function Pricing({ onNavigate }: PricingProps) {
                   </div>
 
                   <button
-                    onClick={() => onNavigate(user ? 'search' : 'signup')}
+                    onClick={() => navigate(user ? '/recherche' : '/inscription')}
                     className="w-full py-4 bg-gray-900 text-white rounded-full font-semibold hover:bg-gray-800 transition"
                   >
                     {isFrench ? 'Commencer la recherche' : 'Start searching'}
@@ -230,7 +228,7 @@ export default function Pricing({ onNavigate }: PricingProps) {
               : 'Our team is here to help you choose the best option'}
           </p>
           <button
-            onClick={() => onNavigate(user ? 'messages' : 'signup')}
+            onClick={() => navigate(user ? '/messages' : '/inscription')}
             className="px-8 py-4 bg-rose-500 text-white rounded-full font-semibold hover:bg-rose-600 transition"
           >
             {isFrench ? 'Contactez-nous' : 'Contact us'}

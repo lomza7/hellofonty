@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, X, Home, MapPin, Sparkles, Camera, ArrowRight, ArrowLeft, Check, Euro, Plus, Trash2, ChevronLeft, ChevronRight, RotateCw, Info, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import AddressAutocomplete from '../components/AddressAutocomplete';
-
-type AddEditListingProps = {
-  listingId?: string;
-  onNavigate: (page: string) => void;
-};
 
 const commonAmenities = [
   'WiFi',
@@ -48,7 +44,10 @@ const STEPS = [
   { id: 6, title: 'Photos', titleEn: 'Photos', icon: Camera },
 ];
 
-export default function AddEditListing({ listingId, onNavigate }: AddEditListingProps) {
+export default function AddEditListing() {
+  const { id } = useParams<{ id: string }>();
+  const listingId = id;
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { profile } = useAuth();
 
@@ -483,9 +482,9 @@ export default function AddEditListing({ listingId, onNavigate }: AddEditListing
         }
 
         if (profile.role === 'admin') {
-          onNavigate('admin');
+          navigate('/admin');
         } else {
-          onNavigate('myListings');
+          navigate('/mes-annonces');
         }
       } else {
         listingData.landlord_id = profile.id;
@@ -1848,7 +1847,7 @@ export default function AddEditListing({ listingId, onNavigate }: AddEditListing
 
           <button
             type="button"
-            onClick={() => onNavigate('myListings')}
+            onClick={() => navigate('/mes-annonces')}
             className="w-full mt-4 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition underline"
           >
             {t('common.cancel')}
@@ -1919,7 +1918,7 @@ export default function AddEditListing({ listingId, onNavigate }: AddEditListing
               <button
                 onClick={() => {
                   setShowSuccessModal(false);
-                  onNavigate('myListings');
+                  navigate('/mes-annonces');
                 }}
                 className="w-full py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold rounded-xl hover:from-rose-600 hover:to-rose-700 transition-all transform hover:scale-105 shadow-lg"
               >

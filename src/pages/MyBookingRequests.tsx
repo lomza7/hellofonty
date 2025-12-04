@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Check, X, User, Home, Clock, Euro, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,13 +27,10 @@ type Booking = {
   };
 };
 
-type MyBookingRequestsProps = {
-  onNavigate: (page: string, id?: string) => void;
-};
-
-export default function MyBookingRequests({ onNavigate }: MyBookingRequestsProps) {
+export default function MyBookingRequests() {
   const { profile } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
@@ -198,7 +196,7 @@ export default function MyBookingRequests({ onNavigate }: MyBookingRequestsProps
                         <Home className="w-5 h-5 text-blue-600 mr-2" />
                         <h3
                           className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600"
-                          onClick={() => onNavigate('listing', booking.listing_id)}
+                          onClick={() => navigate(`/logement/${booking.listing_id}`)}
                         >
                           {booking.listing.title}
                         </h3>
@@ -282,7 +280,7 @@ export default function MyBookingRequests({ onNavigate }: MyBookingRequestsProps
                   {booking.status === 'confirmed' && (
                     <div className="flex space-x-3">
                       <button
-                        onClick={() => onNavigate('messages', booking.student_id)}
+                        onClick={() => navigate('/messages')}
                         className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
                       >
                         <MessageCircle className="w-5 h-5" />

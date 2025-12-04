@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, BedDouble, Bath, Users, Pencil, Trash2, PlusCircle, Copy, Calendar } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import CalendarManager from '../components/CalendarManager';
 
-type MyListingsProps = {
-  onNavigate: (page: string, listingId?: string) => void;
-};
-
-export default function MyListings({ onNavigate }: MyListingsProps) {
+export default function MyListings() {
   const { t } = useLanguage();
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +115,7 @@ export default function MyListings({ onNavigate }: MyListingsProps) {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">{t('myListings.title')}</h1>
           <button
-            onClick={() => onNavigate('addListing')}
+            onClick={() => navigate('/ajouter-annonce')}
             className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             <PlusCircle className="h-5 w-5" />
@@ -133,7 +131,7 @@ export default function MyListings({ onNavigate }: MyListingsProps) {
           <div className="text-center py-12 bg-white rounded-xl">
             <p className="text-xl text-gray-600 mb-6">{t('myListings.empty')}</p>
             <button
-              onClick={() => onNavigate('addListing')}
+              onClick={() => navigate('/ajouter-annonce')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               {t('myListings.add')}
@@ -153,7 +151,7 @@ export default function MyListings({ onNavigate }: MyListingsProps) {
                         src={listing.images[0].image_url}
                         alt={listing.title}
                         className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => onNavigate('listing', listing.id)}
+                        onClick={() => navigate(`/logement/${listing.id}`)}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -168,7 +166,7 @@ export default function MyListings({ onNavigate }: MyListingsProps) {
                         <div className="flex items-center space-x-3 mb-2">
                           <h3
                             className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600"
-                            onClick={() => onNavigate('listing', listing.id)}
+                            onClick={() => navigate(`/logement/${listing.id}`)}
                           >
                             {listing.title}
                           </h3>
@@ -231,7 +229,7 @@ export default function MyListings({ onNavigate }: MyListingsProps) {
                           <Calendar className="h-5 w-5" />
                         </button>
                         <button
-                          onClick={() => onNavigate('editListing', listing.id)}
+                          onClick={() => navigate(`/modifier-annonce/${listing.id}`)}
                           className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
                           title={t('myListings.edit')}
                         >

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
@@ -25,13 +26,10 @@ type Invoice = {
   created_at: string;
 };
 
-type MySubscriptionProps = {
-  onNavigate: (page: string) => void;
-};
-
-export default function MySubscription({ onNavigate }: MySubscriptionProps) {
+export default function MySubscription() {
   const { user, profile } = useAuth();
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +169,7 @@ export default function MySubscription({ onNavigate }: MySubscriptionProps) {
             {language === 'fr' ? 'Accès réservé aux propriétaires' : 'Access reserved for landlords'}
           </h2>
           <button
-            onClick={() => onNavigate('home')}
+            onClick={() => navigate('/')}
             className="text-rose-500 hover:text-rose-600 font-medium"
           >
             {language === 'fr' ? 'Retour à l\'accueil' : 'Back to home'}

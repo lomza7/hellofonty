@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 
-type ResetPasswordProps = {
-  onNavigate: (page: string) => void;
-};
-
-export default function ResetPassword({ onNavigate }: ResetPasswordProps) {
+export default function ResetPassword() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +48,7 @@ export default function ResetPassword({ onNavigate }: ResetPasswordProps) {
 
       setSuccess(`✅ ${t('auth.passwordUpdated')}`);
       setTimeout(() => {
-        onNavigate('signin');
+        navigate('/connexion');
       }, 2000);
     } catch (err: any) {
       setError(err.message || t('common.error'));
@@ -126,7 +124,7 @@ export default function ResetPassword({ onNavigate }: ResetPasswordProps) {
 
         <div className="mt-8 text-center">
           <button
-            onClick={() => onNavigate('signin')}
+            onClick={() => navigate('/connexion')}
             className="text-gray-600 hover:text-gray-900 text-sm font-medium transition"
           >
             ← {t('auth.backToSignIn')}
