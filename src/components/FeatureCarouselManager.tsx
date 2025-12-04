@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle, GripVertical } from 'lucide-react';
 
 interface FeatureImage {
   id: string;
@@ -29,6 +29,8 @@ export default function FeatureCarouselManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadFeatures();
@@ -74,6 +76,62 @@ export default function FeatureCarouselManager() {
     await updateFeature(feature.id, { is_active: !feature.is_active });
   }
 
+  function handleDragStart(index: number) {
+    setDraggedIndex(index);
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }
+
+  function handleDragLeave() {
+    setDragOverIndex(null);
+  }
+
+  async function handleDrop(e: React.DragEvent, dropIndex: number) {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newFeatures = [...features];
+    const draggedItem = newFeatures[draggedIndex];
+
+    newFeatures.splice(draggedIndex, 1);
+    newFeatures.splice(dropIndex, 0, draggedItem);
+
+    const updatedFeatures = newFeatures.map((feature, index) => ({
+      ...feature,
+      display_order: index + 1
+    }));
+
+    setFeatures(updatedFeatures);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    try {
+      for (const feature of updatedFeatures) {
+        await supabase
+          .from('feature_carousel_images')
+          .update({ display_order: feature.display_order })
+          .eq('id', feature.id);
+      }
+    } catch (err) {
+      console.error('Error updating order:', err);
+      alert('Erreur lors de la mise à jour de l\'ordre');
+      await loadFeatures();
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -106,16 +164,29 @@ export default function FeatureCarouselManager() {
         )}
 
         <div className="space-y-4">
-          {features.map((feature) => (
+          {features.map((feature, index) => (
             <div
               key={feature.id}
-              className={`p-5 rounded-lg border-2 transition-all ${
-                feature.is_active
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`p-5 rounded-lg border-2 transition-all cursor-move ${
+                draggedIndex === index
+                  ? 'opacity-50 scale-95'
+                  : dragOverIndex === index
+                  ? 'border-rose-500 bg-rose-50 scale-105 shadow-lg'
+                  : feature.is_active
                   ? 'bg-white border-gray-200 hover:border-rose-300'
                   : 'bg-gray-50 border-gray-200 opacity-60'
               }`}
             >
               <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex items-center justify-center lg:justify-start">
+                  <GripVertical className="w-6 h-6 text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0" />
+                </div>
                 <div className="lg:w-48 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   <img
                     src={feature.image_url}
@@ -238,6 +309,7 @@ export default function FeatureCarouselManager() {
           <div className="flex-1">
             <h3 className="font-semibold text-blue-900 mb-2">Conseils d'utilisation</h3>
             <ul className="space-y-1 text-sm text-blue-800">
+              <li>• <strong>Glissez-déposez</strong> les cartes pour réorganiser l'ordre d'affichage dans le carousel</li>
               <li>• Les images doivent être hébergées en ligne (Pexels) ou placées dans le dossier /public</li>
               <li>• Format recommandé : JPEG ou PNG, ratio 16:9, résolution minimale 800x450px</li>
               <li>• Les modifications sont appliquées immédiatement sur la page d'accueil</li>
