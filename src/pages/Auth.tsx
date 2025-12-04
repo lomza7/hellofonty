@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import EmailVerification from '../components/EmailVerification';
@@ -6,10 +7,10 @@ import { supabase } from '../lib/supabase';
 
 type AuthProps = {
   mode: 'signin' | 'signup';
-  onNavigate: (page: string) => void;
 };
 
-export default function Auth({ mode, onNavigate }: AuthProps) {
+export default function Auth({ mode }: AuthProps) {
+  const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
   const { t } = useLanguage();
 
@@ -38,7 +39,7 @@ export default function Auth({ mode, onNavigate }: AuthProps) {
       if (mode === 'signin') {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        onNavigate('home');
+        navigate('/');
       } else {
         const { error } = await signUp(email, password, {
           first_name: firstName,
@@ -63,7 +64,7 @@ export default function Auth({ mode, onNavigate }: AuthProps) {
     setSuccess('Email vérifié ! Vous pouvez maintenant vous connecter. / Email verified! You can now sign in.');
     setShowEmailVerification(false);
     setTimeout(() => {
-      onNavigate('signin');
+      navigate('/connexion');
     }, 2000);
   };
 
@@ -330,7 +331,7 @@ export default function Auth({ mode, onNavigate }: AuthProps) {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => onNavigate(mode === 'signin' ? 'signup' : 'signin')}
+            onClick={() => navigate(mode === 'signin' ? '/inscription' : '/connexion')}
             className="text-gray-600 hover:text-gray-900 text-sm font-medium transition"
           >
             {mode === 'signin' ? t('auth.noAccount') : t('auth.alreadyAccount')}
