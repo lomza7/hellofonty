@@ -54,19 +54,19 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-1.5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5">
+    <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-2 sm:p-1.5 max-w-full overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-1.5 max-w-full">
         {/* Type de logement */}
-        <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
+        <div className="relative group max-w-full overflow-hidden">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.propertyTypeLabel')}
           </label>
-          <div className="relative">
-            <Home className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <div className="relative max-w-full">
+            <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none" />
             <select
               value={propertyType}
               onChange={(e) => setPropertyType(e.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
             >
               <option value="all">🏘️ {t('search.propertyType.option.all')}</option>
               <option value="room">🛏️ {t('search.propertyType.option.room')}</option>
@@ -77,51 +77,51 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
         </div>
 
         {/* Date d'arrivée */}
-        <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
+        <div className="relative group max-w-full overflow-hidden">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.checkIn')}
           </label>
-          <div className="relative">
-            <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <div className="relative max-w-full">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
             <input
               type="date"
               min={today}
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkInPlaceholder')}
             />
           </div>
         </div>
 
         {/* Date de départ */}
-        <div className="relative group">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
+        <div className="relative group max-w-full overflow-hidden">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.checkOut')}
           </label>
-          <div className="relative">
-            <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <div className="relative max-w-full">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
             <input
               type="date"
               min={checkIn || today}
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkOutPlaceholder')}
             />
           </div>
         </div>
 
         {/* Nombre de personnes */}
-        <div className="relative">
-          <label className="block text-[10px] sm:text-xs font-semibold text-white mb-0.5 px-2 pt-1">
+        <div className="relative max-w-full overflow-hidden">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.guestsLabel')}
           </label>
-          <div className="relative">
-            <Users className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <div className="relative max-w-full">
+            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none" />
             <button
               onClick={() => setShowGuestPicker(!showGuestPicker)}
-              className="w-full pl-8 pr-2 py-1.5 text-left text-xs text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition outline-none"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-left text-sm sm:text-xs text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition outline-none"
             >
               {guests} {guests === 1 ? t('search.guestSingular') : t('search.guestPlural')}
             </button>
@@ -161,12 +161,12 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
       </div>
 
       {/* Bouton de recherche */}
-      <div className="mt-1.5">
+      <div className="mt-2 sm:mt-1.5">
         <button
           onClick={handleSearch}
-          className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-2 rounded-lg text-sm font-semibold hover:from-rose-600 hover:to-pink-600 transition-all shadow-lg flex items-center justify-center space-x-2"
+          className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 sm:py-2 rounded-lg text-base sm:text-sm font-semibold hover:from-rose-600 hover:to-pink-600 transition-all shadow-lg flex items-center justify-center space-x-2"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-5 w-5 sm:h-4 sm:w-4" />
           <span>{t('search.searchButton')}</span>
         </button>
       </div>

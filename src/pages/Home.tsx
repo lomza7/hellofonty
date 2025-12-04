@@ -51,8 +51,8 @@ export default function Home({ onNavigate }: HomeProps) {
             'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(/442_CI_200703_forest_08.jpg)',
         }}
       >
-        <div className="absolute inset-0 flex items-center justify-center py-8 sm:py-16">
-          <div className="w-full px-4 sm:px-6 max-w-5xl">
+        <div className="absolute inset-0 flex items-center justify-center py-6 sm:py-16">
+          <div className="w-full px-3 sm:px-6 max-w-5xl overflow-hidden">
             <div className="flex justify-center mb-4 sm:mb-6">
               <div className="inline-flex items-center gap-2 px-3 sm:px-6 py-1.5 sm:py-3 bg-white/10 backdrop-blur-md border-2 border-white/30 rounded-full hover:bg-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer group">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -62,14 +62,14 @@ export default function Home({ onNavigate }: HomeProps) {
               </div>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-2 sm:mb-4 tracking-tight text-center leading-tight px-2">
+            <h1 className="text-3xl sm:text-6xl md:text-8xl font-bold mb-3 sm:mb-4 tracking-tight text-center leading-tight px-2">
               {renderGradientText(t('home.hero.title'))}
             </h1>
-            <p className="text-xs sm:text-lg md:text-xl text-white mb-6 sm:mb-8 font-light text-center px-6">
+            <p className="text-xs sm:text-lg md:text-xl text-white mb-5 sm:mb-8 font-light text-center px-4">
               {t('home.hero.subtitle')}
             </p>
 
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto px-2 sm:px-0 overflow-hidden">
               <SearchBar onSearch={handleSearch} />
             </div>
 
