@@ -135,7 +135,7 @@ export default function Home() {
               </div>
             </div>
 
-            <h1 className="text-3xl sm:text-6xl md:text-8xl font-bold mb-3 sm:mb-4 tracking-tight text-center leading-tight px-2">
+            <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-3 sm:mb-4 tracking-tight text-center leading-tight px-2">
               {renderGradientText(t('home.hero.title'))}
             </h1>
             <p className="text-xs sm:text-lg md:text-xl text-white mb-5 sm:mb-8 font-light text-center px-4">
