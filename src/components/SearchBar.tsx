@@ -78,17 +78,17 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date d'arrivée */}
         <div className="relative group max-w-full overflow-hidden">
-          <label className="block text-[10px] sm:text-[11px] font-semibold text-white mb-0.5 sm:mb-1 px-2 pt-0.5 sm:pt-1">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.checkIn')}
           </label>
           <div className="relative max-w-full">
-            <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
             <input
               type="date"
               min={today}
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full max-w-full pl-8 sm:pl-8 pr-2 sm:pr-2 py-1.5 sm:py-1.5 text-xs sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkInPlaceholder')}
             />
           </div>
@@ -96,17 +96,17 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
 
         {/* Date de départ */}
         <div className="relative group max-w-full overflow-hidden">
-          <label className="block text-[10px] sm:text-[11px] font-semibold text-white mb-0.5 sm:mb-1 px-2 pt-0.5 sm:pt-1">
+          <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.checkOut')}
           </label>
           <div className="relative max-w-full">
-            <Calendar className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none z-10" />
             <input
               type="date"
               min={checkIn || today}
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full max-w-full pl-8 sm:pl-8 pr-2 sm:pr-2 py-1.5 sm:py-1.5 text-xs sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
+              className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-gray-700 bg-white outline-none cursor-pointer hover:bg-gray-50 rounded-lg transition"
               placeholder={t('search.checkOutPlaceholder')}
             />
           </div>
