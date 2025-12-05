@@ -62,6 +62,8 @@ export default function Leases() {
   const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
   const [availableBookings, setAvailableBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [contractHtml, setContractHtml] = useState<string>('');
+  const [loadingContract, setLoadingContract] = useState(false);
 
   const [formData, setFormData] = useState({
     booking_id: '',
@@ -254,6 +256,38 @@ export default function Leases() {
     }
   };
 
+  const loadContractHtml = async (leaseId: string) => {
+    setLoadingContract(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du contrat');
+      }
+
+      const html = await response.text();
+      setContractHtml(html);
+    } catch (error) {
+      console.error('Erreur chargement contrat:', error);
+      alert('Erreur lors du chargement du contrat');
+    } finally {
+      setLoadingContract(false);
+    }
+  };
+
   const handleDownloadContract = async (leaseId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -289,6 +323,12 @@ export default function Leases() {
       console.error('Erreur téléchargement contrat:', error);
       alert('Erreur lors du téléchargement du contrat');
     }
+  };
+
+  const handleViewContract = async (lease: Lease) => {
+    setSelectedLease(lease);
+    setShowViewModal(true);
+    await loadContractHtml(lease.id);
   };
 
   const resetForm = () => {
@@ -417,10 +457,7 @@ export default function Leases() {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => {
-                        setSelectedLease(lease);
-                        setShowViewModal(true);
-                      }}
+                      onClick={() => handleViewContract(lease)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Voir le bail"
                     >
@@ -683,7 +720,10 @@ export default function Leases() {
                       Détails du bail
                     </h3>
                     <button
-                      onClick={() => setShowViewModal(false)}
+                      onClick={() => {
+                        setShowViewModal(false);
+                        setContractHtml('');
+                      }}
                       className="text-white hover:bg-blue-800 rounded-lg p-2 transition-colors"
                     >
                       <X className="w-6 h-6" />
@@ -692,86 +732,43 @@ export default function Leases() {
                 </div>
 
                 <div className="p-6">
-                  <div className="bg-white border-2 border-gray-200 rounded-xl p-8">
-                    <div className="text-center mb-8">
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">CONTRAT DE LOCATION</h1>
-                      <p className="text-gray-600">{selectedLease.lease_type === 'furnished' ? 'Logement Meublé' : 'Logement Non Meublé'}</p>
+                  {loadingContract ? (
+                    <div className="flex items-center justify-center py-20">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Chargement du contrat...</p>
+                      </div>
                     </div>
-
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Bailleur</h3>
-                        <p className="text-gray-700">
-                          {profile?.first_name} {profile?.last_name}
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Locataire</h3>
-                        <p className="text-gray-700">
-                          {selectedLease.tenant?.first_name} {selectedLease.tenant?.last_name}
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Bien loué</h3>
-                        <p className="text-gray-700">
-                          <strong>Adresse :</strong> {selectedLease.listing?.address}<br />
-                          <strong>Description :</strong> {selectedLease.listing?.title}
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Conditions financières</h3>
-                        <p className="text-gray-700">
-                          <strong>Loyer mensuel :</strong> {selectedLease.monthly_rent}€<br />
-                          <strong>Charges :</strong> {selectedLease.charges}€<br />
-                          <strong>Dépôt de garantie :</strong> {selectedLease.security_deposit}€
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Durée du bail</h3>
-                        <p className="text-gray-700">
-                          <strong>Date de début :</strong> {new Date(selectedLease.start_date).toLocaleDateString('fr-FR')}<br />
-                          <strong>Date de fin :</strong> {new Date(selectedLease.end_date).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
-
-                      {selectedLease.terms_and_conditions && (
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Clauses particulières</h3>
-                          <p className="text-gray-700 whitespace-pre-wrap">{selectedLease.terms_and_conditions}</p>
-                        </div>
-                      )}
-
-                      {selectedLease.status === 'draft' && (
-                        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-sm text-blue-800">
-                            <strong>Prochaine étape :</strong> Envoyez ce bail en signature électronique. Cette fonctionnalité sera bientôt disponible.
-                          </p>
-                        </div>
-                      )}
+                  ) : contractHtml ? (
+                    <div
+                      className="bg-white border-2 border-gray-200 rounded-xl overflow-auto"
+                      style={{ maxHeight: 'calc(100vh - 250px)' }}
+                      dangerouslySetInnerHTML={{ __html: contractHtml }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center py-20">
+                      <p className="text-gray-600">Erreur lors du chargement du contrat</p>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
                   <button
-                    onClick={() => setShowViewModal(false)}
+                    onClick={() => {
+                      setShowViewModal(false);
+                      setContractHtml('');
+                    }}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     Fermer
                   </button>
-                  {selectedLease.status === 'draft' && (
-                    <button
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                      title="Signature électronique - Disponible prochainement"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Envoyer en signature
-                    </button>
-                  )}
+                  <button
+                    onClick={() => selectedLease && handleDownloadContract(selectedLease.id)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
+                  </button>
                 </div>
               </div>
             </div>
