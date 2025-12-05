@@ -61,6 +61,7 @@ export default function EditInventory() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [inventory, setInventory] = useState<any>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomTemplates, setRoomTemplates] = useState<RoomTemplate[]>([]);
@@ -73,6 +74,16 @@ export default function EditInventory() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (hasUnsavedChanges && rooms.length > 0 && !saving) {
+      const autoSaveTimer = setTimeout(() => {
+        saveInventory();
+      }, 3000);
+
+      return () => clearTimeout(autoSaveTimer);
+    }
+  }, [hasUnsavedChanges, rooms]);
 
   const loadData = async () => {
     if (!id || !user) return;
@@ -172,11 +183,13 @@ export default function EditInventory() {
     setNewRoomType('');
     setNewRoomName('');
     setShowAddRoom(false);
+    setHasUnsavedChanges(true);
   };
 
   const deleteRoom = (index: number) => {
     if (confirm(language === 'fr' ? 'Supprimer cette pièce ?' : 'Delete this room?')) {
       setRooms(rooms.filter((_, i) => i !== index));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -193,6 +206,7 @@ export default function EditInventory() {
       ...updates
     };
     setRooms(newRooms);
+    setHasUnsavedChanges(true);
   };
 
   const addElementPhoto = (roomIndex: number, elementIndex: number, file: File) => {
@@ -207,6 +221,7 @@ export default function EditInventory() {
       const newRooms = [...rooms];
       newRooms[roomIndex].elements[elementIndex].photos.push(newPhoto);
       setRooms(newRooms);
+      setHasUnsavedChanges(true);
     };
     reader.readAsDataURL(file);
   };
@@ -216,6 +231,7 @@ export default function EditInventory() {
     newRooms[roomIndex].elements[elementIndex].photos =
       newRooms[roomIndex].elements[elementIndex].photos.filter((_, i) => i !== photoIndex);
     setRooms(newRooms);
+    setHasUnsavedChanges(true);
   };
 
   const saveInventory = async () => {
@@ -317,7 +333,8 @@ export default function EditInventory() {
       }
 
       await loadData();
-      alert(language === 'fr' ? 'Sauvegardé avec succès' : 'Saved successfully');
+      setHasUnsavedChanges(false);
+      alert(language === 'fr' ? 'Sauvegardé automatiquement' : 'Auto-saved successfully');
     } catch (error) {
       console.error('Error saving inventory:', error);
       alert(language === 'fr' ? 'Erreur lors de la sauvegarde' : 'Error saving');
