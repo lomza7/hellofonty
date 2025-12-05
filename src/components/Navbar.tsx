@@ -44,6 +44,12 @@ export default function Navbar() {
     }
   }, [profile?.id]);
 
+  useEffect(() => {
+    if (profile?.id) {
+      loadNotificationCounts();
+    }
+  }, [location.pathname, profile?.id]);
+
   const loadNotificationCounts = async () => {
     if (!profile?.id) return;
 

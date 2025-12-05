@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,7 @@ type Notification = {
 export default function NotificationBell() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -112,6 +113,12 @@ export default function NotificationBell() {
       };
     }
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      loadNotifications();
+    }
+  }, [location.pathname, profile?.id]);
 
   useEffect(() => {
     if (unreadCount > previousUnreadCountRef.current) {

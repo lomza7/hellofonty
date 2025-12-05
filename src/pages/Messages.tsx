@@ -45,12 +45,16 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const markMessageNotificationsAsRead = async () => {
     if (!profile?.id) return;
 
-    await supabase
+    const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('user_id', profile.id)
       .eq('type', 'message')
       .eq('is_read', false);
+
+    if (!error) {
+      console.log('Notifications messages marquées comme lues');
+    }
   };
 
   useEffect(() => {
