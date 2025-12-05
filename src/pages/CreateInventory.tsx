@@ -155,7 +155,7 @@ export default function CreateInventory() {
         .from('leases')
         .select(`
           *,
-          tenant:profiles!leases_tenant_id_fkey(first_name, last_name, email)
+          tenant:profiles!leases_tenant_id_fkey(first_name, last_name)
         `)
         .eq('listing_id', listingId)
         .order('start_date', { ascending: false });
