@@ -26,6 +26,18 @@ interface Lease {
   };
 }
 
+interface Booking {
+  id: string;
+  start_date: string;
+  end_date: string;
+  student_id: string;
+  student: {
+    first_name: string;
+    last_name: string;
+    id: string;
+  };
+}
+
 export default function CreateInventory() {
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -33,10 +45,12 @@ export default function CreateInventory() {
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [checkInInventories, setCheckInInventories] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     listing_id: '',
+    booking_id: '',
     lease_id: '',
     inventory_type: 'check_in' as 'check_in' | 'check_out',
     inspection_date: new Date().toISOString().split('T')[0],
@@ -52,6 +66,7 @@ export default function CreateInventory() {
 
   useEffect(() => {
     if (formData.listing_id) {
+      loadBookings(formData.listing_id);
       loadLeases(formData.listing_id);
     }
   }, [formData.listing_id]);
@@ -63,7 +78,28 @@ export default function CreateInventory() {
   }, [formData.inventory_type, formData.listing_id]);
 
   useEffect(() => {
-    if (formData.lease_id) {
+    const loadTenantInfo = async () => {
+      if (formData.booking_id) {
+        const selectedBooking = bookings.find(b => b.id === formData.booking_id);
+        if (selectedBooking) {
+          const { data: emailData } = await supabase
+            .rpc('get_user_email', { user_id: selectedBooking.student_id });
+
+          setFormData(prev => ({
+            ...prev,
+            tenant_id: selectedBooking.student_id,
+            tenant_name: `${selectedBooking.student.first_name} ${selectedBooking.student.last_name}`,
+            tenant_email: emailData || ''
+          }));
+        }
+      }
+    };
+
+    loadTenantInfo();
+  }, [formData.booking_id, bookings]);
+
+  useEffect(() => {
+    if (formData.lease_id && !formData.booking_id) {
       const selectedLease = leases.find(l => l.id === formData.lease_id);
       if (selectedLease) {
         setFormData(prev => ({
@@ -74,7 +110,7 @@ export default function CreateInventory() {
         }));
       }
     }
-  }, [formData.lease_id, leases]);
+  }, [formData.lease_id, leases, formData.booking_id]);
 
   const loadListings = async () => {
     if (!user) return;
@@ -91,6 +127,25 @@ export default function CreateInventory() {
       setListings(data || []);
     } catch (error) {
       console.error('Error loading listings:', error);
+    }
+  };
+
+  const loadBookings = async (listingId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          student:profiles!bookings_student_id_fkey(first_name, last_name, id)
+        `)
+        .eq('listing_id', listingId)
+        .eq('status', 'approved')
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
     }
   };
 
@@ -136,6 +191,7 @@ export default function CreateInventory() {
     try {
       const inventoryData = {
         listing_id: formData.listing_id,
+        booking_id: formData.booking_id || null,
         lease_id: formData.lease_id || null,
         inventory_type: formData.inventory_type,
         landlord_id: user.id,
@@ -200,7 +256,7 @@ export default function CreateInventory() {
                 <select
                   required
                   value={formData.listing_id}
-                  onChange={(e) => setFormData({ ...formData, listing_id: e.target.value, lease_id: '', tenant_id: '', tenant_name: '', tenant_email: '' })}
+                  onChange={(e) => setFormData({ ...formData, listing_id: e.target.value, booking_id: '', lease_id: '', tenant_id: '', tenant_name: '', tenant_email: '' })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">
@@ -305,7 +361,37 @@ export default function CreateInventory() {
                 />
               </div>
 
-              {formData.listing_id && leases.length > 0 && (
+              {formData.listing_id && bookings.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-green-900 mb-2">
+                    <Check className="w-4 h-4 inline mr-2" />
+                    {language === 'fr' ? 'Réservation validée' : 'Approved Booking'}
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.booking_id}
+                    onChange={(e) => setFormData({ ...formData, booking_id: e.target.value, lease_id: '', tenant_id: '', tenant_name: '', tenant_email: '' })}
+                    className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">
+                      {language === 'fr' ? 'Sélectionnez une réservation' : 'Select a booking'}
+                    </option>
+                    {bookings.map(booking => (
+                      <option key={booking.id} value={booking.id}>
+                        {booking.student.first_name} {booking.student.last_name} - {new Date(booking.start_date).toLocaleDateString()} → {new Date(booking.end_date).toLocaleDateString()}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-green-700 mt-2">
+                    {language === 'fr'
+                      ? 'Les informations du locataire seront automatiquement remplies'
+                      : 'Tenant information will be automatically filled'}
+                  </p>
+                </div>
+              )}
+
+              {formData.listing_id && leases.length > 0 && !formData.booking_id && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {language === 'fr' ? 'Bail associé (optionnel)' : 'Associated Lease (optional)'}
@@ -343,9 +429,17 @@ export default function CreateInventory() {
                       value={formData.tenant_name}
                       onChange={(e) => setFormData({ ...formData, tenant_name: e.target.value })}
                       placeholder={language === 'fr' ? 'Prénom et nom' : 'First and last name'}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      disabled={!!formData.lease_id}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50"
+                      disabled={!!formData.booking_id || !!formData.lease_id}
+                      readOnly={!!formData.booking_id || !!formData.lease_id}
                     />
+                    {(formData.booking_id || formData.lease_id) && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        {language === 'fr'
+                          ? 'Rempli automatiquement depuis la réservation/bail'
+                          : 'Auto-filled from booking/lease'}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -358,9 +452,17 @@ export default function CreateInventory() {
                       value={formData.tenant_email}
                       onChange={(e) => setFormData({ ...formData, tenant_email: e.target.value })}
                       placeholder="email@example.com"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      disabled={!!formData.lease_id}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-50"
+                      disabled={!!formData.booking_id || !!formData.lease_id}
+                      readOnly={!!formData.booking_id || !!formData.lease_id}
                     />
+                    {(formData.booking_id || formData.lease_id) && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        {language === 'fr'
+                          ? 'Rempli automatiquement depuis la réservation/bail'
+                          : 'Auto-filled from booking/lease'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
