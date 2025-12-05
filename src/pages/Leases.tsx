@@ -118,7 +118,29 @@ export default function Leases() {
   const loadAvailableBookings = async () => {
     try {
       if (!user?.id) {
-        console.log('No user ID available');
+        console.log('DEBUG: No user ID available');
+        return;
+      }
+
+      console.log('DEBUG: User ID:', user.id);
+
+      const { data: myListings, error: listingsError } = await supabase
+        .from('listings')
+        .select('id, title')
+        .eq('landlord_id', user.id);
+
+      if (listingsError) {
+        console.error('DEBUG: Error loading listings:', listingsError);
+        return;
+      }
+
+      console.log('DEBUG: My listings:', myListings);
+
+      const myListingIds = myListings?.map(l => l.id) || [];
+
+      if (myListingIds.length === 0) {
+        console.log('DEBUG: No listings found for this landlord');
+        setAvailableBookings([]);
         return;
       }
 
@@ -127,22 +149,10 @@ export default function Leases() {
         .select('booking_id')
         .not('booking_id', 'is', null);
 
-      const existingBookingIds = existingLeases?.map(l => l.booking_id) || [];
+      const existingBookingIds = existingLeases?.map(l => l.booking_id).filter(id => id) || [];
+      console.log('DEBUG: Existing booking IDs with leases:', existingBookingIds);
 
-      const { data: myListings } = await supabase
-        .from('listings')
-        .select('id')
-        .eq('landlord_id', user.id);
-
-      const myListingIds = myListings?.map(l => l.id) || [];
-
-      if (myListingIds.length === 0) {
-        console.log('No listings found for this landlord');
-        setAvailableBookings([]);
-        return;
-      }
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -150,13 +160,21 @@ export default function Leases() {
           student:profiles!bookings_student_id_fkey(id, first_name, last_name, email, phone, address)
         `)
         .eq('status', 'confirmed')
-        .in('listing_id', myListingIds)
-        .not('id', 'in', `(${existingBookingIds.length > 0 ? existingBookingIds.join(',') : 'null'})`)
-        .order('start_date', { ascending: true });
+        .in('listing_id', myListingIds);
 
-      if (error) throw error;
+      if (existingBookingIds.length > 0) {
+        query = query.not('id', 'in', `(${existingBookingIds.join(',')})`);
+      }
 
-      console.log('Available bookings:', data);
+      const { data, error } = await query.order('start_date', { ascending: true });
+
+      if (error) {
+        console.error('DEBUG: Error loading bookings:', error);
+        throw error;
+      }
+
+      console.log('DEBUG: Available bookings found:', data?.length || 0);
+      console.log('DEBUG: Bookings data:', data);
       setAvailableBookings((data || []) as Booking[]);
     } catch (error) {
       console.error('Erreur chargement réservations:', error);
