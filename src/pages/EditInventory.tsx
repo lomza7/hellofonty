@@ -3,10 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import {
-  ArrowLeft, ArrowRight, Save, Plus, Trash2, Camera,
-  ChevronDown, ChevronUp, Edit2, Check, X
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Camera, ChevronDown, ChevronUp, CreditCard as Edit2, Check, X } from 'lucide-react';
 
 interface Room {
   id?: string;
