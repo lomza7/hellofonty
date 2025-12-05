@@ -26,6 +26,9 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const MySubscription = lazy(() => import('./pages/MySubscription'));
 const AccessGuide = lazy(() => import('./pages/AccessGuide'));
 const PropertyInventory = lazy(() => import('./pages/PropertyInventory'));
+const CreateInventory = lazy(() => import('./pages/CreateInventory'));
+const EditInventory = lazy(() => import('./pages/EditInventory'));
+const ReviewInventory = lazy(() => import('./pages/ReviewInventory'));
 const AccessGuidePreview = lazy(() => import('./pages/AccessGuidePreview'));
 const Leases = lazy(() => import('./pages/Leases'));
 const BlogList = lazy(() => import('./pages/BlogList'));
@@ -199,6 +202,46 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <PropertyInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory"
+              element={
+                <ProtectedRoute>
+                  <PropertyInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/new"
+              element={
+                <ProtectedRoute>
+                  <CreateInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/:id"
+              element={
+                <ProtectedRoute>
+                  <PropertyInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <EditInventory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/:id/review"
+              element={
+                <ProtectedRoute>
+                  <ReviewInventory />
                 </ProtectedRoute>
               }
             />
