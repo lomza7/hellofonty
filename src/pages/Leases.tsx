@@ -20,9 +20,7 @@ interface Profile {
   id: string;
   first_name: string;
   last_name: string;
-  email: string;
   phone?: string;
-  address?: string;
 }
 
 interface Booking {
@@ -101,7 +99,7 @@ export default function Leases() {
         .select(`
           *,
           listing:listings(id, title, address, price, charges, security_deposit),
-          tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name, email)
+          tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name)
         `)
         .eq('landlord_id', profile?.id)
         .order('created_at', { ascending: false });
@@ -157,7 +155,7 @@ export default function Leases() {
         .select(`
           *,
           listing:listings(id, title, address, price_per_month, electricity_cost, heating_cost, water_cost, security_deposit, landlord_id),
-          student:profiles!bookings_student_id_fkey(id, first_name, last_name, email, phone, address)
+          student:profiles!bookings_student_id_fkey(id, first_name, last_name, phone)
         `)
         .eq('status', 'confirmed')
         .in('listing_id', myListingIds);
@@ -488,9 +486,6 @@ export default function Leases() {
                               </div>
                               <div>
                                 <p className="text-blue-800">
-                                  <span className="font-medium">Email :</span> {selectedBooking.student?.email}
-                                </p>
-                                <p className="text-blue-800">
                                   <span className="font-medium">Téléphone :</span> {selectedBooking.student?.phone || 'Non renseigné'}
                                 </p>
                                 <p className="text-blue-800">
@@ -668,16 +663,14 @@ export default function Leases() {
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Bailleur</h3>
                         <p className="text-gray-700">
-                          {profile?.first_name} {profile?.last_name}<br />
-                          {profile?.email}
+                          {profile?.first_name} {profile?.last_name}
                         </p>
                       </div>
 
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">Locataire</h3>
                         <p className="text-gray-700">
-                          {selectedLease.tenant?.first_name} {selectedLease.tenant?.last_name}<br />
-                          {selectedLease.tenant?.email}
+                          {selectedLease.tenant?.first_name} {selectedLease.tenant?.last_name}
                         </p>
                       </div>
 
