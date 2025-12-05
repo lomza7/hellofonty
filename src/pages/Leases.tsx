@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Listing {
@@ -260,6 +260,43 @@ export default function Leases() {
     }
   };
 
+  const handleDownloadContract = async (leaseId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du contrat');
+      }
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Contrat_Location_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Erreur téléchargement contrat:', error);
+      alert('Erreur lors du téléchargement du contrat');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       booking_id: '',
@@ -394,6 +431,14 @@ export default function Leases() {
                       title="Voir le bail"
                     >
                       <Eye className="w-5 h-5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDownloadContract(lease.id)}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Télécharger le contrat"
+                    >
+                      <Download className="w-5 h-5" />
                     </button>
 
                     {lease.status === 'draft' && (
