@@ -88,11 +88,11 @@ export default function Leases() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (user?.id) {
       loadLeases();
       loadAvailableBookings();
     }
-  }, [profile?.id]);
+  }, [user?.id]);
 
   const loadLeases = async () => {
     try {
@@ -117,12 +117,30 @@ export default function Leases() {
 
   const loadAvailableBookings = async () => {
     try {
+      if (!user?.id) {
+        console.log('No user ID available');
+        return;
+      }
+
       const { data: existingLeases } = await supabase
         .from('leases')
         .select('booking_id')
         .not('booking_id', 'is', null);
 
       const existingBookingIds = existingLeases?.map(l => l.booking_id) || [];
+
+      const { data: myListings } = await supabase
+        .from('listings')
+        .select('id')
+        .eq('landlord_id', user.id);
+
+      const myListingIds = myListings?.map(l => l.id) || [];
+
+      if (myListingIds.length === 0) {
+        console.log('No listings found for this landlord');
+        setAvailableBookings([]);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('bookings')
@@ -132,16 +150,14 @@ export default function Leases() {
           student:profiles!bookings_student_id_fkey(id, first_name, last_name, email, phone, address)
         `)
         .eq('status', 'confirmed')
+        .in('listing_id', myListingIds)
         .not('id', 'in', `(${existingBookingIds.length > 0 ? existingBookingIds.join(',') : 'null'})`)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
 
-      const myBookings = (data || []).filter((booking: any) => {
-        return booking.listing?.landlord_id === profile?.id;
-      });
-
-      setAvailableBookings(myBookings as Booking[]);
+      console.log('Available bookings:', data);
+      setAvailableBookings((data || []) as Booking[]);
     } catch (error) {
       console.error('Erreur chargement réservations:', error);
     }
@@ -153,8 +169,11 @@ export default function Leases() {
 
     setSelectedBooking(booking);
 
-    const monthlyRent = booking.listing?.price || 0;
-    const charges = booking.listing?.charges || 0;
+    const monthlyRent = booking.listing?.price_per_month || 0;
+    const electricityCost = booking.listing?.electricity_cost || 0;
+    const heatingCost = booking.listing?.heating_cost || 0;
+    const waterCost = booking.listing?.water_cost || 0;
+    const charges = electricityCost + heatingCost + waterCost;
     const securityDeposit = booking.listing?.security_deposit || monthlyRent;
 
     setFormData({
