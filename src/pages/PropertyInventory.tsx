@@ -403,7 +403,7 @@ export default function PropertyInventory() {
                       <button
                         onClick={() => navigate(`/inventory/${inventory.id}`)}
                         className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title={language === 'fr' ? 'Voir' : 'View'}
+                        title={language === 'fr' ? 'Voir les détails' : 'View details'}
                       >
                         <Eye className="w-5 h-5" />
                       </button>
@@ -418,15 +418,13 @@ export default function PropertyInventory() {
                         </button>
                       )}
 
-                      {inventory.status === 'signed' && (
-                        <button
-                          onClick={() => downloadPDF(inventory.id)}
-                          className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title={language === 'fr' ? 'Télécharger PDF' : 'Download PDF'}
-                        >
-                          <Download className="w-5 h-5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => downloadPDF(inventory.id)}
+                        className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title={language === 'fr' ? 'Télécharger PDF' : 'Download PDF'}
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
 
                       {inventory.status === 'draft' && (
                         <button
