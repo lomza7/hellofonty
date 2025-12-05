@@ -36,8 +36,22 @@ export default function MyBookingRequests() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
 
   useEffect(() => {
-    loadBookings();
+    if (profile) {
+      loadBookings();
+      markBookingNotificationsAsRead();
+    }
   }, [profile]);
+
+  const markBookingNotificationsAsRead = async () => {
+    if (!profile?.id) return;
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', profile.id)
+      .in('type', ['booking_request', 'booking_confirmed', 'booking_cancelled'])
+      .eq('is_read', false);
+  };
 
   const loadBookings = async () => {
     if (!profile?.id) return;

@@ -38,8 +38,20 @@ export default function Messages({ selectedUserId }: MessagesProps) {
     if (profile) {
       loadConversations();
       loadAccessGuides();
+      markMessageNotificationsAsRead();
     }
   }, [profile]);
+
+  const markMessageNotificationsAsRead = async () => {
+    if (!profile?.id) return;
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', profile.id)
+      .eq('type', 'message')
+      .eq('is_read', false);
+  };
 
   useEffect(() => {
     const initializeConversation = async () => {
