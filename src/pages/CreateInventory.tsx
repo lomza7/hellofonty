@@ -139,7 +139,7 @@ export default function CreateInventory() {
           student:profiles!bookings_student_id_fkey(first_name, last_name, id)
         `)
         .eq('listing_id', listingId)
-        .eq('status', 'approved')
+        .eq('status', 'confirmed')
         .order('start_date', { ascending: false });
 
       if (error) throw error;
@@ -365,7 +365,7 @@ export default function CreateInventory() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <label className="block text-sm font-medium text-green-900 mb-2">
                     <Check className="w-4 h-4 inline mr-2" />
-                    {language === 'fr' ? 'Réservation validée' : 'Approved Booking'}
+                    {language === 'fr' ? 'Réservation confirmée' : 'Confirmed Booking'}
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
