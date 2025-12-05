@@ -105,6 +105,46 @@ export default function PropertyInventory() {
     setFilteredInventories(filtered);
   };
 
+  const downloadPDF = async (id: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert(language === 'fr' ? 'Session expirée' : 'Session expired');
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/generate-inventory-pdf?id=${id}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const htmlContent = await response.text();
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        };
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert(language === 'fr' ? 'Erreur lors de la génération du PDF' : 'Error generating PDF');
+    }
+  };
+
   const deleteInventory = async (id: string) => {
     if (!confirm(language === 'fr' ? 'Êtes-vous sûr de vouloir supprimer cet état des lieux ?' : 'Are you sure you want to delete this inventory?')) {
       return;
@@ -380,7 +420,7 @@ export default function PropertyInventory() {
 
                       {inventory.status === 'signed' && (
                         <button
-                          onClick={() => {/* TODO: Download PDF */}}
+                          onClick={() => downloadPDF(inventory.id)}
                           className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                           title={language === 'fr' ? 'Télécharger PDF' : 'Download PDF'}
                         >

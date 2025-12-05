@@ -29,6 +29,7 @@ const PropertyInventory = lazy(() => import('./pages/PropertyInventory'));
 const CreateInventory = lazy(() => import('./pages/CreateInventory'));
 const EditInventory = lazy(() => import('./pages/EditInventory'));
 const ReviewInventory = lazy(() => import('./pages/ReviewInventory'));
+const ViewInventory = lazy(() => import('./pages/ViewInventory'));
 const AccessGuidePreview = lazy(() => import('./pages/AccessGuidePreview'));
 const Leases = lazy(() => import('./pages/Leases'));
 const BlogList = lazy(() => import('./pages/BlogList'));
@@ -225,7 +226,7 @@ function AppContent() {
               path="/inventory/:id"
               element={
                 <ProtectedRoute>
-                  <PropertyInventory />
+                  <ViewInventory />
                 </ProtectedRoute>
               }
             />
