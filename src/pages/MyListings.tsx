@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, BedDouble, Bath, Users, Pencil, Trash2, PlusCircle, Copy, Calendar } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Users, Pencil, Trash2, PlusCircle, Copy, Calendar, RefreshCw } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import CalendarManager from '../components/CalendarManager';
+import ICalSyncManager from '../components/ICalSyncManager';
 
 export default function MyListings() {
   const { t } = useLanguage();
@@ -14,6 +15,7 @@ export default function MyListings() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCalendar, setShowCalendar] = useState<string | null>(null);
+  const [showICalSync, setShowICalSync] = useState<string | null>(null);
 
   useEffect(() => {
     loadListings();
@@ -229,6 +231,16 @@ export default function MyListings() {
                           <Calendar className="h-5 w-5" />
                         </button>
                         <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowICalSync(listing.id);
+                          }}
+                          className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
+                          title="Synchronisation iCal (Airbnb/Booking)"
+                        >
+                          <RefreshCw className="h-5 w-5" />
+                        </button>
+                        <button
                           onClick={() => navigate(`/modifier-annonce/${listing.id}`)}
                           className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
                           title={t('myListings.edit')}
@@ -270,6 +282,14 @@ export default function MyListings() {
             listingId={showCalendar}
             listingTitle={listings.find(l => l.id === showCalendar)?.title || ''}
             onClose={() => setShowCalendar(null)}
+          />
+        )}
+
+        {showICalSync && (
+          <ICalSyncManager
+            listingId={showICalSync}
+            listingTitle={listings.find(l => l.id === showICalSync)?.title || ''}
+            onClose={() => setShowICalSync(null)}
           />
         )}
       </div>

@@ -85,14 +85,36 @@ export default function ListingDetail() {
   };
 
   const loadBlockedDates = async () => {
-    const { data } = await supabase
+    const { data: manualDates } = await supabase
       .from('blocked_dates')
       .select('blocked_date')
       .eq('listing_id', listingId);
 
-    if (data) {
-      setBlockedDates(data.map(d => d.blocked_date));
+    const { data: importedDates } = await supabase
+      .from('imported_blocked_dates')
+      .select('start_date, end_date')
+      .eq('listing_id', listingId);
+
+    const allBlockedDates: string[] = [];
+
+    if (manualDates) {
+      allBlockedDates.push(...manualDates.map(d => d.blocked_date));
     }
+
+    if (importedDates) {
+      importedDates.forEach((range: { start_date: string; end_date: string }) => {
+        const start = new Date(range.start_date);
+        const end = new Date(range.end_date);
+        const current = new Date(start);
+
+        while (current <= end) {
+          allBlockedDates.push(current.toISOString().split('T')[0]);
+          current.setDate(current.getDate() + 1);
+        }
+      });
+    }
+
+    setBlockedDates(allBlockedDates);
   };
 
   const checkFavorite = async () => {

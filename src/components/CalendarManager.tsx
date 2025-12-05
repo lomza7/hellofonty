@@ -15,6 +15,7 @@ type BlockedDate = {
 
 export default function CalendarManager({ listingId, listingTitle, onClose }: CalendarManagerProps) {
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+  const [importedDates, setImportedDates] = useState<Set<string>>(new Set());
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,26 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
       const dates = new Set(data.map(d => d.blocked_date));
       setSelectedDates(dates);
       initialBlockedDates.current = new Set(dates);
+    }
+
+    const { data: importedData } = await supabase
+      .from('imported_blocked_dates')
+      .select('start_date, end_date')
+      .eq('listing_id', listingId);
+
+    if (importedData) {
+      const imported = new Set<string>();
+      importedData.forEach((range: { start_date: string; end_date: string }) => {
+        const start = new Date(range.start_date);
+        const end = new Date(range.end_date);
+        const current = new Date(start);
+
+        while (current <= end) {
+          imported.add(current.toISOString().split('T')[0]);
+          current.setDate(current.getDate() + 1);
+        }
+      });
+      setImportedDates(imported);
     }
   };
 
@@ -67,8 +88,8 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
     setSelectedDates(newSelected);
   };
 
-  const handleMouseDown = (dateStr: string, isPast: boolean) => {
-    if (isPast) return;
+  const handleMouseDown = (dateStr: string, isPast: boolean, isImported: boolean) => {
+    if (isPast || isImported) return;
     setIsDragging(true);
     setDragStartDate(dateStr);
 
@@ -79,8 +100,8 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
     toggleDate(dateStr);
   };
 
-  const handleMouseEnter = (dateStr: string, isPast: boolean) => {
-    if (!isDragging || isPast || !dragAction) return;
+  const handleMouseEnter = (dateStr: string, isPast: boolean, isImported: boolean) => {
+    if (!isDragging || isPast || isImported || !dragAction) return;
 
     const isCurrentlyBlocked = selectedDates.has(dateStr);
 
@@ -229,18 +250,21 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
                 const day = idx + 1;
                 const dateStr = formatDate(year, month, day);
                 const isBlocked = selectedDates.has(dateStr);
+                const isImported = importedDates.has(dateStr);
                 const isPast = new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0));
 
                 return (
                   <button
                     key={day}
-                    onMouseDown={() => handleMouseDown(dateStr, isPast)}
-                    onMouseEnter={() => handleMouseEnter(dateStr, isPast)}
+                    onMouseDown={() => handleMouseDown(dateStr, isPast, isImported)}
+                    onMouseEnter={() => handleMouseEnter(dateStr, isPast, isImported)}
                     onMouseUp={handleMouseUp}
-                    disabled={isPast}
+                    disabled={isPast || isImported}
                     className={`aspect-square rounded-lg font-medium text-sm transition select-none ${
                       isPast
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : isImported
+                        ? 'bg-orange-500 text-white cursor-not-allowed'
                         : isBlocked
                         ? 'bg-red-500 text-white hover:bg-red-600'
                         : 'bg-green-50 text-green-700 hover:bg-green-100 border-2 border-green-200'
@@ -256,16 +280,25 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
           <div className="border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-600">
-                <span className="font-semibold">{selectedDates.size}</span> date(s) bloquée(s)
+                <span className="font-semibold">{selectedDates.size}</span> date(s) bloquée(s) manuellement
+                {importedDates.size > 0 && (
+                  <span className="ml-2">
+                    + <span className="font-semibold">{importedDates.size}</span> date(s) importée(s)
+                  </span>
+                )}
               </p>
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-50 border-2 border-green-200 rounded"></div>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-50 border-2 border-green-200 rounded"></div>
                   <span>Disponible</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
                   <span>Bloqué</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                  <span>Importé</span>
                 </div>
               </div>
             </div>
