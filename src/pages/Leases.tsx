@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download, Edit } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Listing {
@@ -59,6 +59,7 @@ export default function Leases() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
   const [availableBookings, setAvailableBookings] = useState<Booking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -69,6 +70,17 @@ export default function Leases() {
     booking_id: '',
     listing_id: '',
     tenant_id: '',
+    start_date: '',
+    end_date: '',
+    monthly_rent: 0,
+    security_deposit: 0,
+    charges: 0,
+    lease_type: 'furnished',
+    terms_and_conditions: '',
+    inventory_included: false
+  });
+
+  const [editFormData, setEditFormData] = useState({
     start_date: '',
     end_date: '',
     monthly_rent: 0,
@@ -331,6 +343,53 @@ export default function Leases() {
     await loadContractHtml(lease.id);
   };
 
+  const handleEditLease = (lease: Lease) => {
+    setSelectedLease(lease);
+    setEditFormData({
+      start_date: lease.start_date.split('T')[0],
+      end_date: lease.end_date.split('T')[0],
+      monthly_rent: lease.monthly_rent,
+      security_deposit: lease.security_deposit,
+      charges: lease.charges,
+      lease_type: lease.lease_type,
+      terms_and_conditions: lease.terms_and_conditions || '',
+      inventory_included: lease.inventory_included
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateLease = async () => {
+    if (!selectedLease) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('leases')
+        .update({
+          start_date: editFormData.start_date,
+          end_date: editFormData.end_date,
+          monthly_rent: editFormData.monthly_rent,
+          security_deposit: editFormData.security_deposit,
+          charges: editFormData.charges,
+          lease_type: editFormData.lease_type,
+          terms_and_conditions: editFormData.terms_and_conditions,
+          inventory_included: editFormData.inventory_included
+        })
+        .eq('id', selectedLease.id);
+
+      if (error) throw error;
+
+      alert('Bail mis à jour avec succès');
+      setShowEditModal(false);
+      loadLeases();
+    } catch (error) {
+      console.error('Erreur mise à jour bail:', error);
+      alert('Erreur lors de la mise à jour du bail');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       booking_id: '',
@@ -463,6 +522,16 @@ export default function Leases() {
                     >
                       <Eye className="w-5 h-5" />
                     </button>
+
+                    {lease.status === 'draft' && (
+                      <button
+                        onClick={() => handleEditLease(lease)}
+                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        title="Modifier le bail"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleDownloadContract(lease.id)}
@@ -770,6 +839,162 @@ export default function Leases() {
                     Télécharger
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showEditModal && selectedLease && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-gradient-to-r from-orange-600 to-orange-700 text-white p-6 rounded-t-2xl z-10">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold flex items-center">
+                    <Edit className="w-6 h-6 mr-2" />
+                    Modifier le bail
+                  </h3>
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="text-white hover:bg-orange-800 rounded-lg p-2 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="text-sm text-blue-900">
+                      <strong>Bien concerné :</strong> {selectedLease.listing?.title}<br />
+                      <strong>Adresse :</strong> {selectedLease.listing?.address}<br />
+                      <strong>Locataire :</strong> {selectedLease.tenant?.first_name} {selectedLease.tenant?.last_name}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de début *
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.start_date}
+                        onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de fin *
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.end_date}
+                        onChange={(e) => setEditFormData({ ...editFormData, end_date: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Loyer mensuel (€) *
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.monthly_rent}
+                        onChange={(e) => setEditFormData({ ...editFormData, monthly_rent: parseFloat(e.target.value) })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Charges (€)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.charges}
+                        onChange={(e) => setEditFormData({ ...editFormData, charges: parseFloat(e.target.value) })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Caution (€) *
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.security_deposit}
+                        onChange={(e) => setEditFormData({ ...editFormData, security_deposit: parseFloat(e.target.value) })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type de bail
+                    </label>
+                    <select
+                      value={editFormData.lease_type}
+                      onChange={(e) => setEditFormData({ ...editFormData, lease_type: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      <option value="furnished">Meublé</option>
+                      <option value="unfurnished">Non meublé</option>
+                      <option value="student">Étudiant</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Clauses particulières
+                    </label>
+                    <textarea
+                      value={editFormData.terms_and_conditions}
+                      onChange={(e) => setEditFormData({ ...editFormData, terms_and_conditions: e.target.value })}
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="Ajoutez des clauses spécifiques au bail..."
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="edit-inventory"
+                      checked={editFormData.inventory_included}
+                      onChange={(e) => setEditFormData({ ...editFormData, inventory_included: e.target.checked })}
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <label htmlFor="edit-inventory" className="ml-2 text-sm text-gray-700">
+                      État des lieux inclus
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  disabled={saving}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleUpdateLease}
+                  disabled={saving}
+                  className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                </button>
               </div>
             </div>
           </div>
