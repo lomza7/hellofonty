@@ -8,12 +8,6 @@ interface Listing {
   id: string;
   title: string;
   address: string;
-  price_per_month: number;
-  electricity_cost?: number;
-  heating_cost?: number;
-  water_cost?: number;
-  security_deposit?: number;
-  landlord_id?: string;
 }
 
 interface Profile {
@@ -98,7 +92,7 @@ export default function Leases() {
         .from('leases')
         .select(`
           *,
-          listing:listings(id, title, address, price, charges, security_deposit),
+          listing:listings(id, title, address),
           tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name)
         `)
         .eq('landlord_id', profile?.id)
