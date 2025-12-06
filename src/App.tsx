@@ -36,7 +36,7 @@ const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
 const Payouts = lazy(() => import('./pages/Payouts'));
-const PayoutsReturn = lazy(() => import('./pages/PayoutsReturn'));
+const PayoutsCongratulations = lazy(() => import('./pages/PayoutsCongratulations'));
 const PayoutsRefresh = lazy(() => import('./pages/PayoutsRefresh'));
 
 function LoadingScreen() {
@@ -266,10 +266,10 @@ function AppContent() {
               }
             />
             <Route
-              path="/proprietaire/paiements/retour"
+              path="/proprietaire/paiements/felicitations"
               element={
                 <ProtectedRoute>
-                  <PayoutsReturn />
+                  <PayoutsCongratulations />
                 </ProtectedRoute>
               }
             />

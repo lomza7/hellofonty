@@ -19,7 +19,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const returnUrl = Deno.env.get('STRIPE_CONNECT_RETURN_URL') || `${supabaseUrl.replace('//', '//').split('/')[0]}//${supabaseUrl.split('/')[2]}/proprietaire/paiements/retour`;
+    const returnUrl = Deno.env.get('STRIPE_CONNECT_RETURN_URL') || `${supabaseUrl.replace('//', '//').split('/')[0]}//${supabaseUrl.split('/')[2]}/proprietaire/paiements/felicitations`;
     const refreshUrl = Deno.env.get('STRIPE_CONNECT_REFRESH_URL') || `${supabaseUrl.replace('//', '//').split('/')[0]}//${supabaseUrl.split('/')[2]}/proprietaire/paiements/reprendre`;
 
     if (!stripeSecretKey) {

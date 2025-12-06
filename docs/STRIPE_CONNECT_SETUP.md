@@ -45,7 +45,7 @@ Dans votre dashboard Supabase, allez dans **Project Settings** > **Edge Function
 ```bash
 STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx (optionnel)
-STRIPE_CONNECT_RETURN_URL=https://votre-site.com/proprietaire/paiements/retour
+STRIPE_CONNECT_RETURN_URL=https://votre-site.com/proprietaire/paiements/felicitations
 STRIPE_CONNECT_REFRESH_URL=https://votre-site.com/proprietaire/paiements/reprendre
 ```
 
@@ -98,17 +98,19 @@ Quatre Edge Functions ont été créées :
 
 ### 3.2 Retour après onboarding
 
-Après avoir complété l'onboarding, Stripe redirige vers `/proprietaire/paiements/retour` où :
-- Le propriétaire peut actualiser son statut
-- Le système vérifie si le compte est vérifié
-- Affiche les informations manquantes si nécessaire
+Après avoir complété l'onboarding, Stripe redirige vers `/proprietaire/paiements/felicitations` où :
+- Le propriétaire reçoit un message de félicitations
+- Une explication claire du délai de vérification (24-48 heures)
+- Des informations sur la réception des paiements mensuels
+- Les prochaines étapes à suivre
 
 ### 3.3 Interruption de l'onboarding
 
 Si le propriétaire interrompt le processus, Stripe redirige vers `/proprietaire/paiements/reprendre` où :
-- Un message explique qu'il peut reprendre plus tard
-- Toutes les informations sont sauvegardées
-- Il peut cliquer pour générer un nouveau lien
+- Un message indique que l'inscription a été interrompue
+- Une redirection automatique (compte à rebours de 3 secondes) vers `/proprietaire/paiements`
+- Un lien pour retourner immédiatement à la page des paiements
+- Le propriétaire peut recommencer le processus depuis la page principale
 
 ## 4. Interface Admin
 
@@ -213,8 +215,8 @@ Pour toute question :
 ## Résumé des URLs importantes
 
 - **Page Paiements** : `/proprietaire/paiements`
-- **Retour onboarding** : `/proprietaire/paiements/retour`
-- **Reprendre onboarding** : `/proprietaire/paiements/reprendre`
+- **Félicitations (après inscription)** : `/proprietaire/paiements/felicitations`
+- **Redirection (inscription interrompue)** : `/proprietaire/paiements/reprendre`
 - **Admin Stripe** : `/admin` (onglet Stripe Connect)
 
 ---
