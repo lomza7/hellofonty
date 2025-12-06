@@ -112,11 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError;
 
-      await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-
       return { error: null };
     } catch (error) {
       return { error: error as Error };
