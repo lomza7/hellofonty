@@ -70,36 +70,39 @@ export default function DocumentVerificationPanel() {
       // Charger les documents étudiants
       const { data: studentDocs, error: studentError } = await supabase
         .from('student_documents')
-        .select(`
-          *,
-          profiles:student_id (
-            first_name,
-            last_name,
-            id
-          )
-        `)
+        .select('*')
         .order('uploaded_at', { ascending: false });
 
-      if (studentError) throw studentError;
+      if (studentError) {
+        console.error('Erreur student_documents:', studentError);
+        throw studentError;
+      }
 
       // Charger les documents propriétaires
       const { data: landlordDocs, error: landlordError } = await supabase
         .from('landlord_documents')
-        .select(`
-          *,
-          profiles:landlord_id (
-            first_name,
-            last_name,
-            id
-          )
-        `)
+        .select('*')
         .order('uploaded_at', { ascending: false });
 
-      if (landlordError) throw landlordError;
+      if (landlordError) {
+        console.error('Erreur landlord_documents:', landlordError);
+        throw landlordError;
+      }
 
-      // Enrichir les documents avec les emails
+      console.log('Documents étudiants chargés:', studentDocs?.length || 0);
+      console.log('Documents propriétaires chargés:', landlordDocs?.length || 0);
+
+      // Enrichir les documents avec les noms et emails
       const enrichedStudentDocs = await Promise.all(
         (studentDocs || []).map(async (doc: any) => {
+          // Récupérer le profil utilisateur
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', doc.student_id)
+            .maybeSingle();
+
+          // Récupérer l'email
           const { data: email } = await supabase.rpc('get_user_email', {
             user_id: doc.student_id
           });
@@ -107,8 +110,8 @@ export default function DocumentVerificationPanel() {
           return {
             ...doc,
             type: 'student' as const,
-            student_name: doc.profiles
-              ? `${doc.profiles.first_name} ${doc.profiles.last_name}`
+            student_name: profile
+              ? `${profile.first_name} ${profile.last_name}`
               : 'Utilisateur inconnu',
             student_email: email || 'N/A'
           };
@@ -117,6 +120,14 @@ export default function DocumentVerificationPanel() {
 
       const enrichedLandlordDocs = await Promise.all(
         (landlordDocs || []).map(async (doc: any) => {
+          // Récupérer le profil utilisateur
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', doc.landlord_id)
+            .maybeSingle();
+
+          // Récupérer l'email
           const { data: email } = await supabase.rpc('get_user_email', {
             user_id: doc.landlord_id
           });
@@ -124,8 +135,8 @@ export default function DocumentVerificationPanel() {
           return {
             ...doc,
             type: 'landlord' as const,
-            landlord_name: doc.profiles
-              ? `${doc.profiles.first_name} ${doc.profiles.last_name}`
+            landlord_name: profile
+              ? `${profile.first_name} ${profile.last_name}`
               : 'Utilisateur inconnu',
             landlord_email: email || 'N/A'
           };
@@ -259,6 +270,21 @@ export default function DocumentVerificationPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Titre avec bouton refresh */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Vérification des Documents</h2>
+        <button
+          onClick={loadDocuments}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualiser
+        </button>
+      </div>
+
       {/* En-tête avec statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-5 border border-yellow-200">
