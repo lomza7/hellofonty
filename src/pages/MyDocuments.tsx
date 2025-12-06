@@ -228,10 +228,26 @@ export default function MyDocuments() {
     }
   };
 
+  const extractFilePath = (fileUrl: string, bucketName: string): string => {
+    // Si c'est déjà un chemin (pas d'URL complète), le retourner tel quel
+    if (!fileUrl.includes('http')) {
+      return fileUrl;
+    }
+
+    // Extraire le chemin depuis une URL Supabase
+    const parts = fileUrl.split(`/${bucketName}/`);
+    if (parts.length > 1) {
+      return parts[1];
+    }
+
+    return fileUrl;
+  };
+
   const getSignedUrl = async (filePath: string): Promise<string> => {
+    const cleanPath = extractFilePath(filePath, 'student-documents');
     const { data, error } = await supabase.storage
       .from('student-documents')
-      .createSignedUrl(filePath, 3600);
+      .createSignedUrl(cleanPath, 3600);
 
     if (error) throw error;
     return data.signedUrl;

@@ -272,11 +272,27 @@ export default function MyDocumentsLandlord() {
     }
   };
 
+  const extractFilePath = (fileUrl: string, bucketName: string): string => {
+    // Si c'est déjà un chemin (pas d'URL complète), le retourner tel quel
+    if (!fileUrl.includes('http')) {
+      return fileUrl;
+    }
+
+    // Extraire le chemin depuis une URL Supabase
+    const parts = fileUrl.split(`/${bucketName}/`);
+    if (parts.length > 1) {
+      return parts[1];
+    }
+
+    return fileUrl;
+  };
+
   const getSignedUrl = async (filePath: string, isStudentDoc = false): Promise<string> => {
     const bucketName = isStudentDoc ? 'student-documents' : 'landlord-documents';
+    const cleanPath = extractFilePath(filePath, bucketName);
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(filePath, 3600);
+      .createSignedUrl(cleanPath, 3600);
 
     if (error) throw error;
     return data.signedUrl;

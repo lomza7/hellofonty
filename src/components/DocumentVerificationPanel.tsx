@@ -69,12 +69,31 @@ export default function DocumentVerificationPanel() {
     }
   }, [selectedDocument]);
 
+  function extractFilePath(fileUrl: string, bucketName: string): string {
+    // Si c'est déjà un chemin (pas d'URL complète), le retourner tel quel
+    if (!fileUrl.includes('http')) {
+      return fileUrl;
+    }
+
+    // Extraire le chemin depuis une URL Supabase
+    // Format: https://.../storage/v1/object/public/bucket-name/path/to/file
+    const parts = fileUrl.split(`/${bucketName}/`);
+    if (parts.length > 1) {
+      return parts[1];
+    }
+
+    // Si ça ne correspond pas au format attendu, retourner l'URL telle quelle
+    return fileUrl;
+  }
+
   async function loadSignedUrl(document: Document) {
     try {
       const bucketName = document.type === 'student' ? 'student-documents' : 'landlord-documents';
+      const filePath = extractFilePath(document.file_url, bucketName);
+
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .createSignedUrl(document.file_url, 3600);
+        .createSignedUrl(filePath, 3600);
 
       if (error) throw error;
       setSelectedDocumentUrl(data.signedUrl);
