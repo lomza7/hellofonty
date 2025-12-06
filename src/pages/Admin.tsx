@@ -8,6 +8,7 @@ import PricingPlansManager from '../components/PricingPlansManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
 import FeatureCarouselManager from '../components/FeatureCarouselManager';
 import StripeConnectAdmin from '../components/StripeConnectAdmin';
+import DocumentVerificationPanel from '../components/DocumentVerificationPanel';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 
 interface UserData {
@@ -107,6 +108,7 @@ export default function Admin() {
   const [selectedBlockedMessage, setSelectedBlockedMessage] = useState<any>(null);
   const [showBlockedDetailsModal, setShowBlockedDetailsModal] = useState(false);
   const [alertsFilter, setAlertsFilter] = useState<string>('all');
+  const [pendingDocumentsCount, setPendingDocumentsCount] = useState(0);
 
   useEffect(() => {
     if (!profile || profile.role !== 'admin') {
@@ -159,15 +161,22 @@ export default function Admin() {
       const [
         { count: totalListings },
         { count: totalBookings },
-        { count: pendingVerifications }
+        { count: pendingVerifications },
+        { count: pendingStudentDocs },
+        { count: pendingLandlordDocs }
       ] = await Promise.all([
         supabase.from('listings').select('*', { count: 'exact', head: true }),
         supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending')
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        supabase.from('student_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('landlord_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending')
       ]);
 
       const students = profiles?.filter(p => p.role === 'student').length || 0;
       const landlords = profiles?.filter(p => p.role === 'landlord').length || 0;
+      const totalPendingDocs = (pendingStudentDocs || 0) + (pendingLandlordDocs || 0);
+
+      setPendingDocumentsCount(totalPendingDocs);
 
       setStats({
         totalUsers: profiles?.length || 0,
@@ -175,7 +184,7 @@ export default function Admin() {
         totalLandlords: landlords,
         totalListings: totalListings || 0,
         totalBookings: totalBookings || 0,
-        pendingVerifications: pendingVerifications || 0,
+        pendingVerifications: totalPendingDocs,
       });
 
       // Load analytics data
@@ -936,283 +945,7 @@ export default function Admin() {
 
         {/* Verifications Tab */}
         {activeTab === 'verifications' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* List of pending verifications */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">Comptes en attente de vérification</h2>
-                <p className="text-sm text-gray-500 mt-1">{pendingVerifications.length} compte(s) à vérifier</p>
-              </div>
-
-              <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
-                {pendingVerifications.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                    <p className="text-gray-500">Aucune vérification en attente</p>
-                  </div>
-                ) : (
-                  pendingVerifications.map((user) => (
-                    <button
-                      key={user.id}
-                      onClick={async () => {
-                        setSelectedUser(user);
-                        if (user.verification_document_url) {
-                          setVerificationDocument(user.verification_document_url);
-                        }
-                      }}
-                      className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                        selectedUser?.id === user.id ? 'bg-rose-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {user.avatar_url ? (
-                            <img
-                              src={user.avatar_url}
-                              alt={user.first_name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white font-semibold">
-                              {user.first_name.charAt(0)}{user.last_name.charAt(0)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {user.first_name} {user.last_name}
-                            </p>
-                            <p className="text-sm text-gray-500">{user.email}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              <Clock className="w-3 h-3 inline mr-1" />
-                              Soumis le {user.verification_submitted_at ? new Date(user.verification_submitted_at).toLocaleDateString('fr-FR') : 'N/A'}
-                            </p>
-                          </div>
-                        </div>
-                        <Eye className="w-5 h-5 text-gray-400" />
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Verification details */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              {selectedUser ? (
-                <>
-                  <div className="p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold text-gray-900">Vérifier l'identité</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {selectedUser.first_name} {selectedUser.last_name}
-                    </p>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    {/* User info */}
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-semibold text-gray-600">Email</label>
-                        <p className="text-gray-900">{selectedUser.email}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-600">Téléphone</label>
-                        <p className="text-gray-900">{selectedUser.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-600">Rôle</label>
-                        <p className="text-gray-900">
-                          {selectedUser.role === 'student' ? 'Étudiant' : 'Propriétaire'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Document preview */}
-                    {verificationDocument && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-sm font-semibold text-gray-600">
-                            Document d'identité
-                          </label>
-                          <a
-                            href={verificationDocument}
-                            download={`verification_${selectedUser.first_name}_${selectedUser.last_name}.jpg`}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Télécharger
-                          </a>
-                        </div>
-                        <div className="relative group">
-                          <img
-                            src={verificationDocument}
-                            alt="Document de vérification"
-                            className="w-full rounded-lg border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
-                            onClick={() => window.open(verificationDocument, '_blank')}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
-                            <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          Cliquez sur l'image pour l'agrandir
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex gap-3 pt-4">
-                      <button
-                        onClick={async () => {
-                          try {
-                            // Update profile status
-                            const { data: updateData, error: updateError } = await supabase
-                              .from('profiles')
-                              .update({
-                                verification_status: 'approved',
-                                is_verified: true,
-                                verification_reviewed_at: new Date().toISOString(),
-                              })
-                              .eq('id', selectedUser.id)
-                              .select();
-
-                            if (updateError) {
-                              console.error('Error updating profile:', updateError);
-                              throw updateError;
-                            }
-
-                            console.log('Profile updated successfully:', updateData);
-
-                            // Create notification
-                            const { error: notifError } = await supabase
-                              .from('notifications')
-                              .insert({
-                                user_id: selectedUser.id,
-                                type: 'booking_confirmed',
-                                title: 'Compte vérifié ✓',
-                                message: 'Votre compte a été vérifié avec succès ! Vous pouvez maintenant profiter de tous les avantages de la plateforme.',
-                                link: '/profile',
-                              });
-
-                            if (notifError) console.error('Error creating notification:', notifError);
-
-                            // Send email
-                            try {
-                              const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-approval-email`;
-                              await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  to: selectedUser.email,
-                                  firstName: selectedUser.first_name,
-                                  lastName: selectedUser.last_name,
-                                  isApproved: true,
-                                }),
-                              });
-                            } catch (emailError) {
-                              console.error('Error sending email:', emailError);
-                            }
-
-                            alert('Compte approuvé avec succès! L\'utilisateur a reçu un email et une notification.');
-                            await loadAdminData();
-                            setSelectedUser(null);
-                            setPendingVerifications(prev => prev.filter(u => u.id !== selectedUser.id));
-                          } catch (error) {
-                            console.error('Error approving verification:', error);
-                            alert('Erreur lors de l\'approbation');
-                          }
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                        Approuver
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const reason = prompt('Raison du rejet (optionnel):');
-                          try {
-                            // Update profile status
-                            const { data: updateData, error: updateError } = await supabase
-                              .from('profiles')
-                              .update({
-                                verification_status: 'rejected',
-                                is_verified: false,
-                                verification_reviewed_at: new Date().toISOString(),
-                                verification_rejection_reason: reason || null,
-                              })
-                              .eq('id', selectedUser.id)
-                              .select();
-
-                            if (updateError) {
-                              console.error('Error updating profile:', updateError);
-                              throw updateError;
-                            }
-
-                            console.log('Profile updated successfully:', updateData);
-
-                            // Create notification
-                            const { error: notifError } = await supabase
-                              .from('notifications')
-                              .insert({
-                                user_id: selectedUser.id,
-                                type: 'booking_cancelled',
-                                title: 'Demande de vérification',
-                                message: reason
-                                  ? `Votre demande de vérification n'a pas pu être approuvée. Raison: ${reason}`
-                                  : 'Votre demande de vérification n\'a pas pu être approuvée. Veuillez soumettre un nouveau document.',
-                                link: '/profile',
-                              });
-
-                            if (notifError) console.error('Error creating notification:', notifError);
-
-                            // Send email
-                            try {
-                              const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-approval-email`;
-                              await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  to: selectedUser.email,
-                                  firstName: selectedUser.first_name,
-                                  lastName: selectedUser.last_name,
-                                  isApproved: false,
-                                  rejectionReason: reason,
-                                }),
-                              });
-                            } catch (emailError) {
-                              console.error('Error sending email:', emailError);
-                            }
-
-                            alert('Compte rejeté. L\'utilisateur a reçu un email et une notification.');
-                            await loadAdminData();
-                            setSelectedUser(null);
-                            setPendingVerifications(prev => prev.filter(u => u.id !== selectedUser.id));
-                          } catch (error) {
-                            console.error('Error rejecting verification:', error);
-                            alert('Erreur lors du rejet');
-                          }
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                      >
-                        <XCircle className="w-5 h-5" />
-                        Rejeter
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="p-12 text-center">
-                  <Shield className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500">Sélectionnez un compte à vérifier</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <DocumentVerificationPanel />
         )}
 
         {/* Analytics Tab */}
