@@ -5,7 +5,6 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-import DocumentNotificationToast from './components/DocumentNotificationToast';
 
 const Home = lazy(() => import('./pages/Home'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -313,7 +312,6 @@ function AppContent() {
       </main>
 
       <Footer />
-      <DocumentNotificationToast />
     </div>
   );
 }
