@@ -57,7 +57,6 @@ export default function DocumentVerificationPanel() {
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
-  const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -510,23 +509,62 @@ export default function DocumentVerificationPanel() {
                 {/* Aperçu du document */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-gray-600">Aperçu</label>
-                    <button
-                      onClick={() => setShowImageModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Agrandir
-                    </button>
+                    <label className="text-sm font-semibold text-gray-600">Document</label>
+                    <div className="flex gap-2">
+                      <a
+                        href={selectedDocument.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Ouvrir
+                      </a>
+                      <a
+                        href={selectedDocument.file_url}
+                        download={selectedDocument.file_name}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Télécharger
+                      </a>
+                    </div>
                   </div>
 
-                  <div className="relative group cursor-pointer" onClick={() => setShowImageModal(true)}>
-                    <img
-                      src={selectedDocument.file_url}
-                      alt="Document"
-                      className="w-full rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
-                    />
-                  </div>
+                  {selectedDocument.file_url.toLowerCase().endsWith('.pdf') ? (
+                    <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
+                      <iframe
+                        src={`${selectedDocument.file_url}#toolbar=0`}
+                        className="w-full h-full"
+                        title="Aperçu du document"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <img
+                        src={selectedDocument.file_url}
+                        alt="Document"
+                        className="w-full rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          const parent = (e.target as HTMLImageElement).parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
+                                <p class="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
+                              </div>
+                            `;
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -589,30 +627,6 @@ export default function DocumentVerificationPanel() {
           )}
         </div>
       </div>
-
-      {/* Modal pour agrandir l'image */}
-      {showImageModal && selectedDocument && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div className="max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white rounded-lg p-2">
-              <img
-                src={selectedDocument.file_url}
-                alt="Document agrandi"
-                className="w-full h-auto max-h-[90vh] object-contain"
-              />
-            </div>
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="mt-4 w-full px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
