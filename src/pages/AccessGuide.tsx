@@ -285,7 +285,7 @@ export default function AccessGuide() {
   const copyShareLink = (token: string, listingId?: string) => {
     if (!token) return;
 
-    const shareUrl = `${window.location.origin}?share=${token}`;
+    const shareUrl = `${window.location.origin}/partage/${token}`;
     navigator.clipboard.writeText(shareUrl);
     setCopied(listingId || 'form');
     setTimeout(() => setCopied(null), 2000);
@@ -689,7 +689,7 @@ export default function AccessGuide() {
                           <div className="flex-1 overflow-hidden">
                             <p className="text-sm text-gray-500 mb-1">Lien public du guide</p>
                             <p className="text-sm font-mono text-blue-600 truncate">
-                              {`${window.location.origin}?share=${formData.share_token}`}
+                              {`${window.location.origin}/partage/${formData.share_token}`}
                             </p>
                           </div>
                           <button

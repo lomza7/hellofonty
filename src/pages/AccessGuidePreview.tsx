@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { MapPin, Key, Wifi, Home, Image as ImageIcon, Video, AlertCircle } from 'lucide-react';
 
@@ -19,20 +20,25 @@ interface AccessGuide {
   };
 }
 
-interface AccessGuidePreviewProps {
-  token: string;
-}
-
-export default function AccessGuidePreview({ token }: AccessGuidePreviewProps) {
+export default function AccessGuidePreview() {
+  const { token } = useParams<{ token: string }>();
   const [guide, setGuide] = useState<AccessGuide | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    loadGuide();
+    if (token) {
+      loadGuide();
+    }
   }, [token]);
 
   const loadGuide = async () => {
+    if (!token) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('access_guides')

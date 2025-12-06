@@ -165,7 +165,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   };
 
   const insertAccessGuideLink = (guide: any) => {
-    const shareUrl = `${window.location.origin}?share=${guide.share_token}`;
+    const shareUrl = `${window.location.origin}/partage/${guide.share_token}`;
     const messageText = `📍 Guide d'accès pour ${guide.listing.title}\n\nVoici le lien vers le guide d'accès complet de votre logement avec toutes les instructions nécessaires :\n\n${shareUrl}\n\nVous y trouverez : les codes d'accès, le WiFi, les instructions de stationnement et toutes les informations pratiques.`;
     setNewMessage(messageText);
     setShowGuideMenu(false);
