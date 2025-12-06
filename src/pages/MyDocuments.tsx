@@ -153,9 +153,7 @@ export default function MyDocuments() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('student-documents')
-        .getPublicUrl(fileName);
+      const fileUrl = fileName;
 
       const existingDoc = documents.find(d => d.document_type === documentType);
 
@@ -170,7 +168,7 @@ export default function MyDocuments() {
         const { error: updateError } = await supabase
           .from('student_documents')
           .update({
-            file_url: publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             uploaded_at: new Date().toISOString(),
             status: 'pending',
@@ -184,7 +182,7 @@ export default function MyDocuments() {
           .insert({
             student_id: user.id,
             document_type: documentType,
-            file_url: publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             status: 'pending',
           });
@@ -230,9 +228,19 @@ export default function MyDocuments() {
     }
   };
 
+  const getSignedUrl = async (filePath: string): Promise<string> => {
+    const { data, error } = await supabase.storage
+      .from('student-documents')
+      .createSignedUrl(filePath, 3600);
+
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
   const handleDownload = async (doc: Document) => {
     try {
-      const response = await fetch(doc.file_url);
+      const signedUrl = await getSignedUrl(doc.file_url);
+      const response = await fetch(signedUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

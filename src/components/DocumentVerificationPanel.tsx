@@ -53,6 +53,7 @@ export default function DocumentVerificationPanel() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocumentUrl, setSelectedDocumentUrl] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +62,27 @@ export default function DocumentVerificationPanel() {
   useEffect(() => {
     loadDocuments();
   }, []);
+
+  useEffect(() => {
+    if (selectedDocument) {
+      loadSignedUrl(selectedDocument);
+    }
+  }, [selectedDocument]);
+
+  async function loadSignedUrl(document: Document) {
+    try {
+      const bucketName = document.type === 'student' ? 'student-documents' : 'landlord-documents';
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .createSignedUrl(document.file_url, 3600);
+
+      if (error) throw error;
+      setSelectedDocumentUrl(data.signedUrl);
+    } catch (error) {
+      console.error('Erreur lors de la génération de l\'URL signée:', error);
+      setSelectedDocumentUrl('');
+    }
+  }
 
   async function loadDocuments() {
     try {
@@ -512,18 +534,24 @@ export default function DocumentVerificationPanel() {
                     <label className="text-sm font-semibold text-gray-600">Document</label>
                     <div className="flex gap-2">
                       <a
-                        href={selectedDocument.file_url}
+                        href={selectedDocumentUrl || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        onClick={(e) => {
+                          if (!selectedDocumentUrl) e.preventDefault();
+                        }}
                       >
                         <Eye className="w-4 h-4" />
                         Ouvrir
                       </a>
                       <a
-                        href={selectedDocument.file_url}
+                        href={selectedDocumentUrl || '#'}
                         download={selectedDocument.file_name}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        onClick={(e) => {
+                          if (!selectedDocumentUrl) e.preventDefault();
+                        }}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -533,36 +561,43 @@ export default function DocumentVerificationPanel() {
                     </div>
                   </div>
 
-                  {selectedDocument.file_url.toLowerCase().endsWith('.pdf') ? (
-                    <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
-                      <iframe
-                        src={`${selectedDocument.file_url}#toolbar=0`}
-                        className="w-full h-full"
-                        title="Aperçu du document"
-                      />
-                    </div>
+                  {selectedDocumentUrl ? (
+                    selectedDocument.file_url.toLowerCase().endsWith('.pdf') ? (
+                      <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
+                        <iframe
+                          src={`${selectedDocumentUrl}#toolbar=0`}
+                          className="w-full h-full"
+                          title="Aperçu du document"
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative group">
+                        <img
+                          src={selectedDocumentUrl}
+                          alt="Document"
+                          className="w-full rounded-lg border border-gray-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            const parent = (e.target as HTMLImageElement).parentElement;
+                            if (parent) {
+                              parent.innerHTML = `
+                                <div class="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                  <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                  </svg>
+                                  <p class="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
+                                  <p class="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
+                                </div>
+                              `;
+                            }
+                          }}
+                        />
+                      </div>
+                    )
                   ) : (
-                    <div className="relative group">
-                      <img
-                        src={selectedDocument.file_url}
-                        alt="Document"
-                        className="w-full rounded-lg border border-gray-200"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          const parent = (e.target as HTMLImageElement).parentElement;
-                          if (parent) {
-                            parent.innerHTML = `
-                              <div class="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                                <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                </svg>
-                                <p class="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
-                                <p class="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
-                              </div>
-                            `;
-                          }
-                        }}
-                      />
+                    <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500 mb-2"></div>
+                      <p className="text-gray-500 text-sm">Chargement du document...</p>
                     </div>
                   )}
                 </div>

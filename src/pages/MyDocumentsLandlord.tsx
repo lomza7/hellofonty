@@ -192,9 +192,7 @@ export default function MyDocumentsLandlord() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('landlord-documents')
-        .getPublicUrl(fileName);
+      const fileUrl = fileName;
 
       const existingDoc = documents.find(d =>
         d.document_type === documentType &&
@@ -212,7 +210,7 @@ export default function MyDocumentsLandlord() {
         const { error: updateError } = await supabase
           .from('landlord_documents')
           .update({
-            file_url: publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             uploaded_at: new Date().toISOString(),
             status: 'pending',
@@ -226,7 +224,7 @@ export default function MyDocumentsLandlord() {
           .insert({
             landlord_id: user.id,
             document_type: documentType,
-            file_url: publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             listing_id: listingId || null,
             status: 'pending',
@@ -274,9 +272,20 @@ export default function MyDocumentsLandlord() {
     }
   };
 
-  const handleDownload = async (fileUrl: string, fileName: string) => {
+  const getSignedUrl = async (filePath: string, isStudentDoc = false): Promise<string> => {
+    const bucketName = isStudentDoc ? 'student-documents' : 'landlord-documents';
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(filePath, 3600);
+
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
+  const handleDownload = async (fileUrl: string, fileName: string, isStudentDoc = false) => {
     try {
-      const response = await fetch(fileUrl);
+      const signedUrl = await getSignedUrl(fileUrl, isStudentDoc);
+      const response = await fetch(signedUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -704,7 +713,7 @@ export default function MyDocumentsLandlord() {
                     </div>
 
                     <button
-                      onClick={() => handleDownload(insurance.file_url, insurance.file_name)}
+                      onClick={() => handleDownload(insurance.file_url, insurance.file_name, true)}
                       className="w-full px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-semibold flex items-center justify-center gap-2"
                     >
                       <Download className="w-5 h-5" />
