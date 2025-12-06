@@ -129,7 +129,9 @@ export default function Admin() {
       // Get auth data and subscriptions for each user
       const usersWithAuth = await Promise.all(
         (profiles || []).map(async (profile) => {
-          const { data: { user } } = await supabase.auth.admin.getUserById(profile.id);
+          // Get email using the get_user_email function
+          const { data: emailData } = await supabase
+            .rpc('get_user_email', { user_id: profile.id });
 
           // Get subscription data
           const { data: subscription } = await supabase
@@ -140,8 +142,8 @@ export default function Admin() {
 
           return {
             ...profile,
-            email: user?.email || 'N/A',
-            last_sign_in_at: user?.last_sign_in_at || profile.created_at,
+            email: emailData || 'N/A',
+            last_sign_in_at: profile.created_at,
             subscription_plan: subscription?.plan_type || (profile.role === 'landlord' ? 'free' : null),
           };
         })
