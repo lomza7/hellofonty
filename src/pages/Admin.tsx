@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen } from 'lucide-react';
+import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
 import FeatureCarouselManager from '../components/FeatureCarouselManager';
+import StripeConnectAdmin from '../components/StripeConnectAdmin';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 
 interface UserData {
@@ -88,7 +89,7 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe'>('users');
   const [pendingVerifications, setPendingVerifications] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [verificationDocument, setVerificationDocument] = useState<string | null>(null);
@@ -690,6 +691,17 @@ export default function Admin() {
             >
               <Image className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Carousel</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('stripe')}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'stripe'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <Wallet className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Stripe Connect</span>
             </button>
             <button
               onClick={() => navigate('/admin/support')}
@@ -2140,6 +2152,11 @@ export default function Admin() {
         {/* Carousel Tab */}
         {activeTab === 'carousel' && (
           <FeatureCarouselManager />
+        )}
+
+        {/* Stripe Connect Tab */}
+        {activeTab === 'stripe' && (
+          <StripeConnectAdmin />
         )}
 
       </div>

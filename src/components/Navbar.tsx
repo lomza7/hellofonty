@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen } from 'lucide-react';
+import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect } from 'react';
@@ -287,6 +287,14 @@ export default function Navbar() {
                           >
                             <CreditCard className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
+                          </Link>
+                          <Link
+                            to="/proprietaire/paiements"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <Wallet className="h-4 w-4" />
+                            <span>{language === 'fr' ? 'Paiements' : 'Payouts'}</span>
                           </Link>
                         </>
                       )}

@@ -35,6 +35,9 @@ const Leases = lazy(() => import('./pages/Leases'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
+const Payouts = lazy(() => import('./pages/Payouts'));
+const PayoutsReturn = lazy(() => import('./pages/PayoutsReturn'));
+const PayoutsRefresh = lazy(() => import('./pages/PayoutsRefresh'));
 
 function LoadingScreen() {
   return (
@@ -251,6 +254,30 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <Leases />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proprietaire/paiements"
+              element={
+                <ProtectedRoute>
+                  <Payouts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proprietaire/paiements/retour"
+              element={
+                <ProtectedRoute>
+                  <PayoutsReturn />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proprietaire/paiements/reprendre"
+              element={
+                <ProtectedRoute>
+                  <PayoutsRefresh />
                 </ProtectedRoute>
               }
             />
