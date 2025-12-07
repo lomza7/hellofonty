@@ -34,6 +34,22 @@ interface RentPayment {
   };
 }
 
+interface PendingBooking {
+  id: string;
+  start_date: string;
+  end_date: string;
+  total_months: number;
+  total_price: number;
+  payment_status: string;
+  payment_deadline: string;
+  student_name: string;
+  listing: {
+    title: string;
+    address: string;
+    monthly_price: number;
+  };
+}
+
 interface PaymentStats {
   total_received: number;
   total_pending: number;
@@ -46,6 +62,7 @@ export default function LandlordRentPayments() {
   const { user } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<RentPayment[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<PendingBooking[]>([]);
   const [stats, setStats] = useState<PaymentStats>({
     total_received: 0,
     total_pending: 0,
@@ -147,6 +164,7 @@ export default function LandlordRentPayments() {
 
   const loadPayments = async () => {
     try {
+      // Charger les paiements mensuels
       const { data, error } = await supabase
         .from('rent_payments')
         .select(`
@@ -166,6 +184,53 @@ export default function LandlordRentPayments() {
         .order('payment_date', { ascending: false });
 
       if (error) throw error;
+
+      // Charger les réservations acceptées en attente de premier paiement
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          total_months,
+          total_price,
+          payment_status,
+          payment_deadline,
+          listing:listings(
+            title,
+            address,
+            monthly_price,
+            landlord_id
+          ),
+          student:profiles!student_id(
+            first_name,
+            last_name
+          )
+        `)
+        .eq('listings.landlord_id', user!.id)
+        .eq('status', 'accepted')
+        .in('payment_status', ['pending', 'awaiting_payment'])
+        .order('payment_deadline', { ascending: true });
+
+      if (bookingsError) throw bookingsError;
+
+      const formattedBookings = (bookingsData || []).map((booking: any) => ({
+        id: booking.id,
+        start_date: booking.start_date,
+        end_date: booking.end_date,
+        total_months: booking.total_months,
+        total_price: booking.total_price,
+        payment_status: booking.payment_status,
+        payment_deadline: booking.payment_deadline,
+        student_name: `${booking.student.first_name} ${booking.student.last_name}`,
+        listing: {
+          title: booking.listing.title,
+          address: booking.listing.address,
+          monthly_price: booking.listing.monthly_price,
+        },
+      }));
+
+      setPendingBookings(formattedBookings);
 
       const formattedPayments = data.map((payment: any) => ({
         id: payment.id,
@@ -476,7 +541,134 @@ export default function LandlordRentPayments() {
           </div>
         </div>
 
-        {payments.length === 0 ? (
+        {pendingBookings.length > 0 && (
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-orange-500 text-white p-3 rounded-full">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  En attente du premier paiement
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {pendingBookings.length} réservation(s) acceptée(s) - Les loyers mensuels seront créés après le premier paiement
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {pendingBookings.map((booking) => {
+                const deadline = new Date(booking.payment_deadline);
+                const now = new Date();
+                const isOverdue = deadline < now;
+                const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                return (
+                  <div
+                    key={booking.id}
+                    className={`bg-white rounded-lg p-5 border-l-4 ${
+                      isOverdue ? 'border-red-500' : 'border-orange-500'
+                    } shadow-sm`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <Home className="w-5 h-5 text-gray-400" />
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {booking.listing.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">{booking.student_name}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Période de location</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatDate(booking.start_date)} - {formatDate(booking.end_date)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {booking.total_months} mois
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Loyer mensuel</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {booking.listing.monthly_price.toFixed(2)} €/mois
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Montant total</p>
+                            <p className="text-lg font-bold text-gray-900">
+                              {booking.total_price.toFixed(2)} €
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Date limite de paiement</p>
+                            <p className={`text-sm font-semibold ${
+                              isOverdue ? 'text-red-600' : daysRemaining <= 3 ? 'text-orange-600' : 'text-gray-900'
+                            }`}>
+                              {formatDate(booking.payment_deadline)}
+                            </p>
+                            {isOverdue ? (
+                              <p className="text-xs text-red-600 font-medium mt-1">
+                                Paiement en retard !
+                              </p>
+                            ) : daysRemaining <= 3 ? (
+                              <p className="text-xs text-orange-600 font-medium mt-1">
+                                {daysRemaining} jour(s) restant(s)
+                              </p>
+                            ) : (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {daysRemaining} jour(s) restant(s)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-900">
+                              <p className="font-medium mb-1">Que se passe-t-il après le paiement ?</p>
+                              <p className="text-xs text-blue-700">
+                                Une fois que l'étudiant effectue le premier paiement, tous les loyers mensuels
+                                ({booking.total_months - 1} paiement(s)) seront automatiquement créés dans votre échéancier
+                                ci-dessous. Chaque loyer sera dû le 1er de chaque mois.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        onClick={() => navigate(`/messages?booking=${booking.id}`)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                      >
+                        Relancer l'étudiant
+                      </button>
+                      <button
+                        onClick={() => navigate('/mes-demandes')}
+                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                      >
+                        Voir la réservation
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {payments.length === 0 && pendingBookings.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -492,10 +684,19 @@ export default function LandlordRentPayments() {
               Voir mes réservations
             </button>
           </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+        ) : payments.length > 0 ? (
+          <>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Échéancier des loyers mensuels
+              </h2>
+              <p className="text-gray-600">
+                Tous les paiements mensuels générés après le premier paiement initial
+              </p>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -733,16 +934,17 @@ export default function LandlordRentPayments() {
               </table>
             </div>
 
-            {filteredPayments.length === 0 && payments.length > 0 && (
-              <div className="p-12 text-center">
-                <Filter className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">
-                  Aucun paiement ne correspond aux filtres sélectionnés
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+              {filteredPayments.length === 0 && payments.length > 0 && (
+                <div className="p-12 text-center">
+                  <Filter className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">
+                    Aucun paiement ne correspond aux filtres sélectionnés
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
