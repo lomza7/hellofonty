@@ -9,14 +9,19 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{t('footer.about')}</h3>
-            <p className="text-sm leading-relaxed">
+            <h3 className="text-white text-lg font-semibold mb-4">HELLOFONTY</h3>
+            <p className="text-sm leading-relaxed mb-4">
               {t('footer.aboutDesc')}
             </p>
+            <address className="not-italic text-sm text-gray-400">
+              3 rue Paul Tavernier<br />
+              77300 Fontainebleau<br />
+              France
+            </address>
           </div>
 
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{t('footer.quickLinks')}</h3>
+            <h3 className="text-white text-lg font-semibold mb-4">{language === 'fr' ? 'Pour les étudiants' : 'For Students'}</h3>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -26,6 +31,37 @@ export default function Footer() {
                   {t('footer.searchListing')}
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/connexion"
+                  className="text-sm hover:text-white transition-colors block"
+                >
+                  {t('nav.signIn')}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/inscription"
+                  className="text-sm hover:text-white transition-colors block"
+                >
+                  {t('nav.signUp')}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/blog"
+                  className="text-sm hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Blog</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-white text-lg font-semibold mb-4">{language === 'fr' ? 'Pour les propriétaires' : 'For Landlords'}</h3>
+            <ul className="space-y-2">
               <li>
                 <Link
                   to="/ajouter-annonce"
@@ -44,11 +80,10 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/blog"
-                  className="text-sm hover:text-white transition-colors flex items-center gap-2"
+                  to="/inscription"
+                  className="text-sm hover:text-white transition-colors block"
                 >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Blog</span>
+                  {language === 'fr' ? 'Devenir propriétaire' : 'Become a Landlord'}
                 </Link>
               </li>
             </ul>
@@ -56,11 +91,7 @@ export default function Footer() {
 
           <div>
             <h3 className="text-white text-lg font-semibold mb-4">{t('footer.contact')}</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2">
-                <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span className="text-sm">Fontainebleau, France</span>
-              </li>
+            <ul className="space-y-3 mb-4">
               <li className="flex items-center gap-2">
                 <Mail className="w-5 h-5 flex-shrink-0" />
                 <a href="mailto:contact@hellofonty.com" className="text-sm hover:text-white transition-colors">
@@ -69,13 +100,12 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">+33 1 23 45 67 89</span>
+                <a href="tel:+33123456789" className="text-sm hover:text-white transition-colors">
+                  +33 1 23 45 67 89
+                </a>
               </li>
             </ul>
-          </div>
-
-          <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{t('footer.followUs')}</h3>
+            <h4 className="text-white text-base font-semibold mb-3">{t('footer.followUs')}</h4>
             <div className="flex gap-4">
               <a
                 href="#"
