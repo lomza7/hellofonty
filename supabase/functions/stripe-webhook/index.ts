@@ -60,6 +60,33 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  if (event.type === 'checkout.session.completed') {
+    const session = stripeData as Stripe.Checkout.Session;
+
+    if (session.metadata?.booking_id) {
+      console.info(`Processing booking payment for booking: ${session.metadata.booking_id}`);
+
+      try {
+        const { error } = await supabase
+          .from('bookings')
+          .update({
+            payment_status: 'completed',
+          })
+          .eq('id', session.metadata.booking_id);
+
+        if (error) {
+          console.error('Error updating booking payment status:', error);
+        } else {
+          console.info(`Successfully updated payment status for booking: ${session.metadata.booking_id}`);
+        }
+      } catch (error) {
+        console.error('Error processing booking payment:', error);
+      }
+
+      return;
+    }
+  }
+
   if (!('customer' in stripeData)) {
     return;
   }

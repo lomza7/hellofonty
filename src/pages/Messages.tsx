@@ -388,21 +388,37 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
-                {messages.map((msg) => (
+                {messages.map((msg) => {
+                  const isSystemMessage = msg.sender_id === null;
+
+                  return (
                   <div
                     key={msg.id}
                     className={`flex ${
-                      msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'
+                      isSystemMessage ? 'justify-center' : msg.sender_id === profile?.id ? 'justify-end' : 'justify-start'
                     }`}
                   >
                     <div
-                      className={`max-w-[85%] sm:max-w-[70%] ${
+                      className={`${
+                        isSystemMessage ? 'max-w-[90%] w-full' : 'max-w-[85%] sm:max-w-[70%]'
+                      } ${
                         msg.booking_id ? 'sm:min-w-[400px]' : ''
                       }`}
                     >
+                      {isSystemMessage && (
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-orange-300 to-transparent"></div>
+                          <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+                            Hellofonty
+                          </span>
+                          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-orange-300 to-transparent"></div>
+                        </div>
+                      )}
                       <div
                         className={`px-3 sm:px-4 py-2 sm:py-3 rounded-2xl ${
-                          msg.sender_id === profile?.id
+                          isSystemMessage
+                            ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 text-gray-900 shadow-md'
+                            : msg.sender_id === profile?.id
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 text-gray-900'
                         }`}
@@ -410,7 +426,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                         <p className="whitespace-pre-wrap break-words text-sm sm:text-base">{msg.content}</p>
                         <p
                           className={`text-[10px] sm:text-xs mt-1 ${
-                            msg.sender_id === profile?.id
+                            isSystemMessage
+                              ? 'text-orange-600 font-medium'
+                              : msg.sender_id === profile?.id
                               ? 'text-blue-100'
                               : 'text-gray-500'
                           }`}
@@ -450,9 +468,44 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                           <span>{msg.booking.status === 'confirmed' ? 'Confirmée' : 'Refusée'}</span>
                         </div>
                       )}
+
+                      {isSystemMessage && msg.event === 'payment_required' && msg.booking_id && msg.booking && msg.booking.payment_status === 'pending' && (
+                        <div className="mt-4">
+                          <button
+                            onClick={() => window.location.href = `/payment/${msg.booking_id}`}
+                            className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            💳 Payer maintenant
+                          </button>
+                          {msg.booking.payment_deadline && (
+                            <p className="text-center text-xs text-orange-700 mt-2 font-medium">
+                              ⏰ Date limite : {new Date(msg.booking.payment_deadline).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {isSystemMessage && msg.event === 'payment_required' && msg.booking_id && msg.booking && msg.booking.payment_status === 'completed' && (
+                        <div className="mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-center">
+                          <span className="text-sm font-medium text-green-700">✅ Paiement effectué</span>
+                        </div>
+                      )}
+
+                      {isSystemMessage && msg.event === 'payment_required' && msg.booking_id && msg.booking && msg.booking.payment_status === 'expired' && (
+                        <div className="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-center">
+                          <span className="text-sm font-medium text-red-700">⏰ Délai de paiement expiré</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="p-3 sm:p-6 border-t">

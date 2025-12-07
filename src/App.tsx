@@ -38,6 +38,8 @@ const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
 const Payouts = lazy(() => import('./pages/Payouts'));
 const PayoutsCongratulations = lazy(() => import('./pages/PayoutsCongratulations'));
 const PayoutsRefresh = lazy(() => import('./pages/PayoutsRefresh'));
+const Payment = lazy(() => import('./pages/Payment'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 
 function LoadingScreen() {
   return (
@@ -104,6 +106,17 @@ function AppContent() {
 
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+
+            <Route
+              path="/payment/:bookingId"
+              element={
+                <ProtectedRoute>
+                  <Payment />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/favoris"
