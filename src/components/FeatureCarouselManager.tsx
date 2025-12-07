@@ -50,7 +50,7 @@ export default function FeatureCarouselManager() {
   const [imageDropZone, setImageDropZone] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'landlords' | 'students'>('landlords');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newFeatureKey, setNewFeatureKey] = useState('');
+  const [newFeatureTitle, setNewFeatureTitle] = useState('');
 
   useEffect(() => {
     loadFeatures();
@@ -117,23 +117,24 @@ export default function FeatureCarouselManager() {
     }
   }
 
+  function generateFeatureKey(title: string): string {
+    const slug = title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    return `${selectedCategory}.${slug}`;
+  }
+
   async function handleAddFeature() {
-    if (!newFeatureKey.trim()) {
-      setError('Veuillez entrer une clé pour la fonctionnalité');
+    if (!newFeatureTitle.trim()) {
+      setError('Veuillez entrer un titre pour la fonctionnalité');
       return;
     }
 
-    if (!newFeatureKey.startsWith('landlords.') && !newFeatureKey.startsWith('students.')) {
-      setError('La clé doit commencer par "landlords." ou "students."');
-      return;
-    }
-
-    const category = newFeatureKey.split('.')[0];
-    if ((selectedCategory === 'landlords' && category !== 'landlords') ||
-        (selectedCategory === 'students' && category !== 'students')) {
-      setError(`La clé doit commencer par "${selectedCategory}."`);
-      return;
-    }
+    const generatedKey = generateFeatureKey(newFeatureTitle);
 
     try {
       setError(null);
@@ -142,11 +143,11 @@ export default function FeatureCarouselManager() {
       const { data, error } = await supabase
         .from('feature_carousel_images')
         .insert([{
-          feature_key: newFeatureKey,
+          feature_key: generatedKey,
           image_url: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg',
           display_order: maxOrder + 1,
           is_active: true,
-          title_fr: '',
+          title_fr: newFeatureTitle,
           title_en: '',
           description_fr: '',
           description_en: ''
@@ -157,12 +158,12 @@ export default function FeatureCarouselManager() {
       if (error) throw error;
 
       setShowAddModal(false);
-      setNewFeatureKey('');
+      setNewFeatureTitle('');
       await loadFeatures();
     } catch (err: any) {
       console.error('Error adding feature:', err);
       if (err.code === '23505') {
-        setError('Cette clé existe déjà');
+        setError('Cette fonctionnalité existe déjà. Essayez un titre différent.');
       } else if (err.message?.includes('permission') || err.message?.includes('policy')) {
         setError('Vous devez être administrateur pour ajouter une fonctionnalité');
       } else {
@@ -353,29 +354,40 @@ export default function FeatureCarouselManager() {
 
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Ajouter une nouvelle fonctionnalité
               </h3>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Clé de la fonctionnalité
+                  Titre de la fonctionnalité
                 </label>
                 <input
                   type="text"
-                  value={newFeatureKey}
-                  onChange={(e) => setNewFeatureKey(e.target.value)}
-                  placeholder={`${selectedCategory}.nouvelle_fonction`}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  value={newFeatureTitle}
+                  onChange={(e) => setNewFeatureTitle(e.target.value)}
+                  placeholder="Ex: Connexion avec Airbnb & Booking.com"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent text-base"
+                  autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleAddFeature();
                     }
                   }}
                 />
+                {newFeatureTitle && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs font-medium text-blue-900 mb-1">
+                      Clé technique générée :
+                    </p>
+                    <code className="text-xs text-blue-700 font-mono">
+                      {generateFeatureKey(newFeatureTitle)}
+                    </code>
+                  </div>
+                )}
                 <p className="text-xs text-gray-500 mt-2">
-                  Exemple: {selectedCategory}.nouvelle_fonction
+                  Entrez un titre descriptif en français. Une clé technique sera automatiquement générée.
                 </p>
               </div>
 
@@ -383,16 +395,16 @@ export default function FeatureCarouselManager() {
                 <button
                   onClick={() => {
                     setShowAddModal(false);
-                    setNewFeatureKey('');
+                    setNewFeatureTitle('');
                     setError(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleAddFeature}
-                  className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+                  className="flex-1 px-4 py-3 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium shadow-lg hover:shadow-xl"
                 >
                   Ajouter
                 </button>
