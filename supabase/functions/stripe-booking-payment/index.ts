@@ -92,46 +92,63 @@ Deno.serve(async (req: Request) => {
       .eq('setting_key', 'platform_fee_amount')
       .maybeSingle();
 
-    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 50;
+    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 390;
 
     const rentAmount = Math.round(booking.rent_amount * 100);
-    const serviceFee = Math.round(booking.service_fee * 100);
-    const totalAmount = rentAmount + serviceFee;
-
+    const depositAmount = Math.round((booking.deposit_amount || 0) * 100);
     const platformFee = Math.round(platformFeeAmount * 100);
-    const landlordAmount = rentAmount;
 
-    const description = booking.is_first_month_partial
+    const landlordAmount = rentAmount + depositAmount;
+    const totalAmount = landlordAmount + platformFee;
+
+    const rentDescription = booking.is_first_month_partial
       ? `Premier mois (prorata) : Du ${new Date(booking.start_date).toLocaleDateString('fr-FR')} au ${new Date(new Date(booking.start_date).getFullYear(), new Date(booking.start_date).getMonth() + 1, 0).toLocaleDateString('fr-FR')}`
       : `Premier mois : Du ${new Date(booking.start_date).toLocaleDateString('fr-FR')} au ${new Date(new Date(booking.start_date).getFullYear(), new Date(booking.start_date).getMonth() + 1, 0).toLocaleDateString('fr-FR')}`;
 
+    const lineItems = [
+      {
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `${booking.listing.title} - Loyer`,
+            description: rentDescription,
+            images: [],
+          },
+          unit_amount: rentAmount,
+        },
+        quantity: 1,
+      },
+    ];
+
+    if (depositAmount > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: 'Caution',
+            description: 'Dépôt de garantie (remboursable en fin de location)',
+          },
+          unit_amount: depositAmount,
+        },
+        quantity: 1,
+      });
+    }
+
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: 'Frais de plateforme Hellofonty',
+          description: 'Frais de mise en relation (paiement unique)',
+        },
+        unit_amount: platformFee,
+      },
+      quantity: 1,
+    });
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `${booking.listing.title} - Premier paiement`,
-              description: description,
-              images: [],
-            },
-            unit_amount: rentAmount,
-          },
-          quantity: 1,
-        },
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: 'Frais de service Hellofonty',
-              description: 'Frais de service de la plateforme (paiement unique)',
-            },
-            unit_amount: serviceFee,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       mode: 'payment',
       success_url: `${req.headers.get('origin')}/payment-success?booking_id=${booking_id}`,
       cancel_url: `${req.headers.get('origin')}/payment/${booking_id}`,

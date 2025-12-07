@@ -16,7 +16,7 @@ type Booking = {
   payment_amount: number;
   rent_amount: number;
   deposit_amount: number;
-  service_fee: number;
+  platform_fee: number;
   is_first_month_partial?: boolean;
   prorated_rent?: number;
   listing?: {
@@ -112,31 +112,6 @@ export default function Payment() {
       if (data.payment_status === 'expired') {
         setError('Le délai de paiement a expiré');
         return;
-      }
-
-      if (!data.payment_amount && data.listing) {
-        const startDate = new Date(data.start_date);
-        const endDate = new Date(data.end_date);
-        const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const rentAmount = (data.listing.price_per_month || 0) * nights;
-        const depositAmount = data.listing.security_deposit || 0;
-        const serviceFee = Math.round(rentAmount * 0.05);
-        const totalAmount = rentAmount + depositAmount + serviceFee;
-
-        data.rent_amount = rentAmount;
-        data.deposit_amount = depositAmount;
-        data.service_fee = serviceFee;
-        data.payment_amount = totalAmount;
-
-        await supabase
-          .from('bookings')
-          .update({
-            rent_amount: rentAmount,
-            deposit_amount: depositAmount,
-            service_fee: serviceFee,
-            payment_amount: totalAmount,
-          })
-          .eq('id', bookingId);
       }
 
       setBooking(data);
@@ -304,8 +279,8 @@ export default function Payment() {
                   <span className="font-semibold">{booking.deposit_amount.toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>Frais de service Hellofonty</span>
-                  <span className="font-semibold">{booking.service_fee.toFixed(2)} €</span>
+                  <span>Frais de plateforme Hellofonty</span>
+                  <span className="font-semibold">{booking.platform_fee.toFixed(2)} €</span>
                 </div>
               </div>
 
