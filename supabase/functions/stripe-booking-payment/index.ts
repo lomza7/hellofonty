@@ -91,17 +91,17 @@ Deno.serve(async (req: Request) => {
     const { data: platformSettings } = await supabaseClient
       .from('platform_settings')
       .select('setting_value')
-      .eq('setting_key', 'platform_fee_percentage')
+      .eq('setting_key', 'platform_fee_amount')
       .maybeSingle();
 
-    const platformFeePercentage = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) / 100 : 0.05;
+    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 390;
 
     const rentAmount = Math.round(booking.rent_amount * 100);
     const depositAmount = Math.round(booking.deposit_amount * 100);
     const serviceFee = Math.round(booking.service_fee * 100);
     const totalAmount = rentAmount + depositAmount + serviceFee;
 
-    const platformFee = Math.round(totalAmount * platformFeePercentage);
+    const platformFee = Math.round(platformFeeAmount * 100);
     const landlordAmount = totalAmount - platformFee;
 
     const session = await stripe.checkout.sessions.create({

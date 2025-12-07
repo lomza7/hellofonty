@@ -17,7 +17,7 @@ export default function PlatformSettings() {
   const [success, setSuccess] = useState('');
 
   const [bookingServiceFee, setBookingServiceFee] = useState('');
-  const [platformFeePercentage, setPlatformFeePercentage] = useState('');
+  const [platformFeeAmount, setPlatformFeeAmount] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -31,7 +31,7 @@ export default function PlatformSettings() {
       const { data, error: fetchError } = await supabase
         .from('platform_settings')
         .select('*')
-        .in('setting_key', ['booking_service_fee', 'platform_fee_percentage']);
+        .in('setting_key', ['booking_service_fee', 'platform_fee_amount']);
 
       if (fetchError) throw fetchError;
 
@@ -39,10 +39,10 @@ export default function PlatformSettings() {
         setSettings(data);
 
         const serviceFee = data.find(s => s.setting_key === 'booking_service_fee');
-        const feePercentage = data.find(s => s.setting_key === 'platform_fee_percentage');
+        const feeAmount = data.find(s => s.setting_key === 'platform_fee_amount');
 
         setBookingServiceFee(serviceFee?.setting_value || '50');
-        setPlatformFeePercentage(feePercentage?.setting_value || '5');
+        setPlatformFeeAmount(feeAmount?.setting_value || '390');
       }
     } catch (err: any) {
       console.error('Erreur lors du chargement des paramètres:', err);
@@ -59,14 +59,14 @@ export default function PlatformSettings() {
       setSuccess('');
 
       const serviceFeeValue = parseFloat(bookingServiceFee);
-      const percentageValue = parseFloat(platformFeePercentage);
+      const feeAmountValue = parseFloat(platformFeeAmount);
 
       if (isNaN(serviceFeeValue) || serviceFeeValue < 0) {
         throw new Error('Les frais de service doivent être un nombre positif');
       }
 
-      if (isNaN(percentageValue) || percentageValue < 0 || percentageValue > 100) {
-        throw new Error('Le pourcentage doit être entre 0 et 100');
+      if (isNaN(feeAmountValue) || feeAmountValue < 0) {
+        throw new Error('Les frais de plateforme doivent être un nombre positif');
       }
 
       const { error: updateError1 } = await supabase
@@ -78,8 +78,8 @@ export default function PlatformSettings() {
 
       const { error: updateError2 } = await supabase
         .from('platform_settings')
-        .update({ setting_value: platformFeePercentage })
-        .eq('setting_key', 'platform_fee_percentage');
+        .update({ setting_value: platformFeeAmount })
+        .eq('setting_key', 'platform_fee_amount');
 
       if (updateError2) throw updateError2;
 
@@ -194,30 +194,29 @@ export default function PlatformSettings() {
         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
           <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Euro className="w-5 h-5 text-purple-600" />
-            Commission plateforme
+            Frais de plateforme
           </h3>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Pourcentage prélevé sur le total
+              Montant fixe prélevé par réservation (en euros)
             </label>
             <div className="relative">
               <input
                 type="number"
                 min="0"
-                max="100"
-                step="0.1"
-                value={platformFeePercentage}
-                onChange={(e) => setPlatformFeePercentage(e.target.value)}
+                step="0.01"
+                value={platformFeeAmount}
+                onChange={(e) => setPlatformFeeAmount(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent text-lg font-semibold"
-                placeholder="5"
+                placeholder="390"
               />
               <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                %
+                €
               </span>
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Ce pourcentage est prélevé par la plateforme lors du paiement via Stripe.
+              Ce montant fixe est prélevé par la plateforme lors du paiement via Stripe.
               Le reste est transféré au propriétaire.
             </p>
           </div>
@@ -227,18 +226,17 @@ export default function PlatformSettings() {
             <div className="text-sm text-gray-700 space-y-1">
               {(() => {
                 const total = 850;
-                const percentage = parseFloat(platformFeePercentage || '5');
-                const platformFee = (total * percentage) / 100;
+                const platformFee = parseFloat(platformFeeAmount || '390');
                 const landlordAmount = total - platformFee;
 
                 return (
                   <>
                     <div className="flex justify-between">
                       <span>Montant total payé</span>
-                      <span className="font-semibold">850,00 €</span>
+                      <span className="font-semibold">{total.toFixed(2)} €</span>
                     </div>
                     <div className="flex justify-between text-purple-700">
-                      <span>Commission plateforme ({percentage}%)</span>
+                      <span>Frais de plateforme (fixe)</span>
                       <span className="font-bold">{platformFee.toFixed(2)} €</span>
                     </div>
                     <div className="flex justify-between text-green-700 pt-2 border-t border-gray-200">
