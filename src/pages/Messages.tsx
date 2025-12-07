@@ -287,7 +287,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
       .from('bookings')
       .update({ status: action })
       .eq('id', bookingId)
-      .select('*, listing:listings(*), student:profiles!student_id(*)')
+      .select('*, listing:listings(id, title, address, user_id), student:profiles!student_id(id, first_name, last_name, email)')
       .single();
 
     if (!bookingError && bookingData) {
