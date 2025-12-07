@@ -82,13 +82,25 @@ export default function Home() {
   const getFeatureTitle = (feature: FeatureImage, fallbackKey: string) => {
     const customTitle = language === 'en' ? feature.title_en : feature.title_fr;
     if (customTitle) return customTitle;
-    return t(fallbackKey) || feature.feature_key;
+
+    const translation = t(fallbackKey);
+    if (translation && translation !== fallbackKey) {
+      return translation;
+    }
+
+    return feature.feature_key.split('.')[1].replace(/_/g, ' ');
   };
 
   const getFeatureDescription = (feature: FeatureImage, fallbackKey: string) => {
     const customDesc = language === 'en' ? feature.description_en : feature.description_fr;
     if (customDesc) return customDesc;
-    return t(fallbackKey) || '';
+
+    const translation = t(fallbackKey);
+    if (translation && translation !== fallbackKey) {
+      return translation;
+    }
+
+    return '';
   };
 
   const renderGradientText = (text: string) => {
