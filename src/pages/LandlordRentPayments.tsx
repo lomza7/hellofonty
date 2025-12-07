@@ -2,7 +2,20 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, CheckCircle, Clock, Euro, Home, TrendingUp } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  Euro,
+  Home,
+  TrendingUp,
+  Filter,
+  Download,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  FileText
+} from 'lucide-react';
 
 interface RentPayment {
   id: string;
@@ -32,6 +45,7 @@ export default function LandlordRentPayments() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<RentPayment[]>([]);
   const [stats, setStats] = useState<PaymentStats>({
     total_received: 0,
     total_pending: 0,
@@ -39,6 +53,13 @@ export default function LandlordRentPayments() {
     payments_count: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('table');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'property'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) {
@@ -48,6 +69,81 @@ export default function LandlordRentPayments() {
 
     loadPayments();
   }, [user]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [payments, filterStatus, filterYear, filterMonth, sortBy, sortOrder]);
+
+  const applyFiltersAndSort = () => {
+    let filtered = [...payments];
+
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(p => p.status === filterStatus);
+    }
+
+    if (filterYear !== 'all') {
+      filtered = filtered.filter(p => p.month_year.startsWith(filterYear));
+    }
+
+    if (filterMonth !== 'all') {
+      filtered = filtered.filter(p => p.month_year.endsWith(`-${filterMonth}`));
+    }
+
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
+          break;
+        case 'amount':
+          comparison = a.rent_amount - b.rent_amount;
+          break;
+        case 'property':
+          comparison = a.listing.title.localeCompare(b.listing.title);
+          break;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    setFilteredPayments(filtered);
+  };
+
+  const toggleRowExpansion = (paymentId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(paymentId)) {
+      newExpanded.delete(paymentId);
+    } else {
+      newExpanded.add(paymentId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const getAvailableYears = () => {
+    const years = new Set(payments.map(p => p.month_year.split('-')[0]));
+    return Array.from(years).sort().reverse();
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Date', 'Mois', 'Propriété', 'Étudiant', 'Loyer', 'Frais', 'Net', 'Statut'];
+    const rows = filteredPayments.map(p => [
+      formatDate(p.payment_date),
+      formatMonthYear(p.month_year),
+      p.listing.title,
+      p.student_name,
+      p.rent_amount.toFixed(2),
+      p.platform_fee.toFixed(2),
+      (p.rent_amount - p.platform_fee).toFixed(2),
+      p.status
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `loyers-mensuels-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   const loadPayments = async () => {
     try {
@@ -185,29 +281,60 @@ export default function LandlordRentPayments() {
     );
   }
 
-  const paidPayments = payments.filter(p => p.status === 'paid');
-  const pendingPayments = payments.filter(p => p.status === 'pending');
-  const overduePayments = payments.filter(p => p.status === 'overdue');
+  const paidPayments = filteredPayments.filter(p => p.status === 'paid');
+  const pendingPayments = filteredPayments.filter(p => p.status === 'pending');
+  const overduePayments = filteredPayments.filter(p => p.status === 'overdue');
+
+  const totalNet = filteredPayments
+    .filter(p => p.status === 'paid')
+    .reduce((sum, p) => sum + (p.rent_amount - p.platform_fee), 0);
+
+  const totalFees = filteredPayments
+    .filter(p => p.status === 'paid')
+    .reduce((sum, p) => sum + p.platform_fee, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Loyers mensuels reçus</h1>
-          <p className="text-gray-600">Suivez les paiements mensuels de vos locataires</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Échéancier des loyers</h1>
+              <p className="text-gray-600">Suivi complet des paiements mensuels de vos locataires</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={exportToCSV}
+                disabled={filteredPayments.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Exporter CSV
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Total reçu</p>
+              <p className="text-sm text-gray-600">Total reçu (brut)</p>
               <Euro className="w-5 h-5 text-green-500" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.total_received.toFixed(2)} €</p>
-            <p className="text-xs text-gray-500 mt-1">Loyers payés</p>
+            <p className="text-xs text-gray-500 mt-1">{paidPayments.length} loyer(s) payé(s)</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Net perçu</p>
+              <TrendingUp className="w-5 h-5 text-blue-500" />
+            </div>
+            <p className="text-2xl font-bold text-blue-900">{totalNet.toFixed(2)} €</p>
+            <p className="text-xs text-gray-500 mt-1">Après frais plateforme</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">En attente</p>
               <Clock className="w-5 h-5 text-yellow-500" />
@@ -216,7 +343,7 @@ export default function LandlordRentPayments() {
             <p className="text-xs text-gray-500 mt-1">{pendingPayments.length} paiement(s)</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-red-500">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">En retard</p>
               <TrendingUp className="w-5 h-5 text-red-500" />
@@ -225,13 +352,127 @@ export default function LandlordRentPayments() {
             <p className="text-xs text-gray-500 mt-1">{overduePayments.length} paiement(s)</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-500">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Total paiements</p>
-              <Calendar className="w-5 h-5 text-blue-500" />
+              <p className="text-sm text-gray-600">Frais plateforme</p>
+              <FileText className="w-5 h-5 text-gray-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.payments_count}</p>
-            <p className="text-xs text-gray-500 mt-1">Tous statuts</p>
+            <p className="text-2xl font-bold text-gray-900">{totalFees.toFixed(2)} €</p>
+            <p className="text-xs text-gray-500 mt-1">Total prélevé</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Filtres et tri</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Statut
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Tous</option>
+                <option value="paid">Payés</option>
+                <option value="pending">En attente</option>
+                <option value="overdue">En retard</option>
+                <option value="cancelled">Annulés</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Année
+              </label>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Toutes</option>
+                {getAvailableYears().map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mois
+              </label>
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Tous</option>
+                <option value="01">Janvier</option>
+                <option value="02">Février</option>
+                <option value="03">Mars</option>
+                <option value="04">Avril</option>
+                <option value="05">Mai</option>
+                <option value="06">Juin</option>
+                <option value="07">Juillet</option>
+                <option value="08">Août</option>
+                <option value="09">Septembre</option>
+                <option value="10">Octobre</option>
+                <option value="11">Novembre</option>
+                <option value="12">Décembre</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Trier par
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'property')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="date">Date</option>
+                <option value="amount">Montant</option>
+                <option value="property">Propriété</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ordre
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="desc">Décroissant</option>
+                <option value="asc">Croissant</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {filteredPayments.length} paiement(s) affiché(s) sur {payments.length}
+            </p>
+            <button
+              onClick={() => {
+                setFilterStatus('all');
+                setFilterYear('all');
+                setFilterMonth('all');
+                setSortBy('date');
+                setSortOrder('desc');
+              }}
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
         </div>
 
@@ -252,162 +493,252 @@ export default function LandlordRentPayments() {
             </button>
           </div>
         ) : (
-          <div className="space-y-8">
-            {overduePayments.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                  Paiements en retard ({overduePayments.length})
-                </h2>
-                <div className="space-y-4">
-                  {overduePayments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-red-500"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {payment.listing.title}
-                            </h3>
-                            {getStatusBadge(payment.status)}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Détails
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Mois
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Date échéance
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Loyer brut
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Frais
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Net perçu
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Statut
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredPayments.map((payment) => (
+                    <>
+                      <tr
+                        key={payment.id}
+                        className={`hover:bg-gray-50 transition-colors ${
+                          payment.status === 'overdue' ? 'bg-red-50' :
+                          payment.status === 'pending' ? 'bg-yellow-50' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-1">
+                              <Home className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {payment.listing.title}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-0.5">
+                                {payment.student_name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {payment.listing.address}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-gray-600 mb-1">{payment.student_name}</p>
-                          <p className="text-sm text-gray-500 mb-4">{payment.listing.address}</p>
+                        </td>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <p className="text-sm text-gray-500">Mois</p>
-                              <p className="font-medium text-gray-900">
-                                {formatMonthYear(payment.month_year)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Date prévue</p>
-                              <p className="font-medium text-gray-900">
-                                {formatDate(payment.payment_date)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Montant</p>
-                              <p className="font-medium text-gray-900">
-                                {payment.rent_amount.toFixed(2)} €
-                              </p>
-                            </div>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatMonthYear(payment.month_year)}
+                            </span>
                           </div>
-                        </div>
-                      </div>
-                    </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-900">
+                            {formatDate(payment.payment_date)}
+                          </span>
+                          {payment.status === 'paid' && payment.paid_at && (
+                            <p className="text-xs text-green-600 mt-1">
+                              Payé le {formatDate(payment.paid_at)}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {payment.rent_amount.toFixed(2)} €
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600">
+                            {payment.platform_fee.toFixed(2)} €
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-semibold text-blue-600">
+                            {(payment.rent_amount - payment.platform_fee).toFixed(2)} €
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {getStatusBadge(payment.status)}
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => toggleRowExpansion(payment.id)}
+                            className="inline-flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 font-medium"
+                          >
+                            {expandedRows.has(payment.id) ? (
+                              <>
+                                <ChevronUp className="w-4 h-4" />
+                                Masquer
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4" />
+                                Détails
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {expandedRows.has(payment.id) && (
+                        <tr className="bg-gray-50">
+                          <td colSpan={8} className="px-6 py-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <FileText className="w-4 h-4" />
+                                  Détails financiers
+                                </h4>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Loyer brut :</span>
+                                    <span className="font-medium text-gray-900">
+                                      {payment.rent_amount.toFixed(2)} €
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Frais plateforme :</span>
+                                    <span className="font-medium text-red-600">
+                                      - {payment.platform_fee.toFixed(2)} €
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                                    <span className="text-gray-900 font-semibold">Net perçu :</span>
+                                    <span className="font-bold text-blue-600">
+                                      {(payment.rent_amount - payment.platform_fee).toFixed(2)} €
+                                    </span>
+                                  </div>
+                                  {payment.status === 'paid' && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                      <p className="text-xs text-gray-600">
+                                        Le montant net sera viré sur votre compte bancaire selon les conditions de votre contrat Stripe Connect
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  Informations temporelles
+                                </h4>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Période :</span>
+                                    <span className="font-medium text-gray-900">
+                                      {formatMonthYear(payment.month_year)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Date échéance :</span>
+                                    <span className="font-medium text-gray-900">
+                                      {formatDate(payment.payment_date)}
+                                    </span>
+                                  </div>
+                                  {payment.paid_at && (
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-600">Date de paiement :</span>
+                                      <span className="font-medium text-green-600">
+                                        {formatDate(payment.paid_at)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {payment.status === 'overdue' && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                      <p className="text-xs text-red-600 font-medium">
+                                        Ce paiement est en retard. Veuillez contacter votre locataire.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                  <Home className="w-4 h-4" />
+                                  Informations réservation
+                                </h4>
+                                <div className="space-y-2">
+                                  <div>
+                                    <p className="text-xs text-gray-600 mb-1">Propriété :</p>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {payment.listing.title}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-600 mb-1">Locataire :</p>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {payment.student_name}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-600 mb-1">Adresse :</p>
+                                    <p className="text-sm text-gray-700">
+                                      {payment.listing.address}
+                                    </p>
+                                  </div>
+                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <button
+                                      onClick={() => navigate(`/messages?booking=${payment.booking_id}`)}
+                                      className="w-full text-sm text-orange-600 hover:text-orange-700 font-medium"
+                                    >
+                                      Contacter le locataire
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
-                </div>
-              </div>
-            )}
+                </tbody>
+              </table>
+            </div>
 
-            {pendingPayments.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                  Paiements en attente ({pendingPayments.length})
-                </h2>
-                <div className="space-y-4">
-                  {pendingPayments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {payment.listing.title}
-                            </h3>
-                            {getStatusBadge(payment.status)}
-                          </div>
-                          <p className="text-gray-600 mb-1">{payment.student_name}</p>
-                          <p className="text-sm text-gray-500 mb-4">{payment.listing.address}</p>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <p className="text-sm text-gray-500">Mois</p>
-                              <p className="font-medium text-gray-900">
-                                {formatMonthYear(payment.month_year)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Date prévue</p>
-                              <p className="font-medium text-gray-900">
-                                {formatDate(payment.payment_date)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Montant</p>
-                              <p className="font-medium text-gray-900">
-                                {payment.rent_amount.toFixed(2)} €
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {paidPayments.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  Historique des paiements ({paidPayments.length})
-                </h2>
-                <div className="space-y-4">
-                  {paidPayments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-white rounded-lg shadow-sm p-6"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {payment.listing.title}
-                            </h3>
-                            {getStatusBadge(payment.status)}
-                          </div>
-                          <p className="text-gray-600 mb-1">{payment.student_name}</p>
-
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                              <p className="text-sm text-gray-500">Mois</p>
-                              <p className="font-medium text-gray-900">
-                                {formatMonthYear(payment.month_year)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Payé le</p>
-                              <p className="font-medium text-gray-900">
-                                {payment.paid_at ? formatDate(payment.paid_at) : '-'}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Montant reçu</p>
-                              <p className="font-medium text-green-600">
-                                {payment.rent_amount.toFixed(2)} €
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Frais plateforme</p>
-                              <p className="font-medium text-gray-600">
-                                {payment.platform_fee.toFixed(2)} €
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {filteredPayments.length === 0 && payments.length > 0 && (
+              <div className="p-12 text-center">
+                <Filter className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">
+                  Aucun paiement ne correspond aux filtres sélectionnés
+                </p>
               </div>
             )}
           </div>
