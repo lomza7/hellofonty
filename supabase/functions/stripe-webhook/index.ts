@@ -63,6 +63,53 @@ async function handleEvent(event: Stripe.Event) {
   if (event.type === 'checkout.session.completed') {
     const session = stripeData as Stripe.Checkout.Session;
 
+    if (session.metadata?.payment_type === 'first_payment' && session.metadata?.booking_id) {
+      console.info(`Processing first rent payment for booking: ${session.metadata.booking_id}`);
+
+      try {
+        const { error } = await supabase
+          .from('bookings')
+          .update({
+            payment_status: 'completed',
+          })
+          .eq('id', session.metadata.booking_id);
+
+        if (error) {
+          console.error('Error updating booking payment status:', error);
+        } else {
+          console.info(`Successfully updated payment status for booking: ${session.metadata.booking_id}`);
+        }
+      } catch (error) {
+        console.error('Error processing first rent payment:', error);
+      }
+
+      return;
+    }
+
+    if (session.metadata?.payment_type === 'monthly_rent' && session.metadata?.payment_id) {
+      console.info(`Processing monthly rent payment: ${session.metadata.payment_id}`);
+
+      try {
+        const { error } = await supabase
+          .from('rent_payments')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+          })
+          .eq('id', session.metadata.payment_id);
+
+        if (error) {
+          console.error('Error updating rent payment status:', error);
+        } else {
+          console.info(`Successfully updated rent payment: ${session.metadata.payment_id}`);
+        }
+      } catch (error) {
+        console.error('Error processing monthly rent payment:', error);
+      }
+
+      return;
+    }
+
     if (session.metadata?.booking_id) {
       console.info(`Processing booking payment for booking: ${session.metadata.booking_id}`);
 

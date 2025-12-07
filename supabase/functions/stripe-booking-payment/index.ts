@@ -49,10 +49,8 @@ Deno.serve(async (req: Request) => {
           id,
           title,
           address,
-          price,
-          security_deposit,
-          user_id,
-          landlord:profiles!user_id(stripe_account_id, stripe_charges_enabled)
+          landlord_id,
+          landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
         )
       `)
       .eq('id', booking_id)
@@ -62,7 +60,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Réservation introuvable');
     }
 
-    if (booking.user_id !== user.id) {
+    if (booking.student_id !== user.id) {
       throw new Error('Non autorisé');
     }
 
@@ -94,15 +92,18 @@ Deno.serve(async (req: Request) => {
       .eq('setting_key', 'platform_fee_amount')
       .maybeSingle();
 
-    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 390;
+    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 50;
 
     const rentAmount = Math.round(booking.rent_amount * 100);
-    const depositAmount = Math.round(booking.deposit_amount * 100);
     const serviceFee = Math.round(booking.service_fee * 100);
-    const totalAmount = rentAmount + depositAmount + serviceFee;
+    const totalAmount = rentAmount + serviceFee;
 
     const platformFee = Math.round(platformFeeAmount * 100);
-    const landlordAmount = totalAmount - platformFee;
+    const landlordAmount = rentAmount;
+
+    const description = booking.is_first_month_partial
+      ? `Premier mois (prorata) : Du ${new Date(booking.start_date).toLocaleDateString('fr-FR')} au ${new Date(new Date(booking.start_date).getFullYear(), new Date(booking.start_date).getMonth() + 1, 0).toLocaleDateString('fr-FR')}`
+      : `Premier mois : Du ${new Date(booking.start_date).toLocaleDateString('fr-FR')} au ${new Date(new Date(booking.start_date).getFullYear(), new Date(booking.start_date).getMonth() + 1, 0).toLocaleDateString('fr-FR')}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -111,8 +112,8 @@ Deno.serve(async (req: Request) => {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `Réservation: ${booking.listing.title}`,
-              description: `Du ${new Date(booking.start_date).toLocaleDateString('fr-FR')} au ${new Date(booking.end_date).toLocaleDateString('fr-FR')}`,
+              name: `${booking.listing.title} - Premier paiement`,
+              description: description,
               images: [],
             },
             unit_amount: rentAmount,
@@ -123,19 +124,8 @@ Deno.serve(async (req: Request) => {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: 'Caution (remboursable)',
-              description: 'Sera remboursée à la fin du séjour',
-            },
-            unit_amount: depositAmount,
-          },
-          quantity: 1,
-        },
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
               name: 'Frais de service Hellofonty',
-              description: 'Frais de service de la plateforme',
+              description: 'Frais de service de la plateforme (paiement unique)',
             },
             unit_amount: serviceFee,
           },
@@ -147,9 +137,10 @@ Deno.serve(async (req: Request) => {
       cancel_url: `${req.headers.get('origin')}/payment/${booking_id}`,
       metadata: {
         booking_id: booking_id,
-        user_id: user.id,
+        student_id: user.id,
         listing_id: booking.listing_id,
-        landlord_id: booking.listing.user_id,
+        landlord_id: booking.listing.landlord_id,
+        payment_type: 'first_payment',
       },
       payment_intent_data: {
         application_fee_amount: platformFee,
@@ -158,7 +149,7 @@ Deno.serve(async (req: Request) => {
         },
         metadata: {
           booking_id: booking_id,
-          type: 'booking_payment',
+          type: 'first_rent_payment',
         },
       },
     });

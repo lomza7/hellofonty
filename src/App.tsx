@@ -40,6 +40,8 @@ const PayoutsCongratulations = lazy(() => import('./pages/PayoutsCongratulations
 const PayoutsRefresh = lazy(() => import('./pages/PayoutsRefresh'));
 const Payment = lazy(() => import('./pages/Payment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const MyMonthlyRents = lazy(() => import('./pages/MyMonthlyRents'));
+const LandlordRentPayments = lazy(() => import('./pages/LandlordRentPayments'));
 
 function LoadingScreen() {
   return (
@@ -183,6 +185,14 @@ function AppContent() {
               }
             />
             <Route
+              path="/mes-loyers"
+              element={
+                <ProtectedRoute>
+                  <MyMonthlyRents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/mes-documents"
               element={
                 <ProtectedRoute>
@@ -275,6 +285,14 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <Payouts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proprietaire/loyers"
+              element={
+                <ProtectedRoute>
+                  <LandlordRentPayments />
                 </ProtectedRoute>
               }
             />
