@@ -215,7 +215,7 @@ export default function LandlordRentPayments() {
             listing:listings(
               title,
               address,
-              monthly_price
+              price_per_month
             ),
             student:profiles!student_id(
               first_name,
@@ -258,7 +258,7 @@ export default function LandlordRentPayments() {
         listing: {
           title: booking.listing.title,
           address: booking.listing.address,
-          monthly_price: booking.listing.monthly_price,
+          monthly_price: booking.listing.price_per_month,
         },
       }));
 
