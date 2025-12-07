@@ -20,10 +20,33 @@ interface RentPayment {
   };
 }
 
+interface Booking {
+  id: string;
+  listing_id: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  payment_status: string;
+  listing: {
+    title: string;
+    address: string;
+    price_per_month: number;
+  };
+}
+
+interface ScheduledPayment {
+  month_year: string;
+  payment_date: string;
+  rent_amount: number;
+  platform_fee: number;
+  total_amount: number;
+}
+
 export default function MyMonthlyRents() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
+  const [bookingsWithSchedule, setBookingsWithSchedule] = useState<Array<Booking & { schedule: ScheduledPayment[] }>>([]);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
@@ -34,7 +57,78 @@ export default function MyMonthlyRents() {
     }
 
     loadPayments();
+    loadConfirmedBookings();
   }, [user]);
+
+  const generatePaymentSchedule = async (booking: Booking): Promise<ScheduledPayment[]> => {
+    const schedule: ScheduledPayment[] = [];
+    const startDate = new Date(booking.start_date);
+    const endDate = new Date(booking.end_date);
+    const monthlyRent = booking.listing.price_per_month;
+
+    const { data: settings } = await supabase
+      .from('platform_settings')
+      .select('platform_fee_amount')
+      .maybeSingle();
+
+    const platformFee = settings?.platform_fee_amount || 0;
+
+    let currentDate = new Date(startDate);
+    currentDate.setDate(1);
+    currentDate.setMonth(currentDate.getMonth() + 1);
+
+    while (currentDate < endDate) {
+      const monthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      const paymentDate = new Date(currentDate);
+      paymentDate.setDate(5);
+
+      schedule.push({
+        month_year: monthYear,
+        payment_date: paymentDate.toISOString().split('T')[0],
+        rent_amount: monthlyRent,
+        platform_fee: platformFee,
+        total_amount: monthlyRent + platformFee,
+      });
+
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    return schedule;
+  };
+
+  const loadConfirmedBookings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          listing:listings(
+            title,
+            address,
+            price_per_month
+          )
+        `)
+        .eq('student_id', user!.id)
+        .eq('status', 'confirmed')
+        .neq('payment_status', 'completed');
+
+      if (error) throw error;
+
+      const bookingsWithSchedules = await Promise.all(
+        data.map(async (booking: any) => {
+          const schedule = await generatePaymentSchedule(booking);
+          return {
+            ...booking,
+            schedule,
+          };
+        })
+      );
+
+      setBookingsWithSchedule(bookingsWithSchedules.filter(b => b.schedule.length > 0));
+    } catch (error) {
+      console.error('Erreur lors du chargement des réservations:', error);
+    }
+  };
 
   const loadPayments = async () => {
     try {
@@ -197,7 +291,7 @@ export default function MyMonthlyRents() {
           <p className="text-gray-600">Gérez et payez vos loyers mensuels</p>
         </div>
 
-        {payments.length === 0 ? (
+        {payments.length === 0 && bookingsWithSchedule.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -215,6 +309,69 @@ export default function MyMonthlyRents() {
           </div>
         ) : (
           <div className="space-y-8">
+            {bookingsWithSchedule.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Échéancier prévisionnel ({bookingsWithSchedule.reduce((sum, b) => sum + b.schedule.length, 0)} paiements)
+                </h2>
+                <div className="space-y-6">
+                  {bookingsWithSchedule.map((booking) => (
+                    <div key={booking.id} className="bg-blue-50 rounded-lg shadow-sm p-6 border-2 border-blue-200">
+                      <div className="mb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Calendar className="w-5 h-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {booking.listing.title}
+                          </h3>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            Prévisionnel
+                          </span>
+                        </div>
+                        <p className="text-gray-600 text-sm">{booking.listing.address}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Du {new Date(booking.start_date).toLocaleDateString('fr-FR')} au {new Date(booking.end_date).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="space-y-3">
+                          {booking.schedule.map((payment, index) => (
+                            <div key={index} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                              <div>
+                                <p className="font-medium text-gray-900">{formatMonthYear(payment.month_year)}</p>
+                                <p className="text-sm text-gray-500">Échéance: {formatDate(payment.payment_date)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">{payment.total_amount.toFixed(2)} €</p>
+                                <p className="text-xs text-gray-500">
+                                  Loyer: {payment.rent_amount.toFixed(2)} € + Frais: {payment.platform_fee.toFixed(2)} €
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4 pt-4 border-t-2 border-gray-300">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-gray-900">Total échéancier</span>
+                            <span className="text-2xl font-bold text-blue-600">
+                              {booking.schedule.reduce((sum, p) => sum + p.total_amount, 0).toFixed(2)} €
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 bg-blue-100 rounded-lg p-3 text-sm text-blue-800">
+                        <p className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          Cet échéancier sera activé après le paiement initial de votre réservation
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {pendingPayments.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
