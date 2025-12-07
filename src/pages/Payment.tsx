@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CreditCard, Clock, Euro, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Clock, Euro, Shield, ArrowLeft, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,7 +22,10 @@ type Booking = {
   listing?: {
     title: string;
     address: string;
-    images: string[];
+    images: Array<{ image_url: string }>;
+    landlord: {
+      avatar_url: string | null;
+    };
   };
 };
 
@@ -82,7 +85,14 @@ export default function Payment() {
         .from('bookings')
         .select(`
           *,
-          listing:listings(title, address, price_per_month, security_deposit, images:listing_images(image_url))
+          listing:listings(
+            title,
+            address,
+            price_per_month,
+            security_deposit,
+            images:listing_images(image_url),
+            landlord:profiles!landlord_id(avatar_url)
+          )
         `)
         .eq('id', bookingId)
         .maybeSingle();
@@ -242,13 +252,23 @@ export default function Payment() {
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Détails du logement</h2>
                 <div className="flex gap-4">
-                  {booking.listing.images && booking.listing.images[0] && (
-                    <img
-                      src={booking.listing.images[0]}
-                      alt={booking.listing.title}
-                      className="w-32 h-32 object-cover rounded-lg"
-                    />
-                  )}
+                  {(() => {
+                    const listingImage = booking.listing.images?.[0]?.image_url;
+                    const landlordAvatar = booking.listing.landlord?.avatar_url;
+                    const imageUrl = listingImage || landlordAvatar;
+
+                    return imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={booking.listing.title}
+                        className="w-32 h-32 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
+                        <Home className="w-12 h-12 text-blue-600" />
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1">
                     <h3 className="font-bold text-lg text-gray-900">{booking.listing.title}</h3>
                     <p className="text-gray-600 text-sm">{booking.listing.address}</p>
