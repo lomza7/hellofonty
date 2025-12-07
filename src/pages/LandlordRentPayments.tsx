@@ -185,36 +185,68 @@ export default function LandlordRentPayments() {
 
       if (error) throw error;
 
+      // Charger d'abord toutes les réservations du propriétaire
+      const { data: allListings, error: listingsError } = await supabase
+        .from('listings')
+        .select('id')
+        .eq('landlord_id', user!.id);
+
+      if (listingsError) throw listingsError;
+
+      const listingIds = (allListings || []).map(l => l.id);
+      console.log('Listings du propriétaire:', listingIds);
+
+      let bookingsData = null;
+      let bookingsError = null;
+
       // Charger les réservations acceptées en attente de premier paiement
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          total_months,
-          total_price,
-          payment_status,
-          payment_deadline,
-          listing:listings(
-            title,
-            address,
-            monthly_price,
-            landlord_id
-          ),
-          student:profiles!student_id(
-            first_name,
-            last_name
-          )
-        `)
-        .eq('listings.landlord_id', user!.id)
-        .eq('status', 'accepted')
-        .in('payment_status', ['pending', 'awaiting_payment'])
-        .order('payment_deadline', { ascending: true });
+      if (listingIds.length > 0) {
+        const result = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            start_date,
+            end_date,
+            total_months,
+            total_price,
+            payment_status,
+            payment_deadline,
+            status,
+            listing:listings(
+              title,
+              address,
+              monthly_price
+            ),
+            student:profiles!student_id(
+              first_name,
+              last_name
+            )
+          `)
+          .in('listing_id', listingIds)
+          .eq('status', 'accepted')
+          .order('payment_deadline', { ascending: true });
 
-      if (bookingsError) throw bookingsError;
+        bookingsData = result.data;
+        bookingsError = result.error;
 
-      const formattedBookings = (bookingsData || []).map((booking: any) => ({
+        if (bookingsError) {
+          console.error('Erreur chargement réservations:', bookingsError);
+        }
+      }
+
+      console.log('Toutes les réservations acceptées:', bookingsData);
+      console.log('Nombre de réservations:', bookingsData?.length);
+
+      // Filtrer uniquement celles en attente de paiement
+      const pendingBookingsData = (bookingsData || []).filter((booking: any) =>
+        booking.payment_status === 'pending' ||
+        booking.payment_status === 'awaiting_payment' ||
+        !booking.payment_status
+      );
+
+      console.log('Réservations en attente de paiement:', pendingBookingsData);
+
+      const formattedBookings = pendingBookingsData.map((booking: any) => ({
         id: booking.id,
         start_date: booking.start_date,
         end_date: booking.end_date,
@@ -229,6 +261,8 @@ export default function LandlordRentPayments() {
           monthly_price: booking.listing.monthly_price,
         },
       }));
+
+      console.log('Réservations formatées:', formattedBookings);
 
       setPendingBookings(formattedBookings);
 
@@ -540,6 +574,18 @@ export default function LandlordRentPayments() {
             </button>
           </div>
         </div>
+
+        {/* DEBUG: Afficher les infos de debug */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-8 text-xs">
+            <p className="font-bold mb-2">DEBUG INFO:</p>
+            <p>Nombre de pendingBookings: {pendingBookings.length}</p>
+            <p>Nombre de payments: {payments.length}</p>
+            <pre className="mt-2 overflow-auto">
+              {JSON.stringify(pendingBookings, null, 2)}
+            </pre>
+          </div>
+        )}
 
         {pendingBookings.length > 0 && (
           <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-6 mb-8">
