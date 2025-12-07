@@ -586,128 +586,150 @@ export default function LandlordRentPayments() {
         </div>
 
         {pendingBookings.length > 0 && (
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-6 mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-orange-500 text-white p-3 rounded-full">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  En attente du premier paiement
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {pendingBookings.length} réservation(s) acceptée(s) - Les loyers mensuels seront créés après le premier paiement
-                </p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+            <div className="px-6 py-4 border-b border-gray-200 bg-orange-50">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-500 text-white p-2 rounded-lg">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    En attente du premier paiement
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {pendingBookings.length} réservation(s) acceptée(s)
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              {pendingBookings.map((booking) => {
-                const deadline = new Date(booking.payment_deadline);
-                const now = new Date();
-                const isOverdue = deadline < now;
-                const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Logement
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Période
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Loyer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date limite
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {pendingBookings.map((booking) => {
+                    const deadline = booking.payment_deadline ? new Date(booking.payment_deadline) : null;
+                    const now = new Date();
+                    const isOverdue = deadline && deadline < now;
+                    const daysRemaining = deadline ? Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
-                return (
-                  <div
-                    key={booking.id}
-                    className={`bg-white rounded-lg p-5 border-l-4 ${
-                      isOverdue ? 'border-red-500' : 'border-orange-500'
-                    } shadow-sm`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <Home className="w-5 h-5 text-gray-400" />
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {booking.listing.title}
-                            </h3>
-                            <p className="text-sm text-gray-600">{booking.student_name}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Période de location</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {formatDate(booking.start_date)} - {formatDate(booking.end_date)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {booking.total_months} mois
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Loyer mensuel</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {booking.listing.monthly_price.toFixed(2)} €/mois
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Montant total</p>
-                            <p className="text-lg font-bold text-gray-900">
-                              {booking.total_price.toFixed(2)} €
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Date limite de paiement</p>
-                            <p className={`text-sm font-semibold ${
-                              isOverdue ? 'text-red-600' : daysRemaining <= 3 ? 'text-orange-600' : 'text-gray-900'
-                            }`}>
-                              {formatDate(booking.payment_deadline)}
-                            </p>
-                            {isOverdue ? (
-                              <p className="text-xs text-red-600 font-medium mt-1">
-                                Paiement en retard !
+                    return (
+                      <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Home className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {booking.listing.title}
                               </p>
-                            ) : daysRemaining <= 3 ? (
-                              <p className="text-xs text-orange-600 font-medium mt-1">
-                                {daysRemaining} jour(s) restant(s)
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {daysRemaining} jour(s) restant(s)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <div className="flex items-start gap-2">
-                            <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-blue-900">
-                              <p className="font-medium mb-1">Que se passe-t-il après le paiement ?</p>
-                              <p className="text-xs text-blue-700">
-                                Une fois que l'étudiant effectue le premier paiement, tous les loyers mensuels
-                                ({booking.total_months - 1} paiement(s)) seront automatiquement créés dans votre échéancier
-                                ci-dessous. Chaque loyer sera dû le 1er de chaque mois.
-                              </p>
+                              <p className="text-sm text-gray-500 truncate">{booking.student_name}</p>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {formatDate(booking.start_date)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {formatDate(booking.end_date)}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {booking.total_months} mois
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {booking.listing.monthly_price.toFixed(2)} €
+                          </div>
+                          <div className="text-xs text-gray-500">par mois</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-base font-semibold text-gray-900">
+                            {booking.total_price.toFixed(2)} €
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {deadline ? (
+                            <>
+                              <div className={`text-sm font-medium ${
+                                isOverdue ? 'text-red-600' : daysRemaining && daysRemaining <= 3 ? 'text-orange-600' : 'text-gray-900'
+                              }`}>
+                                {formatDate(booking.payment_deadline)}
+                              </div>
+                              {isOverdue ? (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  <span className="text-xs font-medium text-red-600">En retard</span>
+                                </div>
+                              ) : daysRemaining && daysRemaining <= 3 ? (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                  <span className="text-xs font-medium text-orange-600">{daysRemaining}j restants</span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {daysRemaining} jours restants
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">Non définie</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => navigate(`/messages?booking=${booking.id}`)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-medium"
+                            >
+                              Relancer
+                            </button>
+                            <button
+                              onClick={() => navigate('/mes-demandes')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium"
+                            >
+                              Voir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={() => navigate(`/messages?booking=${booking.id}`)}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-                      >
-                        Relancer l'étudiant
-                      </button>
-                      <button
-                        onClick={() => navigate('/mes-demandes')}
-                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                      >
-                        Voir la réservation
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="px-6 py-4 bg-blue-50 border-t border-gray-200">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-900">
+                  <p className="font-medium mb-1">Que se passe-t-il après le paiement ?</p>
+                  <p className="text-xs text-blue-700">
+                    Une fois que l'étudiant effectue le premier paiement, tous les loyers mensuels seront automatiquement créés dans votre échéancier ci-dessous. Chaque loyer sera dû le 1er de chaque mois.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
