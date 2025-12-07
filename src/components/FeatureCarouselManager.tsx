@@ -49,6 +49,8 @@ export default function FeatureCarouselManager() {
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [imageDropZone, setImageDropZone] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'landlords' | 'students'>('landlords');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newFeatureKey, setNewFeatureKey] = useState('');
 
   useEffect(() => {
     loadFeatures();
@@ -115,24 +117,26 @@ export default function FeatureCarouselManager() {
     }
   }
 
-  async function addNewFeature() {
-    const newFeatureKey = prompt('Entrez la clé de la nouvelle fonctionnalité (ex: landlords.new_feature ou students.new_feature):');
-
-    if (!newFeatureKey) return;
+  async function handleAddFeature() {
+    if (!newFeatureKey.trim()) {
+      setError('Veuillez entrer une clé pour la fonctionnalité');
+      return;
+    }
 
     if (!newFeatureKey.startsWith('landlords.') && !newFeatureKey.startsWith('students.')) {
-      alert('La clé doit commencer par "landlords." ou "students."');
+      setError('La clé doit commencer par "landlords." ou "students."');
       return;
     }
 
     const category = newFeatureKey.split('.')[0];
     if ((selectedCategory === 'landlords' && category !== 'landlords') ||
         (selectedCategory === 'students' && category !== 'students')) {
-      alert(`La clé doit commencer par "${selectedCategory}."`);
+      setError(`La clé doit commencer par "${selectedCategory}."`);
       return;
     }
 
     try {
+      setError(null);
       const maxOrder = features.length > 0 ? Math.max(...features.map(f => f.display_order)) : 0;
 
       const { data, error } = await supabase
@@ -152,13 +156,17 @@ export default function FeatureCarouselManager() {
 
       if (error) throw error;
 
+      setShowAddModal(false);
+      setNewFeatureKey('');
       await loadFeatures();
     } catch (err: any) {
       console.error('Error adding feature:', err);
       if (err.code === '23505') {
-        alert('Cette clé existe déjà');
+        setError('Cette clé existe déjà');
+      } else if (err.message?.includes('permission') || err.message?.includes('policy')) {
+        setError('Vous devez être administrateur pour ajouter une fonctionnalité');
       } else {
-        alert('Erreur lors de l\'ajout de la fonctionnalité');
+        setError(`Erreur lors de l'ajout: ${err.message}`);
       }
     }
   }
@@ -335,13 +343,64 @@ export default function FeatureCarouselManager() {
           </button>
           <div className="flex-1"></div>
           <button
-            onClick={addNewFeature}
+            onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Ajouter
           </button>
         </div>
+
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Ajouter une nouvelle fonctionnalité
+              </h3>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Clé de la fonctionnalité
+                </label>
+                <input
+                  type="text"
+                  value={newFeatureKey}
+                  onChange={(e) => setNewFeatureKey(e.target.value)}
+                  placeholder={`${selectedCategory}.nouvelle_fonction`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddFeature();
+                    }
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Exemple: {selectedCategory}.nouvelle_fonction
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewFeatureKey('');
+                    setError(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAddFeature}
+                  className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
