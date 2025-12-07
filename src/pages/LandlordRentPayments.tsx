@@ -199,7 +199,7 @@ export default function LandlordRentPayments() {
       let bookingsData = null;
       let bookingsError = null;
 
-      // Charger les réservations acceptées en attente de premier paiement
+      // Charger les réservations confirmées en attente de premier paiement
       if (listingIds.length > 0) {
         const result = await supabase
           .from('bookings')
@@ -223,7 +223,7 @@ export default function LandlordRentPayments() {
             )
           `)
           .in('listing_id', listingIds)
-          .eq('status', 'accepted')
+          .eq('status', 'confirmed')
           .order('payment_deadline', { ascending: true });
 
         bookingsData = result.data;
@@ -234,7 +234,7 @@ export default function LandlordRentPayments() {
         }
       }
 
-      console.log('Toutes les réservations acceptées:', bookingsData);
+      console.log('Toutes les réservations confirmées:', bookingsData);
       console.log('Nombre de réservations:', bookingsData?.length);
 
       // Filtrer uniquement celles en attente de paiement
