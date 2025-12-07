@@ -575,18 +575,6 @@ export default function LandlordRentPayments() {
           </div>
         </div>
 
-        {/* DEBUG: Afficher les infos de debug */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-8 text-xs">
-            <p className="font-bold mb-2">DEBUG INFO:</p>
-            <p>Nombre de pendingBookings: {pendingBookings.length}</p>
-            <p>Nombre de payments: {payments.length}</p>
-            <pre className="mt-2 overflow-auto">
-              {JSON.stringify(pendingBookings, null, 2)}
-            </pre>
-          </div>
-        )}
-
         {pendingBookings.length > 0 && (
           <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
