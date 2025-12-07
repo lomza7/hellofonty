@@ -297,13 +297,23 @@ export default function LandlordRentPayments() {
         .filter((p: RentPayment) => p.status === 'paid')
         .reduce((sum: number, p: RentPayment) => sum + p.rent_amount, 0);
 
-      const totalPending = updatedPayments
+      let totalPending = updatedPayments
         .filter((p: RentPayment) => p.status === 'pending')
         .reduce((sum: number, p: RentPayment) => sum + p.rent_amount, 0);
 
-      const totalOverdue = updatedPayments
+      let totalOverdue = updatedPayments
         .filter((p: RentPayment) => p.status === 'overdue')
         .reduce((sum: number, p: RentPayment) => sum + p.rent_amount, 0);
+
+      formattedBookings.forEach((booking: any) => {
+        const deadline = new Date(booking.payment_deadline);
+        const totalPrice = parseFloat(booking.total_price);
+        if (deadline < now) {
+          totalOverdue += totalPrice;
+        } else {
+          totalPending += totalPrice;
+        }
+      });
 
       setStats({
         total_received: totalReceived,
