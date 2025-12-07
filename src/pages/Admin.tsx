@@ -1830,7 +1830,7 @@ export default function Admin() {
                       </div>
 
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-2xl font-bold text-rose-600">{listing.price}€</span>
+                        <span className="text-2xl font-bold text-rose-600">{listing.price_per_month}€</span>
                         <span className={`px-2 py-1 text-xs font-medium rounded ${
                           listing.is_available
                             ? 'bg-green-100 text-green-700'

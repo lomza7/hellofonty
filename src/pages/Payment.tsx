@@ -116,7 +116,7 @@ export default function Payment() {
         const startDate = new Date(data.start_date);
         const endDate = new Date(data.end_date);
         const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const rentAmount = (data.listing.price || 0) * nights;
+        const rentAmount = (data.listing.price_per_month || 0) * nights;
         const depositAmount = data.listing.security_deposit || 0;
         const serviceFee = Math.round(rentAmount * 0.05);
         const totalAmount = rentAmount + depositAmount + serviceFee;
