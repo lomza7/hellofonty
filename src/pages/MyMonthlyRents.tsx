@@ -55,6 +55,7 @@ export default function MyMonthlyRents() {
   const { user } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
   const [bookingsWithSchedule, setBookingsWithSchedule] = useState<Array<Booking & { schedule: ScheduledPayment[] }>>([]);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
@@ -172,7 +173,12 @@ export default function MyMonthlyRents() {
         })
       );
 
-      setBookingsWithSchedule(bookingsWithSchedules.filter(b => b.schedule.length > 0));
+      const filtered = bookingsWithSchedules.filter(b => b.schedule.length > 0);
+      setBookingsWithSchedule(filtered);
+
+      if (filtered.length > 0 && !selectedBookingId) {
+        setSelectedBookingId(filtered[0].id);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des réservations:', error);
     }
@@ -330,6 +336,7 @@ export default function MyMonthlyRents() {
 
   const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
   const paidPayments = payments.filter(p => p.status === 'paid');
+  const selectedBooking = bookingsWithSchedule.find(b => b.id === selectedBookingId);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -338,6 +345,26 @@ export default function MyMonthlyRents() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes loyers mensuels</h1>
           <p className="text-gray-600">Gérez et payez vos loyers mensuels</p>
         </div>
+
+        {bookingsWithSchedule.length > 1 && (
+          <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+            <label htmlFor="booking-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Sélectionner un logement
+            </label>
+            <select
+              id="booking-select"
+              value={selectedBookingId || ''}
+              onChange={(e) => setSelectedBookingId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              {bookingsWithSchedule.map((booking) => (
+                <option key={booking.id} value={booking.id}>
+                  {booking.listing.title} - {booking.listing.address}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {payments.length === 0 && bookingsWithSchedule.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -357,84 +384,80 @@ export default function MyMonthlyRents() {
           </div>
         ) : (
           <div className="space-y-8">
-            {bookingsWithSchedule.length > 0 && (
+            {selectedBooking && (
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  Échéancier des paiements ({bookingsWithSchedule.reduce((sum, b) => sum + b.schedule.length, 0)} paiements)
+                  Échéancier des paiements ({selectedBooking.schedule.length} paiements)
                 </h2>
-                <div className="space-y-6">
-                  {bookingsWithSchedule.map((booking) => (
-                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-6 border-2 border-gray-200">
-                      <div className="mb-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Calendar className="w-5 h-5 text-blue-600" />
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {booking.listing.title}
-                          </h3>
-                        </div>
-                        <p className="text-gray-600 text-sm">{booking.listing.address}</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Du {new Date(booking.start_date).toLocaleDateString('fr-FR')} au {new Date(booking.end_date).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
+                <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-gray-200">
+                  <div className="mb-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {selectedBooking.listing.title}
+                      </h3>
+                    </div>
+                    <p className="text-gray-600 text-sm">{selectedBooking.listing.address}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Du {new Date(selectedBooking.start_date).toLocaleDateString('fr-FR')} au {new Date(selectedBooking.end_date).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="space-y-3">
-                          {booking.schedule.map((payment, index) => (
-                            <div key={index} className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-gray-900">{formatMonthYear(payment.month_year)}</p>
-                                  {payment.is_initial && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                      Paiement initial
-                                    </span>
-                                  )}
-                                  {payment.status === 'paid' && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Payé
-                                    </span>
-                                  )}
-                                  {payment.status === 'pending' && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                      <Clock className="w-3 h-3" />
-                                      En attente
-                                    </span>
-                                  )}
-                                  {payment.status === 'overdue' && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                      <AlertCircle className="w-3 h-3" />
-                                      En retard
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-500">Échéance: {formatDate(payment.payment_date)}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold text-gray-900">{payment.total_amount.toFixed(2)} €</p>
-                                <p className="text-xs text-gray-500">
-                                  {payment.is_initial ? (
-                                    `Inc. loyer + caution + frais`
-                                  ) : (
-                                    `Loyer: ${payment.rent_amount.toFixed(2)} € + Frais: ${payment.platform_fee.toFixed(2)} €`
-                                  )}
-                                </p>
-                              </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-3">
+                      {selectedBooking.schedule.map((payment, index) => (
+                        <div key={index} className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900">{formatMonthYear(payment.month_year)}</p>
+                              {payment.is_initial && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                  Paiement initial
+                                </span>
+                              )}
+                              {payment.status === 'paid' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Payé
+                                </span>
+                              )}
+                              {payment.status === 'pending' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  <Clock className="w-3 h-3" />
+                                  En attente
+                                </span>
+                              )}
+                              {payment.status === 'overdue' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  <AlertCircle className="w-3 h-3" />
+                                  En retard
+                                </span>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                        <div className="mt-4 pt-4 border-t-2 border-gray-300">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-bold text-gray-900">Total échéancier</span>
-                            <span className="text-2xl font-bold text-blue-600">
-                              {booking.schedule.reduce((sum, p) => sum + p.total_amount, 0).toFixed(2)} €
-                            </span>
+                            <p className="text-sm text-gray-500">Échéance: {formatDate(payment.payment_date)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">{payment.total_amount.toFixed(2)} €</p>
+                            <p className="text-xs text-gray-500">
+                              {payment.is_initial ? (
+                                `Inc. loyer + caution + frais`
+                              ) : (
+                                `Loyer: ${payment.rent_amount.toFixed(2)} € + Frais: ${payment.platform_fee.toFixed(2)} €`
+                              )}
+                            </p>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t-2 border-gray-300">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-gray-900">Total échéancier</span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          {selectedBooking.schedule.reduce((sum, p) => sum + p.total_amount, 0).toFixed(2)} €
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             )}
