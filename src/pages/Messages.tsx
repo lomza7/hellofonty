@@ -216,7 +216,13 @@ export default function Messages({ selectedUserId }: MessagesProps) {
         }
       });
 
-      setConversations(Array.from(convMap.values()));
+      const conversationsList = Array.from(convMap.values());
+      setConversations(conversationsList);
+
+      // Sélectionner automatiquement la première conversation si aucune n'est sélectionnée
+      if (!selectedUserId && !selectedConversation && conversationsList.length > 0) {
+        setSelectedConversation(conversationsList[0].otherUserId);
+      }
     }
     setLoading(false);
   };
