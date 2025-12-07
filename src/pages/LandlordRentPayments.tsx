@@ -88,28 +88,18 @@ export default function LandlordRentPayments() {
   }, [user]);
 
   useEffect(() => {
-    console.log('=== Début du filtrage ===');
-    console.log('Nombre total de paiements:', payments.length);
-    console.log('Filtres actifs:', { filterStatus, filterYear, filterMonth, sortBy, sortOrder });
-
     let filtered = [...payments];
 
     if (filterStatus !== 'all') {
-      console.log('Filtrage par statut:', filterStatus);
       filtered = filtered.filter(p => p.status === filterStatus);
-      console.log('Après filtre statut:', filtered.length);
     }
 
     if (filterYear !== 'all') {
-      console.log('Filtrage par année:', filterYear);
       filtered = filtered.filter(p => p.month_year.startsWith(filterYear));
-      console.log('Après filtre année:', filtered.length);
     }
 
     if (filterMonth !== 'all') {
-      console.log('Filtrage par mois:', filterMonth);
       filtered = filtered.filter(p => p.month_year.endsWith(`-${filterMonth}`));
-      console.log('Après filtre mois:', filtered.length);
     }
 
     filtered.sort((a, b) => {
@@ -127,9 +117,6 @@ export default function LandlordRentPayments() {
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-
-    console.log('Résultat final après tri:', filtered.length, 'paiements');
-    console.log('=== Fin du filtrage ===\n');
 
     setFilteredPayments(filtered);
   }, [payments, filterStatus, filterYear, filterMonth, sortBy, sortOrder]);
