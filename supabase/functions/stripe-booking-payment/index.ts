@@ -88,12 +88,20 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
     }
 
+    const { data: platformSettings } = await supabaseClient
+      .from('platform_settings')
+      .select('setting_value')
+      .eq('setting_key', 'platform_fee_percentage')
+      .maybeSingle();
+
+    const platformFeePercentage = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) / 100 : 0.05;
+
     const rentAmount = Math.round(booking.rent_amount * 100);
     const depositAmount = Math.round(booking.deposit_amount * 100);
     const serviceFee = Math.round(booking.service_fee * 100);
     const totalAmount = rentAmount + depositAmount + serviceFee;
 
-    const platformFee = Math.round(totalAmount * 0.05);
+    const platformFee = Math.round(totalAmount * platformFeePercentage);
     const landlordAmount = totalAmount - platformFee;
 
     const session = await stripe.checkout.sessions.create({
@@ -127,7 +135,7 @@ Deno.serve(async (req: Request) => {
             currency: 'eur',
             product_data: {
               name: 'Frais de service Hellofonty',
-              description: '5% du montant total',
+              description: 'Frais de service de la plateforme',
             },
             unit_amount: serviceFee,
           },

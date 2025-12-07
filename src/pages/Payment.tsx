@@ -297,7 +297,7 @@ export default function Payment() {
                   <span className="font-semibold">{booking.deposit_amount.toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>Frais de service Hellofonty (5%)</span>
+                  <span>Frais de service Hellofonty</span>
                   <span className="font-semibold">{booking.service_fee.toFixed(2)} €</span>
                 </div>
               </div>

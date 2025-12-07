@@ -9,6 +9,7 @@ import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal
 import FeatureCarouselManager from '../components/FeatureCarouselManager';
 import StripeConnectAdmin from '../components/StripeConnectAdmin';
 import DocumentVerificationPanel from '../components/DocumentVerificationPanel';
+import PlatformSettings from '../components/PlatformSettings';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 
 interface UserData {
@@ -90,7 +91,7 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'settings'>('users');
   const [pendingVerifications, setPendingVerifications] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [verificationDocument, setVerificationDocument] = useState<string | null>(null);
@@ -713,6 +714,17 @@ export default function Admin() {
             >
               <Wallet className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Stripe Connect</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'settings'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <DollarSign className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Paramètres</span>
             </button>
             <button
               onClick={() => navigate('/admin/support')}
@@ -1892,6 +1904,11 @@ export default function Admin() {
         {/* Stripe Connect Tab */}
         {activeTab === 'stripe' && (
           <StripeConnectAdmin />
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <PlatformSettings />
         )}
 
       </div>
