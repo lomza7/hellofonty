@@ -88,10 +88,6 @@ export default function LandlordRentPayments() {
   }, [user]);
 
   useEffect(() => {
-    applyFiltersAndSort();
-  }, [payments, filterStatus, filterYear, filterMonth, sortBy, sortOrder]);
-
-  const applyFiltersAndSort = () => {
     let filtered = [...payments];
 
     if (filterStatus !== 'all') {
@@ -123,7 +119,7 @@ export default function LandlordRentPayments() {
     });
 
     setFilteredPayments(filtered);
-  };
+  }, [payments, filterStatus, filterYear, filterMonth, sortBy, sortOrder]);
 
   const toggleRowExpansion = (paymentId: string) => {
     const newExpanded = new Set(expandedRows);
