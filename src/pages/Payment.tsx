@@ -80,7 +80,7 @@ export default function Payment() {
         .from('bookings')
         .select(`
           *,
-          listing:listings(title, address, images, price, security_deposit)
+          listing:listings(title, address, price_per_month, security_deposit, images:listing_images(image_url))
         `)
         .eq('id', bookingId)
         .maybeSingle();
