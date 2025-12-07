@@ -13,14 +13,7 @@ import FeaturesCarousel from '../components/FeaturesCarousel';
 interface FeatureImage {
   feature_key: string;
   image_url: string;
-  title_fr?: string;
-  title_en?: string;
-  description_fr?: string;
-  description_en?: string;
-}
-
-interface FeatureData {
-  image_url: string;
+  display_order: number;
   title_fr?: string;
   title_en?: string;
   description_fr?: string;
@@ -31,8 +24,8 @@ export default function Home() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [featureData, setFeatureData] = useState<Record<string, FeatureData>>({});
-  const [activeFeatureKeys, setActiveFeatureKeys] = useState<Set<string>>(new Set());
+  const [landlordFeatures, setLandlordFeatures] = useState<FeatureImage[]>([]);
+  const [studentFeatures, setStudentFeatures] = useState<FeatureImage[]>([]);
 
   useEffect(() => {
     loadFeatureImages();
@@ -42,25 +35,17 @@ export default function Home() {
     try {
       const { data, error } = await supabase
         .from('feature_carousel_images')
-        .select('feature_key, image_url, title_fr, title_en, description_fr, description_en')
-        .eq('is_active', true);
+        .select('feature_key, image_url, display_order, title_fr, title_en, description_fr, description_en')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
 
-      const dataMap: Record<string, FeatureData> = {};
-      const activeKeys = new Set<string>();
-      data?.forEach((item: FeatureImage) => {
-        dataMap[item.feature_key] = {
-          image_url: item.image_url,
-          title_fr: item.title_fr,
-          title_en: item.title_en,
-          description_fr: item.description_fr,
-          description_en: item.description_en
-        };
-        activeKeys.add(item.feature_key);
-      });
-      setFeatureData(dataMap);
-      setActiveFeatureKeys(activeKeys);
+      const landlords = data?.filter(item => item.feature_key.startsWith('landlords.')) || [];
+      const students = data?.filter(item => item.feature_key.startsWith('students.')) || [];
+
+      setLandlordFeatures(landlords);
+      setStudentFeatures(students);
     } catch (error) {
       console.error('Error loading feature images:', error);
     }
@@ -71,26 +56,39 @@ export default function Home() {
     navigate('/recherche');
   };
 
-  const getFeatureImage = (key: string, fallback: string) => {
-    return featureData[key]?.image_url || fallback;
+  const getIconForFeature = (featureKey: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'landlords.lease': <FileSignature className="w-7 h-7" />,
+      'landlords.payment': <Banknote className="w-7 h-7" />,
+      'landlords.inventory': <ClipboardCheck className="w-7 h-7" />,
+      'landlords.listings': <HomeIcon className="w-7 h-7" />,
+      'landlords.bookings': <Calendar className="w-7 h-7" />,
+      'landlords.access': <Key className="w-7 h-7" />,
+      'landlords.verification': <CheckCircle className="w-7 h-7" />,
+      'landlords.messaging': <MessageCircle className="w-7 h-7" />,
+      'landlords.stats': <BarChart3 className="w-7 h-7" />,
+      'students.search': <Search className="w-7 h-7" />,
+      'students.verified': <Shield className="w-7 h-7" />,
+      'students.favorites': <Heart className="w-7 h-7" />,
+      'students.booking': <Calendar className="w-7 h-7" />,
+      'students.documents': <FileText className="w-7 h-7" />,
+      'students.access': <Key className="w-7 h-7" />,
+      'students.community': <Users className="w-7 h-7" />,
+      'students.free': <Star className="w-7 h-7" />
+    };
+    return iconMap[featureKey] || <HomeIcon className="w-7 h-7" />;
   };
 
-  const getFeatureTitle = (key: string, fallbackTranslationKey: string) => {
-    const data = featureData[key];
-    if (data) {
-      const customTitle = language === 'en' ? data.title_en : data.title_fr;
-      if (customTitle) return customTitle;
-    }
-    return t(fallbackTranslationKey);
+  const getFeatureTitle = (feature: FeatureImage, fallbackKey: string) => {
+    const customTitle = language === 'en' ? feature.title_en : feature.title_fr;
+    if (customTitle) return customTitle;
+    return t(fallbackKey) || feature.feature_key;
   };
 
-  const getFeatureDescription = (key: string, fallbackTranslationKey: string) => {
-    const data = featureData[key];
-    if (data) {
-      const customDesc = language === 'en' ? data.description_en : data.description_fr;
-      if (customDesc) return customDesc;
-    }
-    return t(fallbackTranslationKey);
+  const getFeatureDescription = (feature: FeatureImage, fallbackKey: string) => {
+    const customDesc = language === 'en' ? feature.description_en : feature.description_fr;
+    if (customDesc) return customDesc;
+    return t(fallbackKey) || '';
   };
 
   const renderGradientText = (text: string) => {
@@ -161,152 +159,33 @@ export default function Home() {
 
       <FeaturedListings />
 
-{(() => {
-        const landlordFeatures = [
-          {
-            key: 'landlords.lease',
-            icon: <FileSignature className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.lease', 'features.landlords.lease.title'),
-            description: getFeatureDescription('landlords.lease', 'features.landlords.lease.desc'),
-            imageUrl: getFeatureImage('landlords.lease', 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg')
-          },
-          {
-            key: 'landlords.payment',
-            icon: <Banknote className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.payment', 'features.landlords.payment.title'),
-            description: getFeatureDescription('landlords.payment', 'features.landlords.payment.desc'),
-            imageUrl: getFeatureImage('landlords.payment', 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg')
-          },
-          {
-            key: 'landlords.inventory',
-            icon: <ClipboardCheck className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.inventory', 'features.landlords.inventory.title'),
-            description: getFeatureDescription('landlords.inventory', 'features.landlords.inventory.desc'),
-            imageUrl: getFeatureImage('landlords.inventory', 'https://images.pexels.com/photos/7078666/pexels-photo-7078666.jpeg')
-          },
-          {
-            key: 'landlords.listings',
-            icon: <HomeIcon className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.listings', 'features.landlords.listings.title'),
-            description: getFeatureDescription('landlords.listings', 'features.landlords.listings.desc'),
-            imageUrl: getFeatureImage('landlords.listings', 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg')
-          },
-          {
-            key: 'landlords.bookings',
-            icon: <Calendar className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.bookings', 'features.landlords.bookings.title'),
-            description: getFeatureDescription('landlords.bookings', 'features.landlords.bookings.desc'),
-            imageUrl: getFeatureImage('landlords.bookings', 'https://images.pexels.com/photos/5717546/pexels-photo-5717546.jpeg')
-          },
-          {
-            key: 'landlords.access',
-            icon: <Key className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.access', 'features.landlords.access.title'),
-            description: getFeatureDescription('landlords.access', 'features.landlords.access.desc'),
-            imageUrl: getFeatureImage('landlords.access', 'https://images.pexels.com/photos/5705471/pexels-photo-5705471.jpeg')
-          },
-          {
-            key: 'landlords.verification',
-            icon: <CheckCircle className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.verification', 'features.landlords.verification.title'),
-            description: getFeatureDescription('landlords.verification', 'features.landlords.verification.desc'),
-            imageUrl: getFeatureImage('landlords.verification', 'https://images.pexels.com/photos/5668838/pexels-photo-5668838.jpeg')
-          },
-          {
-            key: 'landlords.messaging',
-            icon: <MessageCircle className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.messaging', 'features.landlords.messaging.title'),
-            description: getFeatureDescription('landlords.messaging', 'features.landlords.messaging.desc'),
-            imageUrl: getFeatureImage('landlords.messaging', 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg')
-          },
-          {
-            key: 'landlords.stats',
-            icon: <BarChart3 className="w-7 h-7" />,
-            title: getFeatureTitle('landlords.stats', 'features.landlords.stats.title'),
-            description: getFeatureDescription('landlords.stats', 'features.landlords.stats.desc'),
-            imageUrl: getFeatureImage('landlords.stats', 'https://images.pexels.com/photos/7947664/pexels-photo-7947664.jpeg')
-          }
-        ].filter(feature => activeFeatureKeys.size === 0 || activeFeatureKeys.has(feature.key));
+{landlordFeatures.length > 0 && (
+        <FeaturesCarousel
+          title={t('features.landlords.title')}
+          subtitle={t('features.landlords.subtitle')}
+          accentColor="rose"
+          features={landlordFeatures.map(feature => ({
+            icon: getIconForFeature(feature.feature_key),
+            title: getFeatureTitle(feature, `features.landlords.${feature.feature_key.split('.')[1]}.title`),
+            description: getFeatureDescription(feature, `features.landlords.${feature.feature_key.split('.')[1]}.desc`),
+            imageUrl: feature.image_url
+          }))}
+        />
+      )}
 
-        return landlordFeatures.length > 0 && (
-          <FeaturesCarousel
-            title={t('features.landlords.title')}
-            subtitle={t('features.landlords.subtitle')}
-            accentColor="rose"
-            features={landlordFeatures}
-          />
-        );
-      })()}
-
-{(() => {
-        const studentFeatures = [
-          {
-            key: 'students.search',
-            icon: <Search className="w-7 h-7" />,
-            title: getFeatureTitle('students.search', 'features.students.search.title'),
-            description: getFeatureDescription('students.search', 'features.students.search.desc'),
-            imageUrl: getFeatureImage('students.search', 'https://images.pexels.com/photos/5582868/pexels-photo-5582868.jpeg')
-          },
-          {
-            key: 'students.verified',
-            icon: <Shield className="w-7 h-7" />,
-            title: getFeatureTitle('students.verified', 'features.students.verified.title'),
-            description: getFeatureDescription('students.verified', 'features.students.verified.desc'),
-            imageUrl: getFeatureImage('students.verified', 'https://images.pexels.com/photos/7821513/pexels-photo-7821513.jpeg')
-          },
-          {
-            key: 'students.favorites',
-            icon: <Heart className="w-7 h-7" />,
-            title: getFeatureTitle('students.favorites', 'features.students.favorites.title'),
-            description: getFeatureDescription('students.favorites', 'features.students.favorites.desc'),
-            imageUrl: getFeatureImage('students.favorites', 'https://images.pexels.com/photos/1370704/pexels-photo-1370704.jpeg')
-          },
-          {
-            key: 'students.booking',
-            icon: <Calendar className="w-7 h-7" />,
-            title: getFeatureTitle('students.booking', 'features.students.booking.title'),
-            description: getFeatureDescription('students.booking', 'features.students.booking.desc'),
-            imageUrl: getFeatureImage('students.booking', 'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg')
-          },
-          {
-            key: 'students.documents',
-            icon: <FileText className="w-7 h-7" />,
-            title: getFeatureTitle('students.documents', 'features.students.documents.title'),
-            description: getFeatureDescription('students.documents', 'features.students.documents.desc'),
-            imageUrl: getFeatureImage('students.documents', 'https://images.pexels.com/photos/8112195/pexels-photo-8112195.jpeg')
-          },
-          {
-            key: 'students.access',
-            icon: <Key className="w-7 h-7" />,
-            title: getFeatureTitle('students.access', 'features.students.access.title'),
-            description: getFeatureDescription('students.access', 'features.students.access.desc'),
-            imageUrl: getFeatureImage('students.access', 'https://images.pexels.com/photos/279810/pexels-photo-279810.jpeg')
-          },
-          {
-            key: 'students.community',
-            icon: <Users className="w-7 h-7" />,
-            title: getFeatureTitle('students.community', 'features.students.community.title'),
-            description: getFeatureDescription('students.community', 'features.students.community.desc'),
-            imageUrl: getFeatureImage('students.community', 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg')
-          },
-          {
-            key: 'students.free',
-            icon: <Star className="w-7 h-7" />,
-            title: getFeatureTitle('students.free', 'features.students.free.title'),
-            description: getFeatureDescription('students.free', 'features.students.free.desc'),
-            imageUrl: getFeatureImage('students.free', 'https://images.pexels.com/photos/259027/pexels-photo-259027.jpeg')
-          }
-        ].filter(feature => activeFeatureKeys.size === 0 || activeFeatureKeys.has(feature.key));
-
-        return studentFeatures.length > 0 && (
-          <FeaturesCarousel
-            title={t('features.students.title')}
-            subtitle={t('features.students.subtitle')}
-            accentColor="blue"
-            features={studentFeatures}
-          />
-        );
-      })()}
+{studentFeatures.length > 0 && (
+        <FeaturesCarousel
+          title={t('features.students.title')}
+          subtitle={t('features.students.subtitle')}
+          accentColor="blue"
+          features={studentFeatures.map(feature => ({
+            icon: getIconForFeature(feature.feature_key),
+            title: getFeatureTitle(feature, `features.students.${feature.feature_key.split('.')[1]}.title`),
+            description: getFeatureDescription(feature, `features.students.${feature.feature_key.split('.')[1]}.desc`),
+            imageUrl: feature.image_url
+          }))}
+        />
+      )}
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20 py-12 sm:py-20">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-3 sm:mb-4 text-center">

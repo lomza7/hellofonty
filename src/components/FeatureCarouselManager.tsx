@@ -506,7 +506,7 @@ export default function FeatureCarouselManager() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-gray-900 text-lg">
-                        {featureLabels[feature.feature_key] || feature.feature_key}
+                        {feature.title_fr || featureLabels[feature.feature_key] || feature.feature_key}
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
                         Position: {feature.display_order}
