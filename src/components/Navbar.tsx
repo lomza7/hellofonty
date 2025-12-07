@@ -205,6 +205,14 @@ export default function Navbar() {
                             )}
                           </Link>
                           <Link
+                            to="/mes-loyers"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            <span>{language === 'fr' ? 'Mes loyers' : 'My Rents'}</span>
+                          </Link>
+                          <Link
                             to="/mes-documents"
                             onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
@@ -295,6 +303,14 @@ export default function Navbar() {
                           >
                             <Wallet className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Paiements' : 'Payouts'}</span>
+                          </Link>
+                          <Link
+                            to="/proprietaire/loyers"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
                           </Link>
                         </>
                       )}

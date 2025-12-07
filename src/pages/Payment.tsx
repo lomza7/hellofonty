@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 type Booking = {
   id: string;
-  user_id: string;
+  student_id: string;
   listing_id: string;
   start_date: string;
   end_date: string;
@@ -17,6 +17,8 @@ type Booking = {
   rent_amount: number;
   deposit_amount: number;
   service_fee: number;
+  is_first_month_partial?: boolean;
+  prorated_rent?: number;
   listing?: {
     title: string;
     address: string;
@@ -92,7 +94,7 @@ export default function Payment() {
         return;
       }
 
-      if (data.user_id !== profile.id) {
+      if (data.student_id !== profile.id) {
         setError('Vous n\'avez pas accès à cette réservation');
         return;
       }
@@ -153,12 +155,17 @@ export default function Payment() {
       setProcessing(true);
       setError('');
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Non authentifié');
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-booking-payment`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
