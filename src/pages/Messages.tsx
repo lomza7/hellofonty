@@ -120,7 +120,10 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   }, [selectedConversation]);
 
   const checkContactPermission = async (otherUserId: string) => {
-    if (!profile) return;
+    if (!profile || otherUserId === 'system') {
+      setContactAllowed(false);
+      return;
+    }
     console.log('Vérification des permissions de contact entre', profile.id, 'et', otherUserId);
     const allowed = await shouldAllowContactSharing(profile.id, otherUserId, supabase);
     console.log('Contact autorisé:', allowed);
@@ -184,15 +187,22 @@ export default function Messages({ selectedUserId }: MessagesProps) {
       const convMap = new Map<string, Conversation>();
 
       data.forEach((msg) => {
-        const otherUserId =
-          msg.sender_id === profile.id ? msg.recipient_id : msg.sender_id;
-        const otherUser =
-          msg.sender_id === profile.id ? msg.recipient : msg.sender;
+        const isSystemMessage = msg.sender_id === null;
+
+        const otherUserId = isSystemMessage
+          ? 'system'
+          : msg.sender_id === profile.id ? msg.recipient_id : msg.sender_id;
+
+        const otherUser = isSystemMessage
+          ? null
+          : msg.sender_id === profile.id ? msg.recipient : msg.sender;
 
         if (!convMap.has(otherUserId)) {
           convMap.set(otherUserId, {
             otherUserId,
-            otherUserName: `${otherUser?.first_name} ${otherUser?.last_name}`,
+            otherUserName: isSystemMessage
+              ? 'HelloFonty'
+              : `${otherUser?.first_name} ${otherUser?.last_name}`,
             lastMessage: msg.content,
             lastMessageDate: msg.created_at,
             unreadCount:
@@ -214,13 +224,23 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const loadMessages = async (otherUserId: string) => {
     if (!profile) return;
 
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, sender:profiles!sender_id(*), recipient:profiles!recipient_id(*), booking:bookings!booking_id(*)')
-      .or(
-        `and(sender_id.eq.${profile.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${profile.id})`
-      )
-      .order('created_at', { ascending: true });
+    let query;
+    if (otherUserId === 'system') {
+      query = supabase
+        .from('messages')
+        .select('*, sender:profiles!sender_id(*), recipient:profiles!recipient_id(*), booking:bookings!booking_id(*)')
+        .is('sender_id', null)
+        .eq('recipient_id', profile.id);
+    } else {
+      query = supabase
+        .from('messages')
+        .select('*, sender:profiles!sender_id(*), recipient:profiles!recipient_id(*), booking:bookings!booking_id(*)')
+        .or(
+          `and(sender_id.eq.${profile.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${profile.id})`
+        );
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true });
 
     if (!error && data) {
       setMessages(data);
@@ -230,12 +250,21 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const markAsRead = async (otherUserId: string) => {
     if (!profile) return;
 
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('sender_id', otherUserId)
-      .eq('recipient_id', profile.id)
-      .eq('is_read', false);
+    if (otherUserId === 'system') {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .is('sender_id', null)
+        .eq('recipient_id', profile.id)
+        .eq('is_read', false);
+    } else {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', otherUserId)
+        .eq('recipient_id', profile.id)
+        .eq('is_read', false);
+    }
 
     setConversations((prev) =>
       prev.map((conv) =>
@@ -382,8 +411,10 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                   <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
                 </button>
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                  {conversations.find((c) => c.otherUserId === selectedConversation)
-                    ?.otherUserName}
+                  {selectedConversation === 'system'
+                    ? 'HelloFonty'
+                    : conversations.find((c) => c.otherUserId === selectedConversation)
+                      ?.otherUserName}
                 </h3>
               </div>
 
@@ -509,64 +540,74 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               </div>
 
               <div className="p-3 sm:p-6 border-t">
-                {contactAllowed && (
-                  <div className="mb-3 sm:mb-4 bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3 flex items-center gap-2">
-                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
-                    <p className="text-xs sm:text-sm text-green-800">
-                      {t('messages.contactAllowed') || 'Réservation confirmée : vous pouvez échanger vos coordonnées en toute sécurité.'}
+                {selectedConversation === 'system' ? (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4 text-center">
+                    <p className="text-sm text-orange-800 font-medium">
+                      💬 Ceci est une conversation système. Vous ne pouvez pas répondre aux messages automatiques.
                     </p>
                   </div>
-                )}
-
-                {/* Bouton pour partager un guide d'accès */}
-                {profile?.user_type === 'landlord' && accessGuides.length > 0 && (
-                  <div className="mb-4 relative">
-                    <button
-                      onClick={() => setShowGuideMenu(!showGuideMenu)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span className="text-sm font-medium">Partager un guide d'accès</span>
-                    </button>
-
-                    {showGuideMenu && (
-                      <div className="absolute bottom-full mb-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[300px] max-h-[300px] overflow-y-auto z-10">
-                        <div className="text-xs text-gray-500 font-medium px-3 py-2 border-b">
-                          Sélectionnez un logement
-                        </div>
-                        {accessGuides.map((guide) => (
-                          <button
-                            key={guide.id}
-                            onClick={() => insertAccessGuideLink(guide)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded transition-colors"
-                          >
-                            <p className="font-medium text-gray-900 text-sm">{guide.listing?.title}</p>
-                            <p className="text-xs text-gray-500">{guide.listing?.address}</p>
-                          </button>
-                        ))}
+                ) : (
+                  <>
+                    {contactAllowed && (
+                      <div className="mb-3 sm:mb-4 bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3 flex items-center gap-2">
+                        <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm text-green-800">
+                          {t('messages.contactAllowed') || 'Réservation confirmée : vous pouvez échanger vos coordonnées en toute sécurité.'}
+                        </p>
                       </div>
                     )}
-                  </div>
-                )}
 
-                <div className="flex space-x-2 sm:space-x-4">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder={t('messages.typeMessage')}
-                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={sending || !newMessage.trim()}
-                    className="px-3 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2"
-                  >
-                    <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="hidden sm:inline">{t('messages.send')}</span>
-                  </button>
-                </div>
+                    {/* Bouton pour partager un guide d'accès */}
+                    {profile?.user_type === 'landlord' && accessGuides.length > 0 && (
+                      <div className="mb-4 relative">
+                        <button
+                          onClick={() => setShowGuideMenu(!showGuideMenu)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                        >
+                          <Key className="w-4 h-4" />
+                          <span className="text-sm font-medium">Partager un guide d'accès</span>
+                        </button>
+
+                        {showGuideMenu && (
+                          <div className="absolute bottom-full mb-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[300px] max-h-[300px] overflow-y-auto z-10">
+                            <div className="text-xs text-gray-500 font-medium px-3 py-2 border-b">
+                              Sélectionnez un logement
+                            </div>
+                            {accessGuides.map((guide) => (
+                              <button
+                                key={guide.id}
+                                onClick={() => insertAccessGuideLink(guide)}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded transition-colors"
+                              >
+                                <p className="font-medium text-gray-900 text-sm">{guide.listing?.title}</p>
+                                <p className="text-xs text-gray-500">{guide.listing?.address}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex space-x-2 sm:space-x-4">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                        placeholder={t('messages.typeMessage')}
+                        className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                      />
+                      <button
+                        onClick={sendMessage}
+                        disabled={sending || !newMessage.trim()}
+                        className="px-3 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2"
+                      >
+                        <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">{t('messages.send')}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           ) : (
