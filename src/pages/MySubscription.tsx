@@ -532,15 +532,22 @@ export default function MySubscription() {
                 {subscription.plan_type === 'premium' && !subscription.cancel_at_period_end && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <button
-                      onClick={() => {
-                        console.log('Cancel button clicked');
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Cancel button clicked', {
+                          cancelingSubscription,
+                          subscription,
+                          hasHandler: typeof handleCancelSubscription === 'function'
+                        });
                         handleCancelSubscription();
                       }}
                       disabled={cancelingSubscription}
-                      className="text-sm text-gray-600 hover:text-red-600 underline disabled:opacity-50"
+                      className="px-4 py-2 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {cancelingSubscription
-                        ? (language === 'fr' ? 'Annulation...' : 'Canceling...')
+                        ? (language === 'fr' ? 'Annulation en cours...' : 'Canceling...')
                         : (language === 'fr' ? 'Annuler mon abonnement' : 'Cancel my subscription')}
                     </button>
                   </div>
