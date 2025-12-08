@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
+import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
 import FeatureCarouselManager from '../components/FeatureCarouselManager';
 import StripeConnectAdmin from '../components/StripeConnectAdmin';
@@ -1733,7 +1734,12 @@ export default function Admin() {
 
         {/* Pricing Tab */}
         {activeTab === 'pricing' && (
-          <PricingPlansManager />
+          <div className="space-y-8">
+            <PricingPlansManager />
+            <div className="border-t-4 border-gray-200 pt-8">
+              <AgencyComparisonManager />
+            </div>
+          </div>
         )}
 
         {/* Listings Tab */}

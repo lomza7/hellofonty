@@ -19,32 +19,56 @@ interface PricingPlan {
   display_order: number;
 }
 
+interface ComparisonFeature {
+  id: string;
+  feature_fr: string;
+  feature_en: string;
+  hellofonty_has: boolean;
+  hellofonty_details_fr: string | null;
+  hellofonty_details_en: string | null;
+  agency_has: boolean;
+  agency_details_fr: string | null;
+  agency_details_en: string | null;
+  order_index: number;
+}
+
 export default function Pricing() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [comparisonFeatures, setComparisonFeatures] = useState<ComparisonFeature[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isFrench = language === 'fr';
 
   useEffect(() => {
-    loadPlans();
+    loadData();
   }, []);
 
-  async function loadPlans() {
+  async function loadData() {
     try {
-      const { data, error } = await supabase
-        .from('pricing_plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('type', { ascending: true })
-        .order('display_order', { ascending: true });
+      const [plansResult, featuresResult] = await Promise.all([
+        supabase
+          .from('pricing_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('type', { ascending: true })
+          .order('display_order', { ascending: true }),
+        supabase
+          .from('agency_comparison_features')
+          .select('*')
+          .eq('is_active', true)
+          .order('order_index', { ascending: true })
+      ]);
 
-      if (error) throw error;
-      setPlans(data || []);
+      if (plansResult.error) throw plansResult.error;
+      if (featuresResult.error) throw featuresResult.error;
+
+      setPlans(plansResult.data || []);
+      setComparisonFeatures(featuresResult.data || []);
     } catch (error) {
-      console.error('Error loading plans:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -250,125 +274,48 @@ export default function Pricing() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Frais pour le propriétaire' : 'Landlord fees'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <Check className="h-6 w-6 text-green-600 mb-1" />
-                        <span className="text-sm text-gray-600 font-semibold">0€ - 99€/an</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <X className="h-6 w-6 text-red-400 mb-1" />
-                        <span className="text-sm text-gray-600">800€ - 1500€</span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Frais pour l\'étudiant' : 'Student fees'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <Check className="h-6 w-6 text-green-600 mb-1" />
-                        <span className="text-sm text-gray-600 font-semibold">300€</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <X className="h-6 w-6 text-red-400 mb-1" />
-                        <span className="text-sm text-gray-600">800€ - 1200€</span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Gestion des annonces' : 'Listing management'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Messagerie intégrée' : 'Integrated messaging'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <X className="h-6 w-6 text-red-400 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Génération de contrats' : 'Contract generation'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'État des lieux digital' : 'Digital inventory'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <X className="h-6 w-6 text-red-400 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Paiement en ligne sécurisé' : 'Secure online payment'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <X className="h-6 w-6 text-red-400 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Support client 7j/7' : '24/7 customer support'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <X className="h-6 w-6 text-red-400 mx-auto" />
-                    </td>
-                  </tr>
-
-                  <tr className="bg-white hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {isFrench ? 'Calendrier synchronisé' : 'Synchronized calendar'}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Check className="h-6 w-6 text-green-600 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <X className="h-6 w-6 text-red-400 mx-auto" />
-                    </td>
-                  </tr>
+                  {comparisonFeatures.map((feature, index) => (
+                    <tr
+                      key={feature.id}
+                      className={`${
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      } ${
+                        index === comparisonFeatures.length - 1 ? '' : 'border-b border-gray-100'
+                      } hover:bg-gray-50 transition`}
+                    >
+                      <td className="px-6 py-4 text-gray-800 font-medium">
+                        {isFrench ? feature.feature_fr : feature.feature_en}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          {feature.hellofonty_has ? (
+                            <Check className="h-6 w-6 text-green-600 mb-1" />
+                          ) : (
+                            <X className="h-6 w-6 text-red-400 mb-1" />
+                          )}
+                          {(isFrench ? feature.hellofonty_details_fr : feature.hellofonty_details_en) && (
+                            <span className="text-sm text-gray-600 font-semibold">
+                              {isFrench ? feature.hellofonty_details_fr : feature.hellofonty_details_en}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          {feature.agency_has ? (
+                            <Check className="h-6 w-6 text-green-600 mb-1" />
+                          ) : (
+                            <X className="h-6 w-6 text-red-400 mb-1" />
+                          )}
+                          {(isFrench ? feature.agency_details_fr : feature.agency_details_en) && (
+                            <span className="text-sm text-gray-600">
+                              {isFrench ? feature.agency_details_fr : feature.agency_details_en}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
