@@ -42,10 +42,11 @@ interface Activity {
 interface Listing {
   id: string;
   title: string;
-  status: string;
-  views: number;
-  favorites: number;
-  bookings_count: number;
+  is_active: boolean;
+  listing_statistics?: {
+    total_views: number;
+    total_favorites: number;
+  } | null;
 }
 
 interface BookingRequest {
@@ -111,7 +112,13 @@ export default function DashboardLandlord() {
       ] = await Promise.all([
         supabase
           .from('listings')
-          .select('*')
+          .select(`
+            *,
+            listing_statistics(
+              total_views,
+              total_favorites
+            )
+          `)
           .eq('landlord_id', user.id)
           .order('created_at', { ascending: false }),
 
@@ -366,14 +373,14 @@ export default function DashboardLandlord() {
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900 mb-2">{listing.title}</h3>
                           <div className="flex items-center gap-4 text-xs text-gray-600">
-                            <span>👁️ {listing.views || 0} vues</span>
-                            <span>❤️ {listing.favorites || 0} favoris</span>
+                            <span>👁️ {listing.listing_statistics?.total_views || 0} vues</span>
+                            <span>❤️ {listing.listing_statistics?.total_favorites || 0} favoris</span>
                           </div>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          listing.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                          listing.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {listing.status === 'active' ? 'Active' : 'Inactive'}
+                          {listing.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </Link>
