@@ -17,143 +17,202 @@ export default function Footer() {
     }, 100);
   };
   return (
-    <footer className="bg-gray-900 text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="relative bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950 text-gray-300 overflow-hidden">
+      {/* Decorative background circles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/3 left-1/3 w-80 h-80 bg-rose-400/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">HELLOFONTY</h3>
-            <p className="text-sm leading-relaxed mb-4">
+            <h3 className="text-white text-xl font-bold mb-5 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
+              HELLOFONTY
+            </h3>
+            <p className="text-sm leading-relaxed mb-6 text-gray-400">
               {t('footer.aboutDesc')}
             </p>
-            <address className="not-italic text-sm text-gray-400">
-              3 rue Paul Tavernier<br />
-              77300 Fontainebleau<br />
-              France
+            <address className="not-italic text-sm text-gray-500 space-y-1">
+              <p className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 mt-0.5 text-rose-400 flex-shrink-0" />
+                <span>
+                  3 rue Paul Tavernier<br />
+                  77300 Fontainebleau<br />
+                  France
+                </span>
+              </p>
             </address>
           </div>
 
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{language === 'fr' ? 'Pour les étudiants' : 'For Students'}</h3>
-            <ul className="space-y-2">
+            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+              {language === 'fr' ? 'Pour les étudiants' : 'For Students'}
+            </h3>
+            <ul className="space-y-3">
               <li>
                 <Link
                   to="/recherche"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {t('footer.searchListing')}
+                  <span className="relative">
+                    {t('footer.searchListing')}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/connexion"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {t('nav.signIn')}
+                  <span className="relative">
+                    {t('nav.signIn')}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/inscription"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {t('nav.signUp')}
+                  <span className="relative">
+                    {t('nav.signUp')}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/blog"
-                  className="text-sm hover:text-white transition-colors flex items-center gap-2"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 flex items-center gap-2 group"
                 >
                   <BookOpen className="w-4 h-4" />
-                  <span>Blog</span>
+                  <span className="relative">
+                    Blog
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <a
                   href="/#faq"
                   onClick={scrollToFAQ}
-                  className="text-sm hover:text-white transition-colors block cursor-pointer"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block cursor-pointer group"
                 >
-                  FAQ
+                  <span className="relative">
+                    FAQ
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{language === 'fr' ? 'Pour les propriétaires' : 'For Landlords'}</h3>
-            <ul className="space-y-2">
+            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+              {language === 'fr' ? 'Pour les propriétaires' : 'For Landlords'}
+            </h3>
+            <ul className="space-y-3">
               <li>
                 <Link
                   to="/ajouter-annonce"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {t('footer.postListing')}
+                  <span className="relative">
+                    {t('footer.postListing')}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/tarifs"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {t('footer.pricing')}
+                  <span className="relative">
+                    {t('footer.pricing')}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/inscription"
-                  className="text-sm hover:text-white transition-colors block"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block group"
                 >
-                  {language === 'fr' ? 'Devenir propriétaire' : 'Become a Landlord'}
+                  <span className="relative">
+                    {language === 'fr' ? 'Devenir propriétaire' : 'Become a Landlord'}
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </Link>
               </li>
               <li>
                 <a
                   href="/#faq"
                   onClick={scrollToFAQ}
-                  className="text-sm hover:text-white transition-colors block cursor-pointer"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-all duration-200 block cursor-pointer group"
                 >
-                  FAQ
+                  <span className="relative">
+                    FAQ
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-rose-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                  </span>
                 </a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-white text-lg font-semibold mb-4">{t('footer.contact')}</h3>
-            <ul className="space-y-3 mb-4">
-              <li className="flex items-center gap-2">
-                <Mail className="w-5 h-5 flex-shrink-0" />
-                <a href="mailto:contact@hellofonty.com" className="text-sm hover:text-white transition-colors">
+            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+              {t('footer.contact')}
+            </h3>
+            <ul className="space-y-4 mb-6">
+              <li className="flex items-center gap-3 group">
+                <div className="w-9 h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
+                  <Mail className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                </div>
+                <a
+                  href="mailto:contact@hellofonty.com"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+                >
                   contact@hellofonty.com
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <Phone className="w-5 h-5 flex-shrink-0" />
-                <a href="tel:+33123456789" className="text-sm hover:text-white transition-colors">
+              <li className="flex items-center gap-3 group">
+                <div className="w-9 h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
+                  <Phone className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                </div>
+                <a
+                  href="tel:+33123456789"
+                  className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+                >
                   +33 1 23 45 67 89
                 </a>
               </li>
             </ul>
-            <h4 className="text-white text-base font-semibold mb-3">{t('footer.followUs')}</h4>
-            <div className="flex gap-4">
+            <h4 className="text-white text-sm font-bold mb-4 tracking-wide">
+              {t('footer.followUs')}
+            </h4>
+            <div className="flex gap-3">
               <a
                 href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="Facebook"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
                 href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-pink-600 transition-colors"
+                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
               </a>
               <a
                 href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
+                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="w-5 h-5" />
@@ -162,11 +221,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-          <p className="text-sm">
+        <div className="border-t border-gray-800/50 mt-12 pt-8 text-center">
+          <p className="text-sm text-gray-400">
             &copy; {new Date().getFullYear()} HELLOFONTY. {t('footer.rights')}.
           </p>
-          <p className="text-xs mt-2 text-gray-500">
+          <p className="text-xs mt-2 text-gray-600">
             {language === 'fr'
               ? 'Plateforme de logement pour étudiants INSEAD à Fontainebleau'
               : 'Housing platform for INSEAD students in Fontainebleau'}
