@@ -110,8 +110,8 @@ export default function DashboardStudent() {
         supabase
           .from('messages')
           .select('id')
-          .eq('receiver_id', user.id)
-          .eq('read', false),
+          .eq('recipient_id', user.id)
+          .eq('is_read', false),
 
         supabase
           .from('rent_payments')
@@ -187,7 +187,7 @@ export default function DashboardStudent() {
             )}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Bonjour, {profile?.full_name || 'Étudiant'} 👋
+                Bonjour, {profile ? `${profile.first_name} ${profile.last_name}` : 'Étudiant'} 👋
               </h1>
               <p className="text-gray-600 mt-1">
                 Bienvenue sur votre tableau de bord

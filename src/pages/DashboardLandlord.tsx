@@ -15,7 +15,9 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  PlusCircle
+  PlusCircle,
+  FileSignature,
+  User
 } from 'lucide-react';
 import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
@@ -56,7 +58,8 @@ interface BookingRequest {
   status: string;
   created_at: string;
   profiles: {
-    full_name: string;
+    first_name: string;
+    last_name: string;
     avatar_url: string;
   };
   listings: {
@@ -126,8 +129,8 @@ export default function DashboardLandlord() {
         supabase
           .from('messages')
           .select('id')
-          .eq('receiver_id', user.id)
-          .eq('read', false),
+          .eq('recipient_id', user.id)
+          .eq('is_read', false),
 
         supabase
           .from('notifications')
@@ -138,7 +141,7 @@ export default function DashboardLandlord() {
 
         supabase
           .from('bookings')
-          .select('*, profiles!bookings_student_id_fkey(full_name, avatar_url), listings!inner(title, landlord_id)')
+          .select('*, profiles!bookings_student_id_fkey(first_name, last_name, avatar_url), listings!inner(title, landlord_id)')
           .eq('listings.landlord_id', user.id)
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
@@ -234,7 +237,7 @@ export default function DashboardLandlord() {
                 Tableau de bord propriétaire 🏠
               </h1>
               <p className="text-gray-600 mt-1">
-                Bienvenue, {profile?.full_name || 'Propriétaire'}
+                Bienvenue, {profile ? `${profile.first_name} ${profile.last_name}` : 'Propriétaire'}
               </p>
             </div>
             <Link
@@ -302,7 +305,7 @@ export default function DashboardLandlord() {
                         {request.profiles.avatar_url ? (
                           <img
                             src={request.profiles.avatar_url}
-                            alt={request.profiles.full_name}
+                            alt={`${request.profiles.first_name} ${request.profiles.last_name}`}
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
@@ -311,7 +314,7 @@ export default function DashboardLandlord() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900">{request.profiles.full_name}</h3>
+                          <h3 className="font-semibold text-gray-900">{request.profiles.first_name} {request.profiles.last_name}</h3>
                           <p className="text-sm text-gray-600">{request.listings.title}</p>
                           <p className="text-xs text-gray-500 mt-1">
                             {new Date(request.start_date).toLocaleDateString('fr-FR')} - {new Date(request.end_date).toLocaleDateString('fr-FR')}
