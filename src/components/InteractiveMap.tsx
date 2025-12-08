@@ -132,6 +132,38 @@ export default function InteractiveMap() {
       markersRef.current.push(marker);
     });
 
+    // Ajouter le marqueur INSEAD
+    const inseadIcon = L.divIcon({
+      className: 'insead-marker',
+      html: `
+        <div class="relative group cursor-pointer">
+          <div class="h-12 w-12 rounded-full overflow-hidden border-4 border-green-700 shadow-xl transition-transform group-hover:scale-110 bg-white">
+            <img src="/logo-insead.jpg" alt="INSEAD" class="h-full w-full object-cover" />
+          </div>
+          <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-green-700 text-white rounded-full text-xs font-bold whitespace-nowrap shadow-lg">
+            INSEAD
+          </div>
+        </div>
+      `,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+    });
+
+    const inseadMarker = L.marker([48.403994, 2.687018], {
+      icon: inseadIcon,
+    }).addTo(map);
+
+    inseadMarker.bindPopup(`
+      <div class="p-2 text-center">
+        <img src="/logo-insead.jpg" alt="INSEAD" class="h-16 w-16 rounded-full mx-auto mb-2 border-2 border-green-700" />
+        <h3 class="font-bold text-green-800 text-lg">INSEAD</h3>
+        <p class="text-gray-600 text-sm">Boulevard de Constance<br/>77300 Fontainebleau</p>
+      </div>
+    `, {
+      maxWidth: 200,
+      className: 'insead-popup'
+    });
+
     mapRef.current = map;
   };
 
