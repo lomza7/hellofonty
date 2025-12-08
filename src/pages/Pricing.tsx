@@ -327,6 +327,9 @@ export default function Pricing() {
               <h3 className="text-lg sm:text-xl font-bold text-white text-center">
                 {isFrench ? 'Récapitulatif Financier' : 'Financial Summary'}
               </h3>
+              <p className="text-xs sm:text-sm text-gray-300 text-center mt-2">
+                {isFrench ? 'Studio de 35m2, Rue Grande à Fontainebleau' : 'Studio 35m2, Rue Grande in Fontainebleau'}
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
