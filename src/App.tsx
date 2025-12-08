@@ -42,6 +42,8 @@ const Payment = lazy(() => import('./pages/Payment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const MyMonthlyRents = lazy(() => import('./pages/MyMonthlyRents'));
 const LandlordRentPayments = lazy(() => import('./pages/LandlordRentPayments'));
+const DashboardStudent = lazy(() => import('./pages/DashboardStudent'));
+const DashboardLandlord = lazy(() => import('./pages/DashboardLandlord'));
 
 function LoadingScreen() {
   return (
@@ -110,6 +112,23 @@ function AppContent() {
             <Route path="/blog/:slug" element={<BlogPost />} />
 
             <Route path="/payment-success" element={<PaymentSuccess />} />
+
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardStudent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard-proprietaire"
+              element={
+                <ProtectedRoute>
+                  <DashboardLandlord />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/payment/:bookingId"

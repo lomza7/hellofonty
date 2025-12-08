@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen, Wallet } from 'lucide-react';
+import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect } from 'react';
@@ -170,6 +170,15 @@ export default function Navbar() {
                           <span>Administration</span>
                         </Link>
                       )}
+
+                      <Link
+                        to={profile?.role === 'landlord' ? '/dashboard-proprietaire' : '/dashboard'}
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 flex items-center space-x-3 font-semibold"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>{language === 'fr' ? 'Tableau de bord' : 'Dashboard'}</span>
+                      </Link>
 
                       <Link
                         to="/messages"
