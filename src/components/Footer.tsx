@@ -26,8 +26,8 @@ export default function Footer() {
       </div>
 
       {/* Large HELLOFONTY text background */}
-      <div className="absolute inset-0 flex items-start justify-center pt-12 sm:pt-16 lg:pt-20 pointer-events-none overflow-hidden">
-        <h2 className="text-[10rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] xl:text-[24rem] font-black text-white/[0.03] tracking-tighter leading-none whitespace-nowrap select-none">
+      <div className="absolute inset-0 flex items-start justify-center pt-8 sm:pt-12 lg:pt-16 pointer-events-none overflow-hidden">
+        <h2 className="text-[3rem] sm:text-[4rem] md:text-[6rem] lg:text-[8rem] xl:text-[10rem] font-black text-white/[0.03] tracking-tighter leading-none whitespace-nowrap select-none px-4">
           HELLOFONTY
         </h2>
       </div>
