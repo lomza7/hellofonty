@@ -342,6 +342,15 @@ function AppContent() {
         </Suspense>
       </main>
 
+      {/* Large HELLOFONTY branding section */}
+      <section className="relative bg-gray-50 py-12 sm:py-16 lg:py-20 overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <h2 className="text-[3rem] sm:text-[4rem] md:text-[6rem] lg:text-[8rem] xl:text-[10rem] font-black text-gray-900/[0.03] tracking-tighter leading-none whitespace-nowrap select-none px-4">
+            HELLOFONTY
+          </h2>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
