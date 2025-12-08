@@ -9,7 +9,6 @@ import {
   CreditCard,
   FileText,
   ClipboardList,
-  TrendingUp,
   DollarSign,
   Users,
   CheckCircle,
@@ -23,13 +22,11 @@ import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
 import TaskList from '../components/dashboard/TaskList';
 import ActivityTimeline from '../components/dashboard/ActivityTimeline';
-import MiniChart from '../components/dashboard/MiniChart';
 
 interface DashboardStats {
   totalRevenue: number;
   pendingPayments: number;
   activeBookings: number;
-  occupancyRate: number;
 }
 
 interface Activity {
@@ -74,14 +71,12 @@ export default function DashboardLandlord() {
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     pendingPayments: 0,
-    activeBookings: 0,
-    occupancyRate: 0
+    activeBookings: 0
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [recentListings, setRecentListings] = useState<Listing[]>([]);
   const [pendingRequests, setPendingRequests] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [monthlyRevenue] = useState([2400, 2800, 2600, 3200, 2900, 3400]);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -166,15 +161,10 @@ export default function DashboardLandlord() {
         .filter(p => p.status === 'pending')
         .reduce((sum, p) => sum + (p.landlord_amount || 0), 0);
 
-      const totalDays = listings.length * 30;
-      const bookedDays = bookings.length * 15;
-      const occupancyRate = totalDays > 0 ? Math.round((bookedDays / totalDays) * 100) : 0;
-
       setStats({
         totalRevenue: Math.round(totalRevenue),
         pendingPayments: Math.round(pendingPayments),
-        activeBookings: bookings.length,
-        occupancyRate
+        activeBookings: bookings.length
       });
 
       setRecentListings(listings.slice(0, 5));
@@ -257,12 +247,11 @@ export default function DashboardLandlord() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={DollarSign}
             title="Revenus totaux"
             value={`${stats.totalRevenue}€`}
-            variation={{ value: '+12%', positive: true }}
             iconColor="text-green-600"
             iconBg="bg-green-100"
           />
@@ -279,14 +268,6 @@ export default function DashboardLandlord() {
             value={stats.activeBookings}
             iconColor="text-blue-600"
             iconBg="bg-blue-100"
-          />
-          <StatCard
-            icon={TrendingUp}
-            title="Taux d'occupation"
-            value={`${stats.occupancyRate}%`}
-            variation={{ value: '+5%', positive: true }}
-            iconColor="text-rose-600"
-            iconBg="bg-rose-100"
           />
         </div>
 
@@ -386,24 +367,6 @@ export default function DashboardLandlord() {
                     </Link>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {monthlyRevenue.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Revenus mensuels</h2>
-                    <p className="text-sm text-gray-600 mt-1">Évolution sur les 6 derniers mois</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-gray-900">
-                      {monthlyRevenue[monthlyRevenue.length - 1]}€
-                    </p>
-                    <p className="text-sm text-gray-600">Ce mois</p>
-                  </div>
-                </div>
-                <MiniChart data={monthlyRevenue} height={80} color="rgb(34, 197, 94)" />
               </div>
             )}
           </div>
