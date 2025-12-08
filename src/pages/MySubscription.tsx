@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useStripeCheckout } from '../hooks/useStripeCheckout';
 
 type Subscription = {
   id: string;
@@ -30,16 +31,40 @@ export default function MySubscription() {
   const { user, profile } = useAuth();
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'plan' | 'invoices'>('plan');
+  const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
+
+  const successParam = searchParams.get('success');
+  const canceledParam = searchParams.get('canceled');
 
   useEffect(() => {
     if (user && profile?.role === 'landlord') {
       loadSubscriptionData();
     }
   }, [user, profile]);
+
+  useEffect(() => {
+    if (successParam) {
+      loadSubscriptionData();
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams);
+        params.delete('success');
+        setSearchParams(params);
+      }, 5000);
+    }
+    if (canceledParam) {
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams);
+        params.delete('canceled');
+        setSearchParams(params);
+      }, 5000);
+    }
+  }, [successParam, canceledParam]);
 
   const loadSubscriptionData = async () => {
     try {
@@ -152,13 +177,73 @@ export default function MySubscription() {
     }).format(amount);
   };
 
-  const handleUpgrade = (targetPlan: 'premium') => {
-    // TODO: Implement Stripe payment flow
-    alert(
+  const handleUpgrade = async () => {
+    try {
+      const { data: premiumPlan, error: planError } = await supabase
+        .from('pricing_plans')
+        .select('stripe_price_id')
+        .eq('type', 'landlord')
+        .eq('price', 29)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (planError) throw planError;
+
+      if (!premiumPlan?.stripe_price_id) {
+        alert(
+          language === 'fr'
+            ? 'Le paiement n\'est pas encore configuré. Veuillez contacter le support.'
+            : 'Payment is not yet configured. Please contact support.'
+        );
+        return;
+      }
+
+      const baseUrl = window.location.origin;
+      await createCheckoutSession({
+        priceId: premiumPlan.stripe_price_id,
+        mode: 'subscription',
+        successUrl: `${baseUrl}/mon-abonnement?success=true`,
+        cancelUrl: `${baseUrl}/mon-abonnement?canceled=true`,
+      });
+    } catch (error) {
+      console.error('Error upgrading subscription:', error);
+      alert(
+        language === 'fr'
+          ? 'Une erreur est survenue. Veuillez réessayer.'
+          : 'An error occurred. Please try again.'
+      );
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!subscription?.stripe_subscription_id) return;
+
+    const confirmed = window.confirm(
       language === 'fr'
-        ? `Pour passer au plan ${getPlanName(targetPlan)}, veuillez configurer Stripe.\n\nRendez-vous sur https://bolt.new/setup/stripe pour plus d'informations.`
-        : `To upgrade to ${getPlanName(targetPlan)}, please configure Stripe.\n\nVisit https://bolt.new/setup/stripe for more information.`
+        ? 'Êtes-vous sûr de vouloir annuler votre abonnement Premium ? Vous conserverez vos avantages jusqu\'à la fin de la période en cours.'
+        : 'Are you sure you want to cancel your Premium subscription? You will keep your benefits until the end of the current period.'
     );
+
+    if (!confirmed) return;
+
+    try {
+      setCancelingSubscription(true);
+
+      alert(
+        language === 'fr'
+          ? 'L\'annulation d\'abonnement sera bientôt disponible. Veuillez contacter le support pour le moment.'
+          : 'Subscription cancellation will be available soon. Please contact support for now.'
+      );
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      alert(
+        language === 'fr'
+          ? 'Une erreur est survenue. Veuillez réessayer.'
+          : 'An error occurred. Please try again.'
+      );
+    } finally {
+      setCancelingSubscription(false);
+    }
   };
 
   if (profile?.role !== 'landlord') {
@@ -190,6 +275,50 @@ export default function MySubscription() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {successParam && (
+          <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
+            <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-green-900 mb-1">
+                {language === 'fr' ? 'Paiement réussi !' : 'Payment successful!'}
+              </h3>
+              <p className="text-sm text-green-700">
+                {language === 'fr'
+                  ? 'Votre abonnement Premium a été activé avec succès. Profitez de tous vos nouveaux avantages !'
+                  : 'Your Premium subscription has been successfully activated. Enjoy all your new benefits!'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {canceledParam && (
+          <div className="mb-8 bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-orange-900 mb-1">
+                {language === 'fr' ? 'Paiement annulé' : 'Payment canceled'}
+              </h3>
+              <p className="text-sm text-orange-700">
+                {language === 'fr'
+                  ? 'Votre paiement a été annulé. Vous pouvez réessayer à tout moment.'
+                  : 'Your payment has been canceled. You can try again at any time.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {checkoutError && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-900 mb-1">
+                {language === 'fr' ? 'Erreur' : 'Error'}
+              </h3>
+              <p className="text-sm text-red-700">{checkoutError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -290,6 +419,20 @@ export default function MySubscription() {
                     </div>
                   ))}
                 </div>
+
+                {subscription.plan_type === 'premium' && !subscription.cancel_at_period_end && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={handleCancelSubscription}
+                      disabled={cancelingSubscription}
+                      className="text-sm text-gray-600 hover:text-red-600 underline disabled:opacity-50"
+                    >
+                      {cancelingSubscription
+                        ? (language === 'fr' ? 'Annulation...' : 'Canceling...')
+                        : (language === 'fr' ? 'Annuler mon abonnement' : 'Cancel my subscription')}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -318,11 +461,24 @@ export default function MySubscription() {
                       ))}
                     </div>
                     <button
-                      onClick={() => handleUpgrade('premium')}
-                      className="w-full bg-white text-rose-500 py-3 rounded-lg font-semibold hover:bg-gray-50 transition flex items-center justify-center space-x-2"
+                      onClick={handleUpgrade}
+                      disabled={checkoutLoading}
+                      className="w-full bg-white text-rose-500 py-3 rounded-lg font-semibold hover:bg-gray-50 transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <TrendingUp className="h-5 w-5" />
-                      <span>{language === 'fr' ? 'Choisir Premium' : 'Choose Premium'}</span>
+                      {checkoutLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>{language === 'fr' ? 'Chargement...' : 'Loading...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="h-5 w-5" />
+                          <span>{language === 'fr' ? 'Choisir Premium' : 'Choose Premium'}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

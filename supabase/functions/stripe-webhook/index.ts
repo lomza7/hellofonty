@@ -209,6 +209,20 @@ async function syncCustomerFromStripe(customerId: string) {
       expand: ['data.default_payment_method'],
     });
 
+    // Get the user_id for this customer
+    const { data: customerData, error: customerError } = await supabase
+      .from('stripe_customers')
+      .select('user_id')
+      .eq('customer_id', customerId)
+      .maybeSingle();
+
+    if (customerError || !customerData) {
+      console.error('Error fetching customer user_id:', customerError);
+      throw new Error('Failed to fetch customer user_id');
+    }
+
+    const userId = customerData.user_id;
+
     // TODO verify if needed
     if (subscriptions.data.length === 0) {
       console.info(`No active subscriptions found for customer: ${customerId}`);
@@ -226,17 +240,72 @@ async function syncCustomerFromStripe(customerId: string) {
         console.error('Error updating subscription status:', noSubError);
         throw new Error('Failed to update subscription status in database');
       }
+
+      // Also update the user's subscription table to free
+      const { error: userSubError } = await supabase
+        .from('subscriptions')
+        .upsert(
+          {
+            user_id: userId,
+            plan_type: 'free',
+            status: 'active',
+            stripe_customer_id: customerId,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_start: null,
+            current_period_end: null,
+            cancel_at_period_end: false,
+          },
+          {
+            onConflict: 'user_id',
+          },
+        );
+
+      if (userSubError) {
+        console.error('Error updating user subscription:', userSubError);
+      }
+
+      return;
     }
 
     // assumes that a customer can only have a single subscription
     const subscription = subscriptions.data[0];
+    const priceId = subscription.items.data[0].price.id;
+
+    // Determine the plan type based on price_id
+    const { data: pricingPlan } = await supabase
+      .from('pricing_plans')
+      .select('price')
+      .eq('stripe_price_id', priceId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    let planType: 'free' | 'premium' = 'free';
+    if (pricingPlan && pricingPlan.price >= 29) {
+      planType = 'premium';
+    }
+
+    // Map Stripe status to app status
+    const subscriptionStatus = subscription.status;
+    let appStatus: 'active' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' = 'active';
+
+    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+      appStatus = subscriptionStatus;
+    } else if (subscriptionStatus === 'canceled' || subscriptionStatus === 'incomplete_expired' || subscriptionStatus === 'unpaid') {
+      appStatus = 'canceled';
+      planType = 'free';
+    } else if (subscriptionStatus === 'past_due') {
+      appStatus = 'past_due';
+    } else if (subscriptionStatus === 'incomplete') {
+      appStatus = 'incomplete';
+    }
 
     // store subscription state
     const { error: subError } = await supabase.from('stripe_subscriptions').upsert(
       {
         customer_id: customerId,
         subscription_id: subscription.id,
-        price_id: subscription.items.data[0].price.id,
+        price_id: priceId,
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
         cancel_at_period_end: subscription.cancel_at_period_end,
@@ -257,7 +326,37 @@ async function syncCustomerFromStripe(customerId: string) {
       console.error('Error syncing subscription:', subError);
       throw new Error('Failed to sync subscription in database');
     }
-    console.info(`Successfully synced subscription for customer: ${customerId}`);
+
+    // Convert Unix timestamps to ISO strings
+    const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+    const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+
+    // Also sync to the subscriptions table (used by the app)
+    const { error: userSubError } = await supabase
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id: userId,
+          plan_type: planType,
+          status: appStatus,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          stripe_price_id: priceId,
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+        },
+        {
+          onConflict: 'user_id',
+        },
+      );
+
+    if (userSubError) {
+      console.error('Error syncing user subscription:', userSubError);
+      throw new Error('Failed to sync user subscription in database');
+    }
+
+    console.info(`Successfully synced subscription for customer: ${customerId} and user: ${userId}`);
   } catch (error) {
     console.error(`Failed to sync subscription for customer ${customerId}:`, error);
     throw error;

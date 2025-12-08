@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Check, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Check, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useStripeCheckout } from '../hooks/useStripeCheckout';
 
 interface PricingPlan {
   id: string;
@@ -17,6 +18,8 @@ interface PricingPlan {
   features_en?: string[];
   is_active: boolean;
   display_order: number;
+  stripe_price_id: string | null;
+  stripe_product_id: string | null;
 }
 
 interface ComparisonFeature {
@@ -36,11 +39,17 @@ export default function Pricing() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [comparisonFeatures, setComparisonFeatures] = useState<ComparisonFeature[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
 
   const isFrench = language === 'fr';
+
+  const successParam = searchParams.get('success');
+  const canceledParam = searchParams.get('canceled');
 
   useEffect(() => {
     loadData();
@@ -74,8 +83,56 @@ export default function Pricing() {
     }
   }
 
+  const handleUpgradeToPremium = async (plan: PricingPlan) => {
+    if (!user) {
+      navigate('/inscription?redirect=/tarifs&upgrade=premium');
+      return;
+    }
+
+    if (!plan.stripe_price_id) {
+      alert(
+        isFrench
+          ? 'Le paiement n\'est pas encore configuré pour ce plan. Veuillez contacter le support.'
+          : 'Payment is not yet configured for this plan. Please contact support.'
+      );
+      return;
+    }
+
+    try {
+      setProcessingPlan(plan.id);
+      const baseUrl = window.location.origin;
+
+      await createCheckoutSession({
+        priceId: plan.stripe_price_id,
+        mode: 'subscription',
+        successUrl: `${baseUrl}/mon-abonnement?success=true`,
+        cancelUrl: `${baseUrl}/tarifs?canceled=true`,
+      });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      setProcessingPlan(null);
+    }
+  };
+
   const landlordPlans = plans.filter(p => p.type === 'landlord');
   const studentPlans = plans.filter(p => p.type === 'student');
+
+  useEffect(() => {
+    if (successParam) {
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams);
+        params.delete('success');
+        setSearchParams(params);
+      }, 5000);
+    }
+    if (canceledParam) {
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams);
+        params.delete('canceled');
+        setSearchParams(params);
+      }, 5000);
+    }
+  }, [successParam, canceledParam]);
 
   if (loading) {
     return (
@@ -88,6 +145,50 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-20 py-20">
+        {successParam && (
+          <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
+            <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-green-900 mb-1">
+                {isFrench ? 'Paiement réussi !' : 'Payment successful!'}
+              </h3>
+              <p className="text-sm text-green-700">
+                {isFrench
+                  ? 'Votre abonnement Premium a été activé avec succès. Consultez votre page Mon Abonnement pour plus de détails.'
+                  : 'Your Premium subscription has been successfully activated. Check your My Subscription page for more details.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {canceledParam && (
+          <div className="mb-8 bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-orange-900 mb-1">
+                {isFrench ? 'Paiement annulé' : 'Payment canceled'}
+              </h3>
+              <p className="text-sm text-orange-700">
+                {isFrench
+                  ? 'Votre paiement a été annulé. Vous pouvez réessayer à tout moment.'
+                  : 'Your payment has been canceled. You can try again at any time.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {checkoutError && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-900 mb-1">
+                {isFrench ? 'Erreur' : 'Error'}
+              </h3>
+              <p className="text-sm text-red-700">{checkoutError}</p>
+            </div>
+          </div>
+        )}
+
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             {isFrench ? 'Nos Tarifs' : 'Our Pricing'}
@@ -168,12 +269,29 @@ export default function Pricing() {
                   </div>
 
                   <button
-                    onClick={() => navigate(user ? '/mon-abonnement' : '/inscription')}
-                    className={buttonClass}
+                    onClick={() => {
+                      if (isPremium) {
+                        handleUpgradeToPremium(plan);
+                      } else {
+                        navigate(user ? '/mes-annonces' : '/inscription');
+                      }
+                    }}
+                    disabled={checkoutLoading && processingPlan === plan.id}
+                    className={`${buttonClass} ${checkoutLoading && processingPlan === plan.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {isPremium
-                      ? (isFrench ? 'Choisir Premium' : 'Choose Premium')
-                      : (isFrench ? 'Commencer gratuitement' : 'Start for free')}
+                    {checkoutLoading && processingPlan === plan.id ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {isFrench ? 'Chargement...' : 'Loading...'}
+                      </span>
+                    ) : isPremium ? (
+                      isFrench ? 'Choisir Premium' : 'Choose Premium'
+                    ) : (
+                      isFrench ? 'Commencer gratuitement' : 'Start for free'
+                    )}
                   </button>
                 </div>
               );
