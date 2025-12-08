@@ -25,13 +25,13 @@ export default function Footer() {
         <div className="absolute bottom-1/3 left-1/3 w-80 h-80 bg-rose-400/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10 lg:gap-12">
           <div>
-            <h3 className="text-white text-xl font-bold mb-5 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
+            <h3 className="text-white text-lg sm:text-xl font-bold mb-3 sm:mb-5 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
               HELLOFONTY
             </h3>
-            <p className="text-sm leading-relaxed mb-6 text-gray-400">
+            <p className="text-sm leading-relaxed mb-4 sm:mb-6 text-gray-400">
               {t('footer.aboutDesc')}
             </p>
             <address className="not-italic text-sm text-gray-500 space-y-1">
@@ -47,10 +47,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+            <h3 className="text-white text-base font-bold mb-3 sm:mb-5 tracking-wide">
               {language === 'fr' ? 'Pour les étudiants' : 'For Students'}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2 sm:space-y-3">
               <li>
                 <Link
                   to="/recherche"
@@ -112,10 +112,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+            <h3 className="text-white text-base font-bold mb-3 sm:mb-5 tracking-wide">
               {language === 'fr' ? 'Pour les propriétaires' : 'For Landlords'}
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2 sm:space-y-3">
               <li>
                 <Link
                   to="/ajouter-annonce"
@@ -165,12 +165,12 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-white text-base font-bold mb-5 tracking-wide">
+            <h3 className="text-white text-base font-bold mb-3 sm:mb-5 tracking-wide">
               {t('footer.contact')}
             </h3>
-            <ul className="space-y-4 mb-6">
-              <li className="flex items-center gap-3 group">
-                <div className="w-9 h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
+            <ul className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+              <li className="flex items-center gap-2 sm:gap-3 group">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
                   <Mail className="w-4 h-4 text-rose-400 flex-shrink-0" />
                 </div>
                 <a
@@ -180,8 +180,8 @@ export default function Footer() {
                   contact@hellofonty.com
                 </a>
               </li>
-              <li className="flex items-center gap-3 group">
-                <div className="w-9 h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
+              <li className="flex items-center gap-2 sm:gap-3 group">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-rose-500/10 rounded-lg flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
                   <Phone className="w-4 h-4 text-rose-400 flex-shrink-0" />
                 </div>
                 <a
@@ -192,36 +192,36 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-            <h4 className="text-white text-sm font-bold mb-4 tracking-wide">
+            <h4 className="text-white text-sm font-bold mb-3 sm:mb-4 tracking-wide">
               {t('footer.followUs')}
             </h4>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <a
                 href="#"
-                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
+                className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="Facebook"
               >
-                <Facebook className="w-5 h-5" />
+                <Facebook className="w-4 h-4 sm:w-5 sm:h-5" />
               </a>
               <a
                 href="#"
-                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
+                className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="Instagram"
               >
-                <Instagram className="w-5 h-5" />
+                <Instagram className="w-4 h-4 sm:w-5 sm:h-5" />
               </a>
               <a
                 href="#"
-                className="w-11 h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
+                className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:from-rose-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-110 hover:shadow-lg hover:shadow-rose-500/20"
                 aria-label="LinkedIn"
               >
-                <Linkedin className="w-5 h-5" />
+                <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" />
               </a>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-800/50 mt-12 pt-8 text-center">
+        <div className="border-t border-gray-800/50 mt-8 sm:mt-10 lg:mt-12 pt-6 sm:pt-8 text-center">
           <p className="text-sm text-gray-400">
             &copy; {new Date().getFullYear()} HELLOFONTY. {t('footer.rights')}.
           </p>
