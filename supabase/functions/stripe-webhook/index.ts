@@ -67,11 +67,11 @@ async function handleEvent(event: Stripe.Event) {
     console.info(`Processing invoice payment: ${invoice.id}`);
 
     try {
-      // Get the user_id from the stripe_customer_id
+      // Get the user_id from stripe_customers table (more reliable for race conditions)
       const { data: customerData, error: customerError } = await supabase
-        .from('subscriptions')
+        .from('stripe_customers')
         .select('user_id')
-        .eq('stripe_customer_id', invoice.customer)
+        .eq('customer_id', invoice.customer)
         .maybeSingle();
 
       if (customerError || !customerData) {

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useStripeCheckout } from '../hooks/useStripeCheckout';
 
 type Subscription = {
@@ -50,6 +50,7 @@ export default function MySubscription() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'plan' | 'invoices'>('plan');
   const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const [syncingInvoices, setSyncingInvoices] = useState(false);
   const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
 
   const successParam = searchParams.get('success');
@@ -248,6 +249,57 @@ export default function MySubscription() {
       );
     } finally {
       setCancelingSubscription(false);
+    }
+  };
+
+  const handleSyncInvoices = async () => {
+    try {
+      setSyncingInvoices(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert(
+          language === 'fr'
+            ? 'Erreur d\'authentification. Veuillez vous reconnecter.'
+            : 'Authentication error. Please sign in again.'
+        );
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-missing-invoice`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to sync invoices');
+      }
+
+      alert(
+        language === 'fr'
+          ? `Synchronisation réussie ! ${result.synced} facture(s) récupérée(s).`
+          : `Sync successful! ${result.synced} invoice(s) retrieved.`
+      );
+
+      await loadSubscriptionData();
+    } catch (error) {
+      console.error('Error syncing invoices:', error);
+      alert(
+        language === 'fr'
+          ? 'Une erreur est survenue lors de la synchronisation. Veuillez réessayer.'
+          : 'An error occurred during synchronization. Please try again.'
+      );
+    } finally {
+      setSyncingInvoices(false);
     }
   };
 
@@ -499,11 +551,25 @@ export default function MySubscription() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {language === 'fr' ? 'Aucune facture' : 'No Invoices'}
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-gray-500 mb-6">
                   {language === 'fr'
                     ? 'Vos factures apparaîtront ici une fois que vous aurez souscrit à un abonnement payant.'
                     : 'Your invoices will appear here once you subscribe to a paid plan.'}
                 </p>
+                {subscription?.plan_type === 'premium' && (
+                  <button
+                    onClick={handleSyncInvoices}
+                    disabled={syncingInvoices}
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`h-5 w-5 ${syncingInvoices ? 'animate-spin' : ''}`} />
+                    <span>
+                      {syncingInvoices
+                        ? (language === 'fr' ? 'Synchronisation...' : 'Syncing...')
+                        : (language === 'fr' ? 'Récupérer mes factures' : 'Retrieve my invoices')}
+                    </span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
