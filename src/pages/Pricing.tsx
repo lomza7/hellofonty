@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -215,6 +215,176 @@ export default function Pricing() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Section Comparaison avec agences immobilières */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              {isFrench ? 'Pourquoi choisir Hellofonty ?' : 'Why choose Hellofonty?'}
+            </h2>
+            <p className="text-lg text-gray-600">
+              {isFrench
+                ? 'Comparez nos services avec les agences immobilières traditionnelles'
+                : 'Compare our services with traditional real estate agencies'}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden max-w-5xl mx-auto border-2 border-gray-100">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-900">
+                    <th className="px-6 py-5 text-left text-white font-semibold w-1/2">
+                      {isFrench ? 'Critères' : 'Criteria'}
+                    </th>
+                    <th className="px-6 py-5 text-center text-white font-semibold w-1/4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-bold text-rose-400">Hellofonty</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-5 text-center text-gray-300 font-medium w-1/4">
+                      {isFrench ? 'Agences Immobilières' : 'Real Estate Agencies'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Frais pour le propriétaire' : 'Landlord fees'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center">
+                        <Check className="h-6 w-6 text-green-600 mb-1" />
+                        <span className="text-sm text-gray-600 font-semibold">0€ - 99€/an</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center">
+                        <X className="h-6 w-6 text-red-400 mb-1" />
+                        <span className="text-sm text-gray-600">800€ - 1500€</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Frais pour l\'étudiant' : 'Student fees'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center">
+                        <Check className="h-6 w-6 text-green-600 mb-1" />
+                        <span className="text-sm text-gray-600 font-semibold">300€</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center">
+                        <X className="h-6 w-6 text-red-400 mb-1" />
+                        <span className="text-sm text-gray-600">800€ - 1200€</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Gestion des annonces' : 'Listing management'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Messagerie intégrée' : 'Integrated messaging'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <X className="h-6 w-6 text-red-400 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Génération de contrats' : 'Contract generation'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'État des lieux digital' : 'Digital inventory'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <X className="h-6 w-6 text-red-400 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Paiement en ligne sécurisé' : 'Secure online payment'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <X className="h-6 w-6 text-red-400 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Support client 7j/7' : '24/7 customer support'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <X className="h-6 w-6 text-red-400 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="bg-white hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-gray-800 font-medium">
+                      {isFrench ? 'Calendrier synchronisé' : 'Synchronized calendar'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Check className="h-6 w-6 text-green-600 mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <X className="h-6 w-6 text-red-400 mx-auto" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 max-w-5xl mx-auto shadow-xl">
+            <div className="text-center text-white">
+              <h3 className="text-2xl font-bold mb-2">
+                {isFrench ? 'Économisez jusqu\'à 1200€ !' : 'Save up to €1200!'}
+              </h3>
+              <p className="text-green-50">
+                {isFrench
+                  ? 'En moyenne, propriétaires et étudiants économisent ensemble 1200€ en frais d\'agence avec Hellofonty'
+                  : 'On average, landlords and students together save €1200 in agency fees with Hellofonty'}
+              </p>
+            </div>
           </div>
         </div>
 

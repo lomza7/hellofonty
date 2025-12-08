@@ -119,13 +119,6 @@ export default function Navbar() {
               {t('nav.pricing')}
             </Link>
 
-            <Link
-              to="/comparaison"
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition hidden md:block"
-            >
-              {language === 'fr' ? 'Comparaison' : 'Comparison'}
-            </Link>
-
             <button
               onClick={handleAddListing}
               className="hidden md:block px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-full transition border border-gray-300"
