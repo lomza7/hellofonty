@@ -299,19 +299,52 @@ export default function Home() {
       <FAQ />
 
       <div className="bg-gray-50 py-12 sm:py-20 mt-12 sm:mt-20">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20 text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 mb-4 sm:mb-6">
-            {t('home.cta.title')}
-          </h2>
-          <p className="text-gray-600 text-base sm:text-lg mb-8 sm:mb-10">
-            {t('home.cta.subtitle')}
-          </p>
-          <button
-            onClick={() => navigate('/inscription')}
-            className="px-8 py-4 sm:px-10 sm:py-5 bg-rose-500 text-white text-base sm:text-lg font-semibold rounded-full hover:bg-rose-600 transform active:scale-95 sm:hover:scale-105 transition-all shadow-xl"
-          >
-            {t('nav.signUp')}
-          </button>
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20">
+          <div className="relative bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 rounded-3xl sm:rounded-[2.5rem] p-8 sm:p-16 md:p-20 text-center overflow-hidden">
+            {/* Decorative circles */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+              <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+              <div className="absolute top-1/2 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-20 left-1/4 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
+            </div>
+
+            <div className="relative z-10">
+              {/* Badge with avatars */}
+              <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full mb-6 sm:mb-8">
+                <div className="flex -space-x-2">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border-2 border-rose-500 flex items-center justify-center text-xs font-semibold text-rose-600">
+                    👥
+                  </div>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-rose-100 border-2 border-rose-500 flex items-center justify-center text-xs font-semibold text-rose-600">
+                    🏠
+                  </div>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-pink-100 border-2 border-rose-500 flex items-center justify-center text-xs font-semibold text-rose-600">
+                    🎓
+                  </div>
+                </div>
+                <span className="text-white text-xs sm:text-sm font-semibold">
+                  {language === 'fr' ? 'Rejoignez la communauté HELLOFONTY' : 'Join the HELLOFONTY community'}
+                </span>
+              </div>
+
+              {/* Main title */}
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 sm:mb-8 leading-tight max-w-4xl mx-auto">
+                {language === 'fr'
+                  ? 'Trouvez votre logement idéal à Fontainebleau.'
+                  : 'Find your ideal home in Fontainebleau.'}
+              </h2>
+
+              {/* CTA Button */}
+              <a
+                href="https://t.me/hellofonty"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-8 py-4 sm:px-10 sm:py-5 bg-white text-rose-600 text-base sm:text-lg font-bold rounded-full hover:bg-gray-50 transform active:scale-95 hover:scale-105 transition-all shadow-2xl"
+              >
+                {language === 'fr' ? 'REJOINDRE TELEGRAM' : 'JOIN TELEGRAM'}
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
