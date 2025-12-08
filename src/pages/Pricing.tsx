@@ -323,8 +323,8 @@ export default function Pricing() {
 
           {/* Tableau récapitulatif financier */}
           <div className="mt-8 bg-white rounded-2xl shadow-lg overflow-hidden max-w-3xl mx-auto border-2 border-gray-100">
-            <div className="bg-gray-900 px-6 py-4">
-              <h3 className="text-xl font-bold text-white text-center">
+            <div className="bg-gray-900 px-4 sm:px-6 py-4">
+              <h3 className="text-lg sm:text-xl font-bold text-white text-center">
                 {isFrench ? 'Récapitulatif Financier' : 'Financial Summary'}
               </h3>
             </div>
@@ -332,68 +332,68 @@ export default function Pricing() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b-2 border-gray-200">
-                    <th className="px-6 py-4 text-left text-gray-700 font-semibold">
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-sm text-gray-700 font-semibold">
                       {isFrench ? 'Profil' : 'Profile'}
                     </th>
-                    <th className="px-6 py-4 text-center text-gray-700 font-semibold">
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-sm text-gray-700 font-semibold">
                       <span className="text-rose-500 font-bold">Hellofonty</span>
                     </th>
-                    <th className="px-6 py-4 text-center text-gray-700 font-semibold">
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-sm text-gray-700 font-semibold">
                       {isFrench ? 'Agence' : 'Agency'}
                     </th>
-                    <th className="px-6 py-4 text-center text-gray-700 font-semibold">
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-sm text-gray-700 font-semibold">
                       {isFrench ? 'Économie' : 'Savings'}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 font-medium">
                       {isFrench ? 'Propriétaire' : 'Landlord'}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-bold text-green-600">0€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-green-600">0€</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-semibold text-gray-700">800€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-gray-700">800€</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-bold text-rose-500">+800€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-rose-500">+800€</span>
                     </td>
                   </tr>
                   <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 font-medium">
                       {isFrench ? 'Étudiant' : 'Student'}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-bold text-green-600">390€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-green-600">390€</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-semibold text-gray-700">600€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-gray-700">600€</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xl font-bold text-rose-500">+210€</span>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                      <span className="text-base sm:text-lg font-semibold text-rose-500">+210€</span>
                     </td>
                   </tr>
                   <tr className="bg-gradient-to-r from-rose-50 to-pink-50">
-                    <td className="px-6 py-5 text-gray-900 font-bold text-lg">
+                    <td className="px-3 sm:px-6 py-4 sm:py-5 text-sm sm:text-base text-gray-900 font-bold">
                       {isFrench ? 'Total' : 'Total'}
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-2xl font-bold text-green-600">390€</span>
+                    <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
+                      <span className="text-lg sm:text-xl font-bold text-green-600">390€</span>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-2xl font-bold text-gray-700">1 400€</span>
+                    <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
+                      <span className="text-lg sm:text-xl font-bold text-gray-700">1 400€</span>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-2xl font-bold text-rose-500">+1 010€</span>
+                    <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
+                      <span className="text-lg sm:text-xl font-bold text-rose-500">+1 010€</span>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div className="bg-gray-50 px-6 py-3 text-center">
-              <p className="text-sm text-gray-600">
+            <div className="bg-gray-50 px-4 sm:px-6 py-3 text-center">
+              <p className="text-xs sm:text-sm text-gray-600">
                 {isFrench
                   ? '* Frais pour une transaction standard de location étudiante'
                   : '* Fees for a standard student rental transaction'}
