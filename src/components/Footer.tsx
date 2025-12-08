@@ -14,7 +14,7 @@ export default function Footer() {
       if (faqSection) {
         faqSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 100);
+    }, 300);
   };
   return (
     <footer className="relative bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950 text-gray-300 overflow-hidden">
