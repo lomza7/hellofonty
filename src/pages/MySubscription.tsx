@@ -225,6 +225,7 @@ export default function MySubscription() {
     console.log('handleCancelSubscription called', { subscription });
 
     if (!subscription) {
+      console.error('No subscription found');
       alert(
         language === 'fr'
           ? 'Impossible de charger les informations d\'abonnement. Veuillez rafraîchir la page.'
@@ -233,7 +234,10 @@ export default function MySubscription() {
       return;
     }
 
+    console.log('Subscription exists, checking stripe_subscription_id:', subscription.stripe_subscription_id);
+
     if (!subscription.stripe_subscription_id) {
+      console.error('No stripe_subscription_id found');
       alert(
         language === 'fr'
           ? 'Aucun abonnement actif trouvé. Veuillez contacter le support si vous pensez qu\'il s\'agit d\'une erreur.'
@@ -242,13 +246,22 @@ export default function MySubscription() {
       return;
     }
 
-    const confirmed = window.confirm(
-      language === 'fr'
-        ? 'Êtes-vous sûr de vouloir annuler votre abonnement Premium ? Vous conserverez vos avantages jusqu\'à la fin de la période en cours.'
-        : 'Are you sure you want to cancel your Premium subscription? You will keep your benefits until the end of the current period.'
-    );
+    console.log('About to show confirmation dialog');
 
-    if (!confirmed) return;
+    const confirmMessage = language === 'fr'
+      ? 'Êtes-vous sûr de vouloir annuler votre abonnement Premium ? Vous conserverez vos avantages jusqu\'à la fin de la période en cours.'
+      : 'Are you sure you want to cancel your Premium subscription? You will keep your benefits until the end of the current period.';
+
+    console.log('Confirmation message:', confirmMessage);
+
+    const confirmed = window.confirm(confirmMessage);
+
+    console.log('User confirmed:', confirmed);
+
+    if (!confirmed) {
+      console.log('User cancelled the action');
+      return;
+    }
 
     try {
       setCancelingSubscription(true);
