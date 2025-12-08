@@ -34,6 +34,7 @@ interface EditingPlan {
 export default function PricingPlansManager() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingData, setEditingData] = useState<EditingPlan>({
@@ -115,15 +116,47 @@ export default function PricingPlansManager() {
     });
   }
 
-  async function savePlan() {
+  async function translateToEnglish(text: string | string[]): Promise<string | string[]> {
     try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ text, from: 'fr', to: 'en' }),
+        }
+      );
+
+      if (!response.ok) throw new Error('Translation failed');
+
+      const data = await response.json();
+      return Array.isArray(text) ? data.translations : data.translation;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return text;
+    }
+  }
+
+  async function savePlan() {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+
       const featuresArray = editingData.features
         .split('\n')
         .map(f => f.trim())
         .filter(f => f.length > 0);
 
+      const nameEn = await translateToEnglish(editingData.name) as string;
+      const featuresEn = await translateToEnglish(featuresArray) as string[];
+
       const planData = {
         name: editingData.name,
+        name_en: nameEn,
         type: editingData.type,
         plan_category: editingData.plan_category,
         price: parseFloat(editingData.price),
@@ -131,6 +164,7 @@ export default function PricingPlansManager() {
         stripe_price_id: editingData.stripe_price_id || null,
         stripe_product_id: editingData.stripe_product_id || null,
         features: featuresArray,
+        features_en: featuresEn,
         is_active: editingData.is_active,
       };
 
@@ -154,6 +188,8 @@ export default function PricingPlansManager() {
     } catch (error) {
       console.error('Error saving plan:', error);
       alert('Erreur lors de la sauvegarde du plan');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -454,14 +490,25 @@ export default function PricingPlansManager() {
         <div className="flex items-center gap-3 pt-4">
           <button
             onClick={savePlan}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-5 h-5" />
-            Enregistrer
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Traduction et enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Enregistrer
+              </>
+            )}
           </button>
           <button
             onClick={cancelEdit}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            disabled={saving}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
             Annuler
