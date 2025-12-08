@@ -27,6 +27,18 @@ type Invoice = {
   created_at: string;
 };
 
+type PricingPlan = {
+  id: string;
+  name: string;
+  name_en: string;
+  price: number;
+  billing_period: string;
+  features: string[];
+  features_en: string[];
+  stripe_price_id: string | null;
+  is_active: boolean;
+};
+
 export default function MySubscription() {
   const { user, profile } = useAuth();
   const { language, t } = useLanguage();
@@ -34,6 +46,7 @@ export default function MySubscription() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'plan' | 'invoices'>('plan');
   const [cancelingSubscription, setCancelingSubscription] = useState(false);
@@ -69,6 +82,18 @@ export default function MySubscription() {
   const loadSubscriptionData = async () => {
     try {
       setLoading(true);
+
+      // Load pricing plans
+      const { data: plansData, error: plansError } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .eq('type', 'landlord')
+        .eq('plan_category', 'subscription')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (plansError) throw plansError;
+      setPricingPlans(plansData || []);
 
       // Load subscription
       const { data: subData, error: subError } = await supabase
@@ -113,51 +138,39 @@ export default function MySubscription() {
     }
   };
 
-  const getPlanName = (planType: string) => {
-    switch (planType) {
-      case 'free':
-        return language === 'fr' ? 'Offre Gratuite' : 'Free Plan';
-      case 'premium':
-        return language === 'fr' ? 'Gestion Complète' : 'Full Management';
-      default:
-        return planType;
-    }
+  const getCurrentPlanData = () => {
+    if (!subscription) return null;
+    return pricingPlans.find(plan => {
+      if (subscription.plan_type === 'free') {
+        return plan.price === 0;
+      } else if (subscription.plan_type === 'premium') {
+        return plan.price > 0;
+      }
+      return false;
+    });
   };
 
-  const getPlanPrice = (planType: string) => {
-    switch (planType) {
-      case 'free':
-        return language === 'fr' ? 'Gratuit' : 'Free';
-      case 'premium':
-        return '29€/mois';
-      default:
-        return '';
-    }
+  const getPremiumPlan = () => {
+    return pricingPlans.find(plan => plan.price > 0);
   };
 
-  const getPlanFeatures = (planType: string) => {
-    switch (planType) {
-      case 'free':
-        return [
-          { name: language === 'fr' ? 'Publication illimitée d\'annonces' : 'Unlimited listing posts', included: true },
-          { name: language === 'fr' ? 'Photos et descriptions détaillées' : 'Photos and detailed descriptions', included: true },
-          { name: language === 'fr' ? 'Messagerie directe avec étudiants' : 'Direct messaging with students', included: true },
-          { name: language === 'fr' ? 'Gestion autonome des réservations' : 'Self-managed bookings', included: true },
-          { name: language === 'fr' ? 'Profil propriétaire vérifié' : 'Verified landlord profile', included: true },
-        ];
-      case 'premium':
-        return [
-          { name: language === 'fr' ? 'Tout de l\'offre gratuite' : 'Everything in Free plan', included: true },
-          { name: language === 'fr' ? 'Gestion complète des réservations' : 'Full booking management', included: true },
-          { name: language === 'fr' ? 'Accueil et remise des clés' : 'Welcome and key handover', included: true },
-          { name: language === 'fr' ? 'État des lieux entrée/sortie' : 'Check-in/check-out inventory', included: true },
-          { name: language === 'fr' ? 'Ménage entre locataires' : 'Cleaning between tenants', included: true },
-          { name: language === 'fr' ? 'Support client 7j/7' : '24/7 customer support', included: true },
-          { name: language === 'fr' ? 'Assurance dommages incluse' : 'Damage insurance included', included: true },
-        ];
-      default:
-        return [];
+  const getPlanName = (planData: PricingPlan | null | undefined) => {
+    if (!planData) return language === 'fr' ? 'Plan inconnu' : 'Unknown plan';
+    return language === 'fr' ? planData.name : planData.name_en;
+  };
+
+  const getPlanPrice = (planData: PricingPlan | null | undefined) => {
+    if (!planData) return '';
+    if (planData.price === 0) {
+      return language === 'fr' ? 'Gratuit' : 'Free';
     }
+    return `${planData.price}€/mois`;
+  };
+
+  const getPlanFeatures = (planData: PricingPlan | null | undefined) => {
+    if (!planData) return [];
+    const features = language === 'fr' ? planData.features : planData.features_en;
+    return features.map(feature => ({ name: feature, included: true }));
   };
 
   const formatDate = (dateString: string) => {
@@ -179,15 +192,7 @@ export default function MySubscription() {
 
   const handleUpgrade = async () => {
     try {
-      const { data: premiumPlan, error: planError } = await supabase
-        .from('pricing_plans')
-        .select('stripe_price_id')
-        .eq('type', 'landlord')
-        .eq('price', 29)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (planError) throw planError;
+      const premiumPlan = getPremiumPlan();
 
       if (!premiumPlan?.stripe_price_id) {
         alert(
@@ -381,10 +386,10 @@ export default function MySubscription() {
                     </h2>
                     <div className="flex items-center space-x-3">
                       <span className="text-3xl font-bold text-rose-500">
-                        {getPlanName(subscription.plan_type)}
+                        {getPlanName(getCurrentPlanData())}
                       </span>
                       <span className="text-2xl text-gray-600">
-                        {getPlanPrice(subscription.plan_type)}
+                        {getPlanPrice(getCurrentPlanData())}
                       </span>
                     </div>
                   </div>
@@ -406,7 +411,7 @@ export default function MySubscription() {
                 </div>
 
                 <div className="space-y-3">
-                  {getPlanFeatures(subscription.plan_type).map((feature, index) => (
+                  {getPlanFeatures(getCurrentPlanData()).map((feature, index) => (
                     <div key={index} className="flex items-center space-x-3">
                       {feature.included ? (
                         <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -443,17 +448,17 @@ export default function MySubscription() {
               </h2>
               <div className="max-w-md mx-auto">
                 {/* Premium Plan */}
-                {subscription?.plan_type === 'free' && (
+                {subscription?.plan_type === 'free' && getPremiumPlan() && (
                   <div className="bg-rose-500 text-white rounded-xl shadow-lg p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-gray-900 text-white px-3 py-1 text-xs font-semibold">
                       {language === 'fr' ? 'POPULAIRE' : 'POPULAR'}
                     </div>
                     <div className="mb-4">
-                      <h3 className="text-2xl font-bold mb-2">{language === 'fr' ? 'Gestion Complète' : 'Full Management'}</h3>
-                      <div className="text-3xl font-bold mb-4">29€/mois</div>
+                      <h3 className="text-2xl font-bold mb-2">{getPlanName(getPremiumPlan())}</h3>
+                      <div className="text-3xl font-bold mb-4">{getPlanPrice(getPremiumPlan())}</div>
                     </div>
                     <div className="space-y-3 mb-6">
-                      {getPlanFeatures('premium').map((feature, index) => (
+                      {getPlanFeatures(getPremiumPlan()).map((feature, index) => (
                         <div key={index} className="flex items-center space-x-3">
                           <CheckCircle className="h-5 w-5 text-white flex-shrink-0" />
                           <span className="text-white">{feature.name}</span>
