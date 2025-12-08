@@ -355,13 +355,13 @@ export default function Pricing() {
                       {isFrench ? 'Propriétaire' : 'Landlord'}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-green-600">0€</span>
+                      <span className="text-base sm:text-lg font-semibold text-green-600">0€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-gray-700">800€</span>
+                      <span className="text-base sm:text-lg font-semibold text-gray-700">800€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-rose-500">+800€</span>
+                      <span className="text-base sm:text-lg font-semibold text-rose-500">+800€</span>
                     </td>
                   </tr>
                   <tr className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition">
@@ -369,13 +369,13 @@ export default function Pricing() {
                       {isFrench ? 'Étudiant' : 'Student'}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-green-600">390€</span>
+                      <span className="text-base sm:text-lg font-semibold text-green-600">390€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-gray-700">600€</span>
+                      <span className="text-base sm:text-lg font-semibold text-gray-700">600€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-sm font-semibold text-rose-500">+210€</span>
+                      <span className="text-base sm:text-lg font-semibold text-rose-500">+210€</span>
                     </td>
                   </tr>
                   <tr className="bg-gradient-to-r from-rose-50 to-pink-50">
@@ -383,13 +383,13 @@ export default function Pricing() {
                       {isFrench ? 'Total' : 'Total'}
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
-                      <span className="text-base sm:text-lg font-bold text-green-600">390€</span>
+                      <span className="text-lg sm:text-xl font-bold text-green-600">390€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
-                      <span className="text-base sm:text-lg font-bold text-gray-700">1 400€</span>
+                      <span className="text-lg sm:text-xl font-bold text-gray-700">1 400€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
-                      <span className="text-base sm:text-lg font-bold text-rose-500">+1 010€</span>
+                      <span className="text-lg sm:text-xl font-bold text-rose-500">+1 010€</span>
                     </td>
                   </tr>
                 </tbody>
