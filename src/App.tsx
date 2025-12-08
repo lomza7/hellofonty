@@ -42,6 +42,7 @@ const Payment = lazy(() => import('./pages/Payment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const MyMonthlyRents = lazy(() => import('./pages/MyMonthlyRents'));
 const LandlordRentPayments = lazy(() => import('./pages/LandlordRentPayments'));
+const Comparison = lazy(() => import('./pages/Comparison'));
 
 function LoadingScreen() {
   return (
@@ -104,6 +105,7 @@ function AppContent() {
             <Route path="/recherche" element={<Search />} />
             <Route path="/logement/:id" element={<ListingDetail />} />
             <Route path="/tarifs" element={<Pricing />} />
+            <Route path="/comparaison" element={<Comparison />} />
             <Route path="/partage/:token" element={<AccessGuidePreview />} />
 
             <Route path="/blog" element={<BlogList />} />
