@@ -336,7 +336,7 @@ export default function Home() {
 
               {/* CTA Button */}
               <a
-                href="https://t.me/hellofonty"
+                href="https://t.me/inseadfontainebleau"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-8 py-4 sm:px-10 sm:py-5 bg-white text-rose-600 text-base sm:text-lg font-bold rounded-full hover:bg-gray-50 transform active:scale-95 hover:scale-105 transition-all shadow-2xl"
