@@ -60,6 +60,63 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  // Handle invoice payment succeeded
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = stripeData as Stripe.Invoice;
+
+    console.info(`Processing invoice payment: ${invoice.id}`);
+
+    try {
+      // Get the user_id from the stripe_customer_id
+      const { data: customerData, error: customerError } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('stripe_customer_id', invoice.customer)
+        .maybeSingle();
+
+      if (customerError || !customerData) {
+        console.error('Error fetching user_id for invoice:', customerError);
+        return;
+      }
+
+      // Check if invoice already exists
+      const { data: existingInvoice } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('stripe_invoice_id', invoice.id)
+        .maybeSingle();
+
+      if (existingInvoice) {
+        console.info(`Invoice ${invoice.id} already exists, skipping`);
+        return;
+      }
+
+      // Insert the invoice
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          user_id: customerData.user_id,
+          stripe_invoice_id: invoice.id,
+          amount: invoice.amount_paid,
+          currency: invoice.currency,
+          status: invoice.status === 'paid' ? 'paid' : invoice.status,
+          invoice_pdf: invoice.invoice_pdf,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          billing_reason: invoice.billing_reason,
+        });
+
+      if (invoiceError) {
+        console.error('Error inserting invoice:', invoiceError);
+      } else {
+        console.info(`Successfully inserted invoice: ${invoice.id}`);
+      }
+    } catch (error) {
+      console.error('Error processing invoice payment:', error);
+    }
+
+    return;
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = stripeData as Stripe.Checkout.Session;
 
