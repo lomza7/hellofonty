@@ -1,9 +1,21 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Mail, Phone, Facebook, Instagram, Linkedin, BookOpen } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Footer() {
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
+
+  const scrollToFAQ = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate('/');
+    setTimeout(() => {
+      const faqSection = document.getElementById('faq');
+      if (faqSection) {
+        faqSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -57,12 +69,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/#faq"
-                  className="text-sm hover:text-white transition-colors block"
+                <a
+                  href="/#faq"
+                  onClick={scrollToFAQ}
+                  className="text-sm hover:text-white transition-colors block cursor-pointer"
                 >
                   FAQ
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
@@ -95,12 +108,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/#faq"
-                  className="text-sm hover:text-white transition-colors block"
+                <a
+                  href="/#faq"
+                  onClick={scrollToFAQ}
+                  className="text-sm hover:text-white transition-colors block cursor-pointer"
                 >
                   FAQ
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
