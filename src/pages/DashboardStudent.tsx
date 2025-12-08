@@ -266,7 +266,7 @@ export default function DashboardStudent() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">Mes réservations</h2>
                   <Link
-                    to="/my-booking-requests-student"
+                    to="/mes-reservations"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
                   >
                     Voir tout →
@@ -276,7 +276,7 @@ export default function DashboardStudent() {
                   {recentBookings.map(booking => (
                     <Link
                       key={booking.id}
-                      to={`/listing/${booking.listing_id}`}
+                      to={`/logement/${booking.listing_id}`}
                       className="block p-4 border-2 border-gray-100 rounded-xl hover:border-rose-200 hover:shadow-md transition-all"
                     >
                       <div className="flex items-start justify-between">
@@ -346,7 +346,7 @@ export default function DashboardStudent() {
                         </span>
                       </div>
                       <Link
-                        to="/my-monthly-rents"
+                        to="/mes-loyers"
                         className="block w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white text-center py-2 rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all font-medium text-sm"
                       >
                         Payer maintenant
@@ -364,19 +364,19 @@ export default function DashboardStudent() {
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-lg p-6">
+<div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Search}
                   label="Rechercher"
-                  href="/search"
+                  href="/recherche"
                   color="rose"
                 />
                 <QuickActionButton
                   icon={Heart}
                   label="Favoris"
-                  href="/favorites"
+                  href="/favoris"
                   badge={stats.favorites}
                   color="pink"
                 />
@@ -388,15 +388,29 @@ export default function DashboardStudent() {
                   color="blue"
                 />
                 <QuickActionButton
+                  icon={Calendar}
+                  label="Réservations"
+                  href="/mes-reservations"
+                  badge={stats.activeBookings}
+                  color="green"
+                />
+                <QuickActionButton
+                  icon={CreditCard}
+                  label="Mes loyers"
+                  href="/mes-loyers"
+                  badge={stats.upcomingPayments}
+                  color="orange"
+                />
+                <QuickActionButton
                   icon={FileText}
                   label="Documents"
-                  href="/my-documents"
+                  href="/mes-documents"
                   color="purple"
                 />
                 <QuickActionButton
                   icon={User}
                   label="Mon profil"
-                  href="/profile"
+                  href="/profil"
                   color="green"
                 />
                 <QuickActionButton

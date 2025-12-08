@@ -343,10 +343,10 @@ export default function DashboardLandlord() {
 
             {recentListings.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-6">
+<div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">Mes annonces</h2>
                   <Link
-                    to="/my-listings"
+                    to="/mes-annonces"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
                   >
                     Voir tout →
@@ -356,7 +356,7 @@ export default function DashboardLandlord() {
                   {recentListings.map(listing => (
                     <Link
                       key={listing.id}
-                      to={`/listing/${listing.id}`}
+                      to={`/logement/${listing.id}`}
                       className="block p-4 border-2 border-gray-100 rounded-xl hover:border-rose-200 hover:shadow-md transition-all"
                     >
                       <div className="flex items-center justify-between">
@@ -406,19 +406,19 @@ export default function DashboardLandlord() {
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-lg p-6">
+<div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Home}
                   label="Mes annonces"
-                  href="/my-listings"
+                  href="/mes-annonces"
                   color="rose"
                 />
                 <QuickActionButton
                   icon={Calendar}
                   label="Calendrier"
-                  href="/my-listings"
+                  href="/mes-annonces"
                   color="blue"
                 />
                 <QuickActionButton
@@ -431,33 +431,57 @@ export default function DashboardLandlord() {
                 <QuickActionButton
                   icon={Users}
                   label="Demandes"
-                  href="/my-booking-requests"
+                  href="/mes-demandes"
                   badge={pendingRequests.length}
                   color="orange"
                 />
                 <QuickActionButton
                   icon={CreditCard}
                   label="Paiements"
-                  href="/landlord-rent-payments"
+                  href="/proprietaire/loyers"
                   color="purple"
                 />
                 <QuickActionButton
                   icon={FileText}
                   label="Documents"
-                  href="/my-documents-landlord"
+                  href="/documents-proprietaire"
                   color="yellow"
                 />
                 <QuickActionButton
                   icon={ClipboardList}
                   label="Baux"
-                  href="/leases"
+                  href="/mes-baux"
                   color="blue"
                 />
                 <QuickActionButton
                   icon={CheckCircle}
                   label="Inventaires"
-                  href="/property-inventory"
+                  href="/inventory"
                   color="green"
+                />
+                <QuickActionButton
+                  icon={DollarSign}
+                  label="Virements"
+                  href="/proprietaire/paiements"
+                  color="green"
+                />
+                <QuickActionButton
+                  icon={FileSignature}
+                  label="Guide d'accès"
+                  href="/guide-acces"
+                  color="purple"
+                />
+                <QuickActionButton
+                  icon={User}
+                  label="Mon profil"
+                  href="/profil"
+                  color="rose"
+                />
+                <QuickActionButton
+                  icon={CreditCard}
+                  label="Abonnement"
+                  href="/mon-abonnement"
+                  color="orange"
                 />
               </div>
             </div>
