@@ -321,12 +321,16 @@ export default function Pricing() {
             </div>
           </div>
 
-          <div className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 max-w-5xl mx-auto shadow-xl">
-            <div className="text-center text-white">
-              <h3 className="text-2xl font-bold mb-2">
+          <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950 rounded-2xl p-8 max-w-5xl mx-auto shadow-xl">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl"></div>
+              <div className="absolute top-10 -right-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl"></div>
+            </div>
+            <div className="relative z-10 text-center text-white">
+              <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
                 {isFrench ? 'Économisez jusqu\'à 1200€ !' : 'Save up to €1200!'}
               </h3>
-              <p className="text-green-50">
+              <p className="text-gray-300">
                 {isFrench
                   ? 'En moyenne, propriétaires et étudiants économisent ensemble 1200€ en frais d\'agence avec Hellofonty'
                   : 'On average, landlords and students together save €1200 in agency fees with Hellofonty'}
