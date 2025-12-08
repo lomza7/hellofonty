@@ -25,6 +25,13 @@ export default function Footer() {
         <div className="absolute bottom-1/3 left-1/3 w-80 h-80 bg-rose-400/5 rounded-full blur-3xl"></div>
       </div>
 
+      {/* Large HELLOFONTY text background */}
+      <div className="absolute inset-0 flex items-start justify-center pt-12 sm:pt-16 lg:pt-20 pointer-events-none overflow-hidden">
+        <h2 className="text-[10rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] xl:text-[24rem] font-black text-white/[0.03] tracking-tighter leading-none whitespace-nowrap select-none">
+          HELLOFONTY
+        </h2>
+      </div>
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10 lg:gap-12">
           <div>
