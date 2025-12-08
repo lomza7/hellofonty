@@ -222,7 +222,25 @@ export default function MySubscription() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!subscription?.stripe_subscription_id) return;
+    console.log('handleCancelSubscription called', { subscription });
+
+    if (!subscription) {
+      alert(
+        language === 'fr'
+          ? 'Impossible de charger les informations d\'abonnement. Veuillez rafraîchir la page.'
+          : 'Unable to load subscription information. Please refresh the page.'
+      );
+      return;
+    }
+
+    if (!subscription.stripe_subscription_id) {
+      alert(
+        language === 'fr'
+          ? 'Aucun abonnement actif trouvé. Veuillez contacter le support si vous pensez qu\'il s\'agit d\'une erreur.'
+          : 'No active subscription found. Please contact support if you believe this is an error.'
+      );
+      return;
+    }
 
     const confirmed = window.confirm(
       language === 'fr'
@@ -514,7 +532,10 @@ export default function MySubscription() {
                 {subscription.plan_type === 'premium' && !subscription.cancel_at_period_end && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <button
-                      onClick={handleCancelSubscription}
+                      onClick={() => {
+                        console.log('Cancel button clicked');
+                        handleCancelSubscription();
+                      }}
                       disabled={cancelingSubscription}
                       className="text-sm text-gray-600 hover:text-red-600 underline disabled:opacity-50"
                     >
