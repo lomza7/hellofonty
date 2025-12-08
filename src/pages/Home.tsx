@@ -9,6 +9,7 @@ import OptimizedImage from '../components/OptimizedImage';
 import FeaturedListings from '../components/FeaturedListings';
 import PlatformStats from '../components/PlatformStats';
 import FeaturesCarousel from '../components/FeaturesCarousel';
+import FAQ from '../components/FAQ';
 
 interface FeatureImage {
   feature_key: string;
@@ -294,6 +295,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <FAQ />
 
       <div className="bg-gray-50 py-12 sm:py-20 mt-12 sm:mt-20">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-20 text-center">

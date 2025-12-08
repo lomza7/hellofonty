@@ -56,6 +56,14 @@ export default function Footer() {
                   <span>Blog</span>
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/#faq"
+                  className="text-sm hover:text-white transition-colors block"
+                >
+                  FAQ
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -84,6 +92,14 @@ export default function Footer() {
                   className="text-sm hover:text-white transition-colors block"
                 >
                   {language === 'fr' ? 'Devenir propriétaire' : 'Become a Landlord'}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/#faq"
+                  className="text-sm hover:text-white transition-colors block"
+                >
+                  FAQ
                 </Link>
               </li>
             </ul>
