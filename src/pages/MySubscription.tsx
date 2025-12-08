@@ -235,17 +235,51 @@ export default function MySubscription() {
     try {
       setCancelingSubscription(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert(
+          language === 'fr'
+            ? 'Erreur d\'authentification. Veuillez vous reconnecter.'
+            : 'Authentication error. Please sign in again.'
+        );
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-cancel-subscription`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to cancel subscription');
+      }
+
+      const endDate = result.current_period_end
+        ? formatDate(result.current_period_end)
+        : '';
+
       alert(
         language === 'fr'
-          ? 'L\'annulation d\'abonnement sera bientôt disponible. Veuillez contacter le support pour le moment.'
-          : 'Subscription cancellation will be available soon. Please contact support for now.'
+          ? `Votre abonnement a été annulé avec succès. Vous conserverez vos avantages Premium jusqu'au ${endDate}.`
+          : `Your subscription has been successfully canceled. You will keep your Premium benefits until ${endDate}.`
       );
-    } catch (error) {
+
+      await loadSubscriptionData();
+    } catch (error: any) {
       console.error('Error canceling subscription:', error);
       alert(
         language === 'fr'
-          ? 'Une erreur est survenue. Veuillez réessayer.'
-          : 'An error occurred. Please try again.'
+          ? error.message || 'Une erreur est survenue. Veuillez réessayer.'
+          : error.message || 'An error occurred. Please try again.'
       );
     } finally {
       setCancelingSubscription(false);
