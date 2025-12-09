@@ -145,6 +145,46 @@ Deno.serve(async (req: Request) => {
         };
         break;
 
+      case 'UPLOAD_PROFILE_PHOTO':
+        taskData = {
+          ...taskData,
+          title: 'Ajouter une photo de profil',
+          description: 'Ajoutez une photo de profil pour compléter votre vérification. Rendez-vous dans votre profil.',
+          priority: 'important',
+          related_entity_type: 'profile',
+        };
+        break;
+
+      case 'UPLOAD_ID_DOCUMENT_LANDLORD':
+        taskData = {
+          ...taskData,
+          title: 'Télécharger votre justificatif d\'identité',
+          description: 'Téléchargez votre pièce d\'identité dans vos documents pour compléter votre vérification.',
+          priority: 'important',
+          related_entity_type: 'document',
+        };
+        break;
+
+      case 'UPLOAD_PROPERTY_TAX':
+        taskData = {
+          ...taskData,
+          title: 'Télécharger votre taxe foncière',
+          description: 'Téléchargez votre justificatif de propriété (taxe foncière) dans vos documents.',
+          priority: 'important',
+          related_entity_type: 'document',
+        };
+        break;
+
+      case 'UPLOAD_INSEAD_ATTESTATION':
+        taskData = {
+          ...taskData,
+          title: 'Télécharger votre attestation INSEAD',
+          description: 'Téléchargez votre attestation INSEAD dans vos documents pour compléter votre vérification.',
+          priority: 'important',
+          related_entity_type: 'document',
+        };
+        break;
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown task type" }),

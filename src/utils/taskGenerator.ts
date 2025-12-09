@@ -9,7 +9,11 @@ export type TaskType =
   | 'CREATE_ACCESS_GUIDE'
   | 'SIGN_LEASE'
   | 'SCHEDULE_INVENTORY'
-  | 'ACCEPT_BOOKING';
+  | 'ACCEPT_BOOKING'
+  | 'UPLOAD_PROFILE_PHOTO'
+  | 'UPLOAD_ID_DOCUMENT_LANDLORD'
+  | 'UPLOAD_PROPERTY_TAX'
+  | 'UPLOAD_INSEAD_ATTESTATION';
 
 interface GenerateTaskParams {
   userId: string;
