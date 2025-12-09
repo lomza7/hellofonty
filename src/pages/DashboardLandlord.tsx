@@ -238,7 +238,7 @@ export default function DashboardLandlord() {
               </p>
             </div>
             <Link
-              to="/add-listing"
+              to="/ajouter-annonce"
               className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold"
             >
               <PlusCircle className="h-5 w-5" />
