@@ -80,7 +80,13 @@ interface FinanceStats {
   conversionRate: number;
   freeSubscribers: number;
   premiumSubscribers: number;
+  bookingFeePrice: number;
+  premiumPrice: number;
+  churnRate: number;
+  churnedSubscribers: number;
+  activeSubscribers: number;
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
+  churnData: { date: string; churned: number; active: number; rate: number }[];
 }
 
 export default function Admin() {
@@ -369,6 +375,17 @@ export default function Admin() {
         ? (confirmedBookings.length / bookings.length) * 100
         : 0;
 
+      const cancelledSubs = subscriptions?.filter(s => s.status === 'cancelled') || [];
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const churnedThisMonth = cancelledSubs.filter(s => {
+        const cancelledDate = new Date(s.updated_at);
+        return cancelledDate >= thirtyDaysAgo;
+      }).length;
+
+      const totalActiveAtStart = premiumSubs.length + churnedThisMonth;
+      const churnRate = totalActiveAtStart > 0 ? (churnedThisMonth / totalActiveAtStart) * 100 : 0;
+
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (29 - i));
@@ -392,6 +409,23 @@ export default function Admin() {
         };
       });
 
+      const churnData = last30Days.map(date => {
+        const dayChurned = cancelledSubs.filter(s =>
+          s.updated_at.startsWith(date)
+        ).length;
+        const dayActive = activeSubscriptions.filter(s =>
+          new Date(s.created_at) <= new Date(date) &&
+          (s.status === 'active' || new Date(s.updated_at) > new Date(date))
+        ).length;
+        const dayRate = dayActive > 0 ? (dayChurned / dayActive) * 100 : 0;
+        return {
+          date,
+          churned: dayChurned,
+          active: dayActive,
+          rate: dayRate
+        };
+      });
+
       setFinanceStats({
         totalRevenue,
         bookingRevenue,
@@ -405,7 +439,13 @@ export default function Admin() {
         conversionRate,
         freeSubscribers: freeSubs.length,
         premiumSubscribers: premiumSubs.length,
+        bookingFeePrice,
+        premiumPrice,
+        churnRate,
+        churnedSubscribers: churnedThisMonth,
+        activeSubscribers: premiumSubs.length,
         revenueGrowth,
+        churnData,
       });
     } catch (error) {
       console.error('Error loading finance data:', error);
@@ -1551,7 +1591,7 @@ export default function Admin() {
                   <TrendingUp className="w-12 h-12 opacity-20" />
                 </div>
                 <div className="text-blue-100 text-sm">
-                  {financeStats.premiumSubscribers} abonnés × 29€
+                  {financeStats.premiumSubscribers} abonnés × {financeStats.premiumPrice}€
                 </div>
               </div>
 
@@ -1593,14 +1633,14 @@ export default function Admin() {
                   <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Frais de Réservation</p>
-                      <p className="text-xs text-gray-500 mt-1">{financeStats.confirmedBookings} réservations × 500€</p>
+                      <p className="text-xs text-gray-500 mt-1">{financeStats.confirmedBookings} réservations × {financeStats.bookingFeePrice}€</p>
                     </div>
                     <p className="text-xl font-bold text-emerald-600">{financeStats.bookingRevenue.toFixed(2)}€</p>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Abonnements Premium</p>
-                      <p className="text-xs text-gray-500 mt-1">{financeStats.premiumSubscribers} propriétaires × 29€/mois</p>
+                      <p className="text-xs text-gray-500 mt-1">{financeStats.premiumSubscribers} propriétaires × {financeStats.premiumPrice}€/mois</p>
                     </div>
                     <p className="text-xl font-bold text-blue-600">{financeStats.subscriptionRevenue.toFixed(2)}€</p>
                   </div>
@@ -1639,7 +1679,7 @@ export default function Admin() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Premium</p>
-                        <p className="text-xs text-amber-600 font-medium">29€/mois</p>
+                        <p className="text-xs text-amber-600 font-medium">{financeStats.premiumPrice}€/mois</p>
                       </div>
                     </div>
                     <p className="text-2xl font-bold text-amber-600">{financeStats.premiumSubscribers}</p>
@@ -1672,12 +1712,12 @@ export default function Admin() {
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Confirmées</p>
                   <p className="text-2xl font-bold text-green-600">{financeStats.confirmedBookings}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(financeStats.confirmedBookings * 500).toFixed(2)}€ générés</p>
+                  <p className="text-xs text-gray-500 mt-1">{(financeStats.confirmedBookings * financeStats.bookingFeePrice).toFixed(2)}€ générés</p>
                 </div>
                 <div className="p-4 bg-yellow-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">En attente</p>
                   <p className="text-2xl font-bold text-yellow-600">{financeStats.pendingBookings}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(financeStats.pendingBookings * 500).toFixed(2)}€ potentiels</p>
+                  <p className="text-xs text-gray-500 mt-1">{(financeStats.pendingBookings * financeStats.bookingFeePrice).toFixed(2)}€ potentiels</p>
                 </div>
                 <div className="p-4 bg-red-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Annulées</p>
@@ -1705,9 +1745,9 @@ export default function Admin() {
                       <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
                         {new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                         <br />
-                        {day.bookings > 0 && `${day.bookings} réservation${day.bookings > 1 ? 's' : ''} (${day.bookings * 500}€)`}
+                        {day.bookings > 0 && `${day.bookings} réservation${day.bookings > 1 ? 's' : ''} (${day.bookings * financeStats.bookingFeePrice}€)`}
                         {day.bookings > 0 && day.subscriptions > 0 && <br />}
-                        {day.subscriptions > 0 && `${day.subscriptions} abonné${day.subscriptions > 1 ? 's' : ''} (${day.subscriptions * 29}€)`}
+                        {day.subscriptions > 0 && `${day.subscriptions} abonné${day.subscriptions > 1 ? 's' : ''} (${day.subscriptions * financeStats.premiumPrice}€)`}
                         {day.revenue === 0 && 'Aucun revenu'}
                       </div>
                     </div>
@@ -1717,6 +1757,64 @@ export default function Admin() {
               <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
                 <span>{financeStats.revenueGrowth[0]?.date && new Date(financeStats.revenueGrowth[0].date).toLocaleDateString('fr-FR')}</span>
                 <span>{financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1]?.date && new Date(financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1].date).toLocaleDateString('fr-FR')}</span>
+              </div>
+            </div>
+
+            {/* Churn Analysis */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-rose-600" />
+                Analyse du Churn (Taux d'Attrition)
+              </h3>
+
+              <div className="grid md:grid-cols-3 gap-6 mb-6">
+                <div className="p-4 bg-red-50 rounded-lg border-2 border-red-200">
+                  <p className="text-sm text-gray-600 mb-1">Taux de Churn</p>
+                  <p className="text-3xl font-bold text-red-600">{financeStats.churnRate.toFixed(1)}%</p>
+                  <p className="text-xs text-gray-500 mt-1">30 derniers jours</p>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Désabonnements</p>
+                  <p className="text-3xl font-bold text-orange-600">{financeStats.churnedSubscribers}</p>
+                  <p className="text-xs text-gray-500 mt-1">Ce mois-ci</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Abonnés Actifs</p>
+                  <p className="text-3xl font-bold text-green-600">{financeStats.activeSubscribers}</p>
+                  <p className="text-xs text-gray-500 mt-1">Premium actuellement</p>
+                </div>
+              </div>
+
+              <div className="h-64 flex items-end justify-between gap-1">
+                {financeStats.churnData.map((day, index) => {
+                  const maxChurn = Math.max(...financeStats.churnData.map(d => d.churned), 1);
+                  const height = (day.churned / maxChurn) * 100;
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center group relative">
+                      <div
+                        className="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-t hover:from-red-600 hover:to-red-500 transition-all"
+                        style={{ height: `${height}%`, minHeight: day.churned > 0 ? '4px' : '0' }}
+                      />
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                        {new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                        <br />
+                        {day.churned > 0 ? `${day.churned} désabonnement${day.churned > 1 ? 's' : ''}` : 'Aucun churn'}
+                        <br />
+                        {day.active} actifs
+                        {day.rate > 0 && (
+                          <>
+                            <br />
+                            Taux: {day.rate.toFixed(1)}%
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                <span>{financeStats.churnData[0]?.date && new Date(financeStats.churnData[0].date).toLocaleDateString('fr-FR')}</span>
+                <span>{financeStats.churnData[financeStats.churnData.length - 1]?.date && new Date(financeStats.churnData[financeStats.churnData.length - 1].date).toLocaleDateString('fr-FR')}</span>
               </div>
             </div>
 
@@ -1736,7 +1834,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <p className="text-rose-100 text-sm mb-2">Objectif MRR (100 Premium)</p>
-                  <p className="text-3xl font-bold">2,900€</p>
+                  <p className="text-3xl font-bold">{(100 * financeStats.premiumPrice).toLocaleString('fr-FR')}€</p>
                   <p className="text-rose-100 text-xs mt-1">+{(100 - financeStats.premiumSubscribers)} abonnés nécessaires</p>
                 </div>
               </div>
