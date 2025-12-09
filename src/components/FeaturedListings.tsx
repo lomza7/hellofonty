@@ -197,13 +197,6 @@ export default function FeaturedListings() {
         {/* Interactive Map Section */}
         <div className="mt-20">
           <div className="text-center mb-12">
-            <div className="flex justify-center mb-8">
-              <img
-                src="/google_gemini_generated_image.png"
-                alt="Communauté INSEAD"
-                className="max-w-2xl w-full h-auto"
-              />
-            </div>
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
               {t('home.map.title')}
             </h2>
