@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "HelloFonty <noreply@mail.hellofonty.com>",
+        from: "HelloFonty <noreply@hellofonty.fr>",
         to: email,
         subject: "Votre code de vérification HelloFonty",
         html: `

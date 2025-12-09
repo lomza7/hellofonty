@@ -19,7 +19,7 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const baseUrl = 'https://hellofonty.com';
+    const baseUrl = 'https://hellofonty.fr';
     const now = new Date().toISOString();
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
