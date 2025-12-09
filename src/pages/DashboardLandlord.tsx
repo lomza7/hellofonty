@@ -22,6 +22,7 @@ import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
 import TaskList from '../components/dashboard/TaskList';
 import ActivityTimeline from '../components/dashboard/ActivityTimeline';
+import PartnerOffersCarousel from '../components/PartnerOffersCarousel';
 
 interface DashboardStats {
   totalRevenue: number;
@@ -369,6 +370,8 @@ export default function DashboardLandlord() {
                 </div>
               </div>
             )}
+
+            <PartnerOffersCarousel targetAudience="landlord" />
           </div>
 
           <div className="space-y-8">

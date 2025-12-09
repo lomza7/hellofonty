@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet } from 'lucide-react';
+import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
@@ -11,6 +11,7 @@ import FeatureCarouselManager from '../components/FeatureCarouselManager';
 import StripeConnectAdmin from '../components/StripeConnectAdmin';
 import DocumentVerificationPanel from '../components/DocumentVerificationPanel';
 import PlatformSettings from '../components/PlatformSettings';
+import PartnerOffersManager from '../components/PartnerOffersManager';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 
 interface UserData {
@@ -92,7 +93,7 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'settings' | 'partner-offers'>('users');
   const [pendingVerifications, setPendingVerifications] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [verificationDocument, setVerificationDocument] = useState<string | null>(null);
@@ -704,6 +705,17 @@ export default function Admin() {
             >
               <Image className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Carousel</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('partner-offers')}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'partner-offers'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <Megaphone className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Offres Partenaires</span>
             </button>
             <button
               onClick={() => setActiveTab('stripe')}
@@ -1915,6 +1927,13 @@ export default function Admin() {
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <PlatformSettings />
+        )}
+
+        {/* Partner Offers Tab */}
+        {activeTab === 'partner-offers' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <PartnerOffersManager />
+          </div>
         )}
 
       </div>

@@ -20,6 +20,7 @@ import QuickActionButton from '../components/dashboard/QuickActionButton';
 import TaskList from '../components/dashboard/TaskList';
 import ActivityTimeline from '../components/dashboard/ActivityTimeline';
 import MiniChart from '../components/dashboard/MiniChart';
+import PartnerOffersCarousel from '../components/PartnerOffersCarousel';
 
 interface DashboardStats {
   activeBookings: number;
@@ -306,6 +307,8 @@ export default function DashboardStudent() {
                 </div>
               </div>
             )}
+
+            <PartnerOffersCarousel targetAudience="student" />
 
             {monthlyExpenses.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
