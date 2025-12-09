@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, XCircle, AlertCircle, Upload, User as UserIcon, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 interface Task {
@@ -19,9 +20,39 @@ interface TaskCardProps {
   onTaskUpdate?: () => void;
 }
 
+interface VerificationTaskAction {
+  label: string;
+  route: string;
+  icon: typeof Upload | typeof UserIcon;
+}
+
+const verificationTaskActions: Record<string, VerificationTaskAction> = {
+  'Ajouter une photo de profil': {
+    label: 'Aller au profil',
+    route: '/profil',
+    icon: UserIcon
+  },
+  'Télécharger votre justificatif d\'identité': {
+    label: 'Télécharger le document',
+    route: '/documents-proprietaire',
+    icon: Upload
+  },
+  'Télécharger votre taxe foncière': {
+    label: 'Télécharger le document',
+    route: '/documents-proprietaire',
+    icon: Upload
+  },
+  'Télécharger votre attestation INSEAD': {
+    label: 'Télécharger le document',
+    route: '/mes-documents',
+    icon: Upload
+  }
+};
+
 export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const navigate = useNavigate();
 
   const priorityConfig = {
     urgent: {
@@ -50,7 +81,15 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
   const config = priorityConfig[task.priority];
   const PriorityIcon = config.icon;
 
+  const isVerificationTask = task.title in verificationTaskActions;
+  const verificationAction = verificationTaskActions[task.title];
+  const isCompleted = task.status === 'completed';
+
   const handleToggleComplete = async () => {
+    if (isVerificationTask && !isCompleted) {
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const newStatus = task.status === 'completed' ? 'pending' : 'completed';
@@ -77,7 +116,11 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
     }
   };
 
-  const isCompleted = task.status === 'completed';
+  const handleActionClick = () => {
+    if (verificationAction) {
+      navigate(verificationAction.route);
+    }
+  };
 
   return (
     <div
@@ -94,13 +137,21 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
       <div className="flex items-start gap-3">
         <button
           onClick={handleToggleComplete}
-          disabled={isUpdating}
-          className="flex-shrink-0 mt-0.5 focus:outline-none hover:scale-110 transition-transform"
+          disabled={isUpdating || (isVerificationTask && !isCompleted)}
+          className={`flex-shrink-0 mt-0.5 focus:outline-none transition-transform ${
+            isVerificationTask && !isCompleted
+              ? 'cursor-not-allowed opacity-50'
+              : 'hover:scale-110'
+          }`}
         >
           {isCompleted ? (
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           ) : (
-            <Circle className="h-6 w-6 text-gray-400 hover:text-rose-500" />
+            <Circle className={`h-6 w-6 ${
+              isVerificationTask
+                ? 'text-gray-300'
+                : 'text-gray-400 hover:text-rose-500'
+            }`} />
           )}
         </button>
 
@@ -123,18 +174,34 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             </p>
           )}
 
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            {task.due_date && !isCompleted && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {new Date(task.due_date).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short'
-                })}
-              </span>
-            )}
-            {task.task_type === 'system' && (
-              <span className="bg-gray-200 px-2 py-0.5 rounded">Automatique</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-gray-500">
+              {task.due_date && !isCompleted && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {new Date(task.due_date).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </span>
+              )}
+              {task.task_type === 'system' && (
+                <span className="bg-gray-200 px-2 py-0.5 rounded">Automatique</span>
+              )}
+            </div>
+
+            {isVerificationTask && !isCompleted && verificationAction && (
+              <button
+                onClick={handleActionClick}
+                className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+              >
+                {(() => {
+                  const ActionIcon = verificationAction.icon;
+                  return <ActionIcon className="h-4 w-4" />;
+                })()}
+                {verificationAction.label}
+                <ArrowRight className="h-4 w-4" />
+              </button>
             )}
           </div>
         </div>
