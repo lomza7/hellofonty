@@ -201,7 +201,7 @@ export default function FeaturedListings() {
               <img
                 src="/google_gemini_generated_image.png"
                 alt="Communauté INSEAD"
-                className="max-w-4xl w-full h-auto rounded-2xl shadow-lg"
+                className="max-w-2xl w-full h-auto"
               />
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
