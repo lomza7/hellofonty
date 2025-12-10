@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
+import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
