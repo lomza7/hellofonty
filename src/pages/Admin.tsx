@@ -695,7 +695,7 @@ export default function Admin() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des données...</p>
+          <p className="mt-4 text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -707,9 +707,9 @@ export default function Admin() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-rose-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Administration</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('admin.title')}</h1>
           </div>
-          <p className="text-gray-600">Tableau de bord administrateur</p>
+          <p className="text-gray-600">{t('admin.subtitle')}</p>
         </div>
 
         {/* Stats Grid */}
@@ -718,7 +718,7 @@ export default function Admin() {
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Utilisateurs</p>
+                  <p className="text-sm text-gray-600">{t('admin.totalUsers')}</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalUsers}</p>
                 </div>
                 <Users className="w-12 h-12 text-blue-500 opacity-20" />
@@ -748,7 +748,7 @@ export default function Admin() {
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Annonces</p>
+                  <p className="text-sm text-gray-600">{t('admin.listings')}</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalListings}</p>
                 </div>
                 <Home className="w-12 h-12 text-rose-500 opacity-20" />
@@ -758,7 +758,7 @@ export default function Admin() {
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Réservations</p>
+                  <p className="text-sm text-gray-600">{t('admin.bookings')}</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalBookings}</p>
                 </div>
                 <Calendar className="w-12 h-12 text-orange-500 opacity-20" />
@@ -768,7 +768,7 @@ export default function Admin() {
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Vérifications en attente</p>
+                  <p className="text-sm text-gray-600">{t('admin.pendingVerifications')}</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{stats.pendingVerifications}</p>
                 </div>
                 <FileText className="w-12 h-12 text-yellow-500 opacity-20" />
@@ -789,7 +789,7 @@ export default function Admin() {
               }`}
             >
               <Users className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Utilisateurs</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.users')}</span>
             </button>
             <button
               onClick={() => setActiveTab('verifications')}
@@ -800,7 +800,7 @@ export default function Admin() {
               }`}
             >
               <Shield className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Vérifications</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.verifications')}</span>
               {stats && stats.pendingVerifications > 0 && (
                 <span className="bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {stats.pendingVerifications}
@@ -816,7 +816,7 @@ export default function Admin() {
               }`}
             >
               <TrendingUp className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Statistiques</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.analytics')}</span>
             </button>
             <button
               onClick={() => setActiveTab('messaging')}
@@ -827,7 +827,7 @@ export default function Admin() {
               }`}
             >
               <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Messages</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.messaging')}</span>
             </button>
             <button
               onClick={() => setActiveTab('finance')}
@@ -838,7 +838,7 @@ export default function Admin() {
               }`}
             >
               <Euro className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Finances</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.finance')}</span>
             </button>
             <button
               onClick={() => setActiveTab('pricing')}
@@ -849,7 +849,7 @@ export default function Admin() {
               }`}
             >
               <Tag className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Tarifs</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.pricing')}</span>
             </button>
             <button
               onClick={() => setActiveTab('listings')}
@@ -860,7 +860,7 @@ export default function Admin() {
               }`}
             >
               <Home className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Annonces</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.listings')}</span>
             </button>
             <button
               onClick={() => setActiveTab('carousel')}
@@ -871,7 +871,7 @@ export default function Admin() {
               }`}
             >
               <Image className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Carousel</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.carousel')}</span>
             </button>
             <button
               onClick={() => setActiveTab('partner-offers')}
@@ -882,7 +882,7 @@ export default function Admin() {
               }`}
             >
               <Megaphone className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Offres Partenaires</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.partnerOffers')}</span>
             </button>
             <button
               onClick={() => setActiveTab('stripe')}
@@ -893,7 +893,7 @@ export default function Admin() {
               }`}
             >
               <Wallet className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Stripe Connect</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.stripe')}</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
@@ -904,14 +904,14 @@ export default function Admin() {
               }`}
             >
               <DollarSign className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Paramètres</span>
+              <span className="text-sm md:text-base">{t('admin.tabs.settings')}</span>
             </button>
             <button
               onClick={() => navigate('/admin/support')}
               className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
             >
               <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">Support</span>
+              <span className="text-sm md:text-base">{t('support.title')}</span>
             </button>
             <button
               onClick={() => navigate('/admin/blog')}
@@ -927,14 +927,14 @@ export default function Admin() {
         {activeTab === 'users' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Tous les utilisateurs</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('admin.tabs.users')}</h2>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Rechercher par email, nom, téléphone..."
+                  placeholder={t('admin.search.placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
@@ -962,9 +962,9 @@ export default function Admin() {
                   onChange={(e) => setSubscriptionFilter(e.target.value)}
                   className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent appearance-none bg-white"
                 >
-                  <option value="all">Tous les abonnements</option>
-                  <option value="free">Gratuit</option>
-                  <option value="premium">Premium</option>
+                  <option value="all">{t('admin.filter.allSubscriptions')}</option>
+                  <option value="free">{t('admin.free')}</option>
+                  <option value="premium">{t('admin.premium')}</option>
                   <option value="none">Sans abonnement</option>
                 </select>
               </div>
@@ -976,22 +976,22 @@ export default function Admin() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Utilisateur
+                    {t('admin.user')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Email
+                    {t('admin.email')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Téléphone
+                    {t('admin.phone')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Rôle
+                    {t('admin.role')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Abonnement
+                    {t('admin.subscription')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Statut
+                    {t('admin.status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Inscription
@@ -1042,7 +1042,7 @@ export default function Admin() {
                         'bg-blue-100 text-blue-800'
                       }`}>
                         {user.role === 'admin' ? 'Admin' :
-                         user.role === 'landlord' ? 'Propriétaire' : 'Étudiant'}
+                         user.role === 'landlord' ? t('admin.landlords') : t('admin.students')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1050,7 +1050,7 @@ export default function Admin() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           user.subscription_plan === 'premium' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.subscription_plan === 'premium' ? 'Premium' : 'Gratuit'}
+                          {user.subscription_plan === 'premium' ? t('admin.premium') : t('admin.free')}
                         </span>
                       ) : (
                         <span className="text-sm text-gray-400">—</span>
@@ -1064,9 +1064,9 @@ export default function Admin() {
                           user.verification_status === 'rejected' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.verification_status === 'approved' ? 'Vérifié' :
-                           user.verification_status === 'pending' ? 'En attente' :
-                           user.verification_status === 'rejected' ? 'Rejeté' : 'Non soumis'}
+                          {user.verification_status === 'approved' ? t('admin.verified') :
+                           user.verification_status === 'pending' ? t('auth.pendingVerification') :
+                           user.verification_status === 'rejected' ? 'Rejeté' : t('admin.notVerified')}
                         </span>
                       </div>
                     </td>

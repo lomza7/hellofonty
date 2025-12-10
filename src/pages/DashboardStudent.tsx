@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -57,6 +58,7 @@ interface Payment {
 
 export default function DashboardStudent() {
   const { user, profile } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     activeBookings: 0,
@@ -188,15 +190,15 @@ export default function DashboardStudent() {
             )}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Bonjour, {profile ? `${profile.first_name} ${profile.last_name}` : 'Étudiant'} 👋
+                Bonjour, {profile ? `${profile.first_name} ${profile.last_name}` : t('auth.student')} 👋
               </h1>
               <p className="text-gray-600 mt-1">
-                Bienvenue sur votre tableau de bord
+                {t('dashboard.student.subtitle')}
               </p>
               {profile?.email_verified && (
                 <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium mt-2">
                   <CheckCircle className="h-4 w-4" />
-                  Compte vérifié INSEAD
+                  {t('auth.verified')}
                 </span>
               )}
             </div>
@@ -228,28 +230,28 @@ export default function DashboardStudent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             icon={Calendar}
-            title="Réservations actives"
+            title={t('dashboard.student.activeBookings')}
             value={stats.activeBookings}
             iconColor="text-rose-600"
             iconBg="bg-rose-100"
           />
           <StatCard
             icon={Heart}
-            title="Favoris sauvegardés"
+            title={t('dashboard.student.favorites')}
             value={stats.favorites}
             iconColor="text-pink-600"
             iconBg="bg-pink-100"
           />
           <StatCard
             icon={MessageSquare}
-            title="Messages non lus"
+            title={t('dashboard.student.unreadMessages')}
             value={stats.unreadMessages}
             iconColor="text-blue-600"
             iconBg="bg-blue-100"
           />
           <StatCard
             icon={CreditCard}
-            title="Paiements à venir"
+            title={t('dashboard.student.upcomingPayments')}
             value={stats.upcomingPayments}
             iconColor="text-orange-600"
             iconBg="bg-orange-100"
@@ -265,7 +267,7 @@ export default function DashboardStudent() {
             {recentBookings.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Mes réservations</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{t('dashboard.student.myBookings')}</h2>
                   <Link
                     to="/mes-reservations"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
@@ -298,7 +300,7 @@ export default function DashboardStudent() {
                           'bg-gray-100 text-gray-700'
                         }`}>
                           {booking.status === 'confirmed' ? 'Confirmée' :
-                           booking.status === 'pending' ? 'En attente' :
+                           booking.status === 'pending' ? t('auth.pendingVerification') :
                            booking.status}
                         </span>
                       </div>
@@ -335,7 +337,7 @@ export default function DashboardStudent() {
                 <div className="flex items-start gap-3 mb-4">
                   <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1">Paiements à venir</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">{t('dashboard.student.upcomingPaymentsTitle')}</h2>
                     <p className="text-sm text-gray-600">Dans les 7 prochains jours</p>
                   </div>
                 </div>
@@ -352,7 +354,7 @@ export default function DashboardStudent() {
                         to="/mes-loyers"
                         className="block w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white text-center py-2 rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all font-medium text-sm"
                       >
-                        Payer maintenant
+                        {t('dashboard.student.pay')}
                       </Link>
                     </div>
                   ))}
@@ -372,27 +374,27 @@ export default function DashboardStudent() {
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Search}
-                  label="Rechercher"
+                  label={t('nav.search')}
                   href="/recherche"
                   color="rose"
                 />
                 <QuickActionButton
                   icon={Heart}
-                  label="Favoris"
+                  label={t('nav.favorites')}
                   href="/favoris"
                   badge={stats.favorites}
                   color="pink"
                 />
                 <QuickActionButton
                   icon={MessageSquare}
-                  label="Messages"
+                  label={t('nav.messages')}
                   href="/messages"
                   badge={stats.unreadMessages}
                   color="blue"
                 />
                 <QuickActionButton
                   icon={Calendar}
-                  label="Réservations"
+                  label={t('dashboard.student.myBookings')}
                   href="/mes-reservations"
                   badge={stats.activeBookings}
                   color="green"
@@ -406,13 +408,13 @@ export default function DashboardStudent() {
                 />
                 <QuickActionButton
                   icon={FileText}
-                  label="Documents"
+                  label={t('dashboard.student.myDocuments')}
                   href="/mes-documents"
                   color="purple"
                 />
                 <QuickActionButton
                   icon={User}
-                  label="Mon profil"
+                  label={t('profile.title')}
                   href="/profil"
                   color="green"
                 />

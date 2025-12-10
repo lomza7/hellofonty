@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -68,6 +69,7 @@ interface BookingRequest {
 
 export default function DashboardLandlord() {
   const { user, profile } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
@@ -232,10 +234,10 @@ export default function DashboardLandlord() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Tableau de bord propriétaire 🏠
+                {t('dashboard.landlord.title')} 🏠
               </h1>
               <p className="text-gray-600 mt-1">
-                Bienvenue, {profile ? `${profile.first_name} ${profile.last_name}` : 'Propriétaire'}
+                {t('dashboard.landlord.subtitle')}, {profile ? `${profile.first_name} ${profile.last_name}` : t('auth.landlord')}
               </p>
             </div>
             <Link
@@ -243,7 +245,7 @@ export default function DashboardLandlord() {
               className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold"
             >
               <PlusCircle className="h-5 w-5" />
-              Nouvelle annonce
+              {t('dashboard.landlord.newListing')}
             </Link>
           </div>
         </div>
@@ -251,21 +253,21 @@ export default function DashboardLandlord() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={DollarSign}
-            title="Revenus totaux"
+            title={t('dashboard.landlord.totalRevenue')}
             value={`${stats.totalRevenue}€`}
             iconColor="text-green-600"
             iconBg="bg-green-100"
           />
           <StatCard
             icon={Clock}
-            title="Paiements en attente"
+            title={t('dashboard.landlord.pendingPayments')}
             value={`${stats.pendingPayments}€`}
             iconColor="text-orange-600"
             iconBg="bg-orange-100"
           />
           <StatCard
             icon={CheckCircle}
-            title="Réservations actives"
+            title={t('dashboard.landlord.activeBookings')}
             value={stats.activeBookings}
             iconColor="text-blue-600"
             iconBg="bg-blue-100"
@@ -283,8 +285,8 @@ export default function DashboardLandlord() {
                 <div className="flex items-start gap-3 mb-6">
                   <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1">Demandes en attente</h2>
-                    <p className="text-sm text-gray-600">Réponse recommandée dans les 24h</p>
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">{t('dashboard.landlord.pendingRequests')}</h2>
+                    <p className="text-sm text-gray-600">{t('dashboard.landlord.pendingRequestsSubtitle')}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -318,13 +320,13 @@ export default function DashboardLandlord() {
                           onClick={() => handleAcceptBooking(request.id)}
                           className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
                         >
-                          Accepter
+                          {t('dashboard.landlord.acceptBooking')}
                         </button>
                         <button
                           onClick={() => handleRejectBooking(request.id)}
                           className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm"
                         >
-                          Refuser
+                          {t('dashboard.landlord.rejectBooking')}
                         </button>
                       </div>
                     </div>
@@ -336,7 +338,7 @@ export default function DashboardLandlord() {
             {recentListings.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Mes annonces</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{t('nav.myListings')}</h2>
                   <Link
                     to="/mes-annonces"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
@@ -387,7 +389,7 @@ export default function DashboardLandlord() {
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Home}
-                  label="Mes annonces"
+                  label={t('nav.myListings')}
                   href="/mes-annonces"
                   color="rose"
                 />
@@ -399,7 +401,7 @@ export default function DashboardLandlord() {
                 />
                 <QuickActionButton
                   icon={MessageSquare}
-                  label="Messages"
+                  label={t('nav.messages')}
                   href="/messages"
                   badge={unreadMessages}
                   color="green"
@@ -449,7 +451,7 @@ export default function DashboardLandlord() {
                 />
                 <QuickActionButton
                   icon={User}
-                  label="Mon profil"
+                  label={t('profile.title')}
                   href="/profil"
                   color="rose"
                 />
