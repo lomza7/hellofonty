@@ -44,6 +44,10 @@ const MyMonthlyRents = lazy(() => import('./pages/MyMonthlyRents'));
 const LandlordRentPayments = lazy(() => import('./pages/LandlordRentPayments'));
 const DashboardStudent = lazy(() => import('./pages/DashboardStudent'));
 const DashboardLandlord = lazy(() => import('./pages/DashboardLandlord'));
+const LegalNotice = lazy(() => import('./pages/LegalNotice'));
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
+const TermsOfSale = lazy(() => import('./pages/TermsOfSale'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
 function LoadingScreen() {
   return (
@@ -355,6 +359,11 @@ function AppContent() {
                 </AdminRoute>
               }
             />
+
+            <Route path="/mentions-legales" element={<LegalNotice />} />
+            <Route path="/cgu" element={<TermsOfUse />} />
+            <Route path="/cgv" element={<TermsOfSale />} />
+            <Route path="/rgpd" element={<PrivacyPolicy />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

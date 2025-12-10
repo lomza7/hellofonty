@@ -221,11 +221,40 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800/50 mt-8 sm:mt-10 lg:mt-12 pt-6 sm:pt-8 text-center">
-          <p className="text-sm text-gray-400">
+        <div className="border-t border-gray-800/50 mt-8 sm:mt-10 lg:mt-12 pt-6 sm:pt-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-4">
+            <Link
+              to="/mentions-legales"
+              className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+            >
+              {t('footer.legal')}
+            </Link>
+            <span className="hidden sm:inline text-gray-700">•</span>
+            <Link
+              to="/cgu"
+              className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+            >
+              {t('footer.terms')}
+            </Link>
+            <span className="hidden sm:inline text-gray-700">•</span>
+            <Link
+              to="/cgv"
+              className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+            >
+              {t('footer.sales')}
+            </Link>
+            <span className="hidden sm:inline text-gray-700">•</span>
+            <Link
+              to="/rgpd"
+              className="text-sm text-gray-400 hover:text-rose-400 transition-colors"
+            >
+              {t('footer.privacy')}
+            </Link>
+          </div>
+          <p className="text-sm text-gray-400 text-center">
             &copy; {new Date().getFullYear()} HELLOFONTY. {t('footer.rights')}.
           </p>
-          <p className="text-xs mt-2 text-gray-600">
+          <p className="text-xs mt-2 text-gray-600 text-center">
             {language === 'fr'
               ? 'Plateforme de logement pour étudiants INSEAD à Fontainebleau'
               : 'Housing platform for INSEAD students in Fontainebleau'}
