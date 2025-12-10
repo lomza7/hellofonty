@@ -12,11 +12,23 @@ import {
   FileText,
   Save,
   UserCircle,
-  Settings
+  Settings,
+  Eye,
+  Clock as ClockIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+
+interface LandlordDocument {
+  id: string;
+  document_type: string;
+  document_url: string;
+  verification_status: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+}
 
 export default function Profile() {
   const { t } = useLanguage();
@@ -34,6 +46,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [landlordDocuments, setLandlordDocuments] = useState<LandlordDocument[]>([]);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const countries = [
@@ -68,8 +81,30 @@ export default function Profile() {
       if (profile.avatar_url) {
         setAvatarPreview(profile.avatar_url);
       }
+
+      if (profile.role === 'landlord') {
+        loadLandlordDocuments();
+      }
     }
   }, [profile]);
+
+  const loadLandlordDocuments = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('landlord_documents')
+        .select('*')
+        .eq('landlord_id', profile.id)
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+
+      setLandlordDocuments(data || []);
+    } catch (err) {
+      console.error('Error loading landlord documents:', err);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -617,6 +652,104 @@ export default function Profile() {
                       )}
                     </div>
                   </div>
+
+                  {profile.role === 'student' && profile.verification_document_url && (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-100 shadow-sm">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        {preferredLanguage === 'fr' ? 'Mon document' : 'My document'}
+                      </h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
+                          <FileText className="w-5 h-5 text-purple-500" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500">
+                              {preferredLanguage === 'fr' ? 'Attestation INSEAD' : 'INSEAD Certificate'}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {profile.verification_status === 'approved' && (
+                                <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {preferredLanguage === 'fr' ? 'Approuvé' : 'Approved'}
+                                </span>
+                              )}
+                              {profile.verification_status === 'pending' && (
+                                <span className="text-xs font-medium text-orange-600 flex items-center gap-1">
+                                  <ClockIcon className="w-3 h-3" />
+                                  {preferredLanguage === 'fr' ? 'En attente' : 'Pending'}
+                                </span>
+                              )}
+                              {profile.verification_status === 'rejected' && (
+                                <span className="text-xs font-medium text-red-600 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {preferredLanguage === 'fr' ? 'Refusé' : 'Rejected'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <a
+                            href={profile.verification_document_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 hover:bg-gray-100 rounded-lg transition"
+                          >
+                            <Eye className="w-4 h-4 text-gray-600" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.role === 'landlord' && landlordDocuments.length > 0 && (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-100 shadow-sm">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        {preferredLanguage === 'fr' ? 'Mes documents' : 'My documents'}
+                      </h3>
+                      <div className="space-y-2">
+                        {landlordDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
+                            <FileText className="w-5 h-5 text-blue-500" />
+                            <div className="flex-1">
+                              <p className="text-xs text-gray-500">
+                                {doc.document_type === 'identity_document'
+                                  ? (preferredLanguage === 'fr' ? 'Pièce d\'identité' : 'ID Document')
+                                  : (preferredLanguage === 'fr' ? 'Taxe foncière' : 'Property Tax')}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {doc.verification_status === 'approved' && (
+                                  <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    {preferredLanguage === 'fr' ? 'Approuvé' : 'Approved'}
+                                  </span>
+                                )}
+                                {doc.verification_status === 'pending' && (
+                                  <span className="text-xs font-medium text-orange-600 flex items-center gap-1">
+                                    <ClockIcon className="w-3 h-3" />
+                                    {preferredLanguage === 'fr' ? 'En attente' : 'Pending'}
+                                  </span>
+                                )}
+                                {doc.verification_status === 'rejected' && (
+                                  <span className="text-xs font-medium text-red-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {preferredLanguage === 'fr' ? 'Refusé' : 'Rejected'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <a
+                              href={doc.document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 hover:bg-gray-100 rounded-lg transition"
+                            >
+                              <Eye className="w-4 h-4 text-gray-600" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
