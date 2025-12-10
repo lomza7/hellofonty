@@ -79,6 +79,21 @@ interface ChurnedUser {
   stripe_subscription_id: string | null;
 }
 
+interface PendingPaymentBooking {
+  id: string;
+  student_first_name: string;
+  student_last_name: string;
+  landlord_first_name: string;
+  landlord_last_name: string;
+  listing_title: string;
+  payment_amount: number;
+  payment_deadline: string | null;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  days_remaining: number;
+}
+
 interface FinanceStats {
   totalRevenue: number;
   bookingRevenue: number;
@@ -87,9 +102,12 @@ interface FinanceStats {
   arr: number;
   totalBookings: number;
   confirmedBookings: number;
+  paidBookings: number;
+  pendingPaymentBookings: number;
   pendingBookings: number;
   cancelledBookings: number;
   conversionRate: number;
+  paymentRate: number;
   freeSubscribers: number;
   premiumSubscribers: number;
   bookingFeePrice: number;
@@ -98,6 +116,7 @@ interface FinanceStats {
   churnedSubscribers: number;
   activeSubscribers: number;
   churnedUsers: ChurnedUser[];
+  pendingPayments: PendingPaymentBooking[];
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
   churnData: { date: string; churned: number; active: number; rate: number }[];
 }
@@ -354,7 +373,11 @@ export default function Admin() {
     try {
       const { data: bookings } = await supabase
         .from('bookings')
-        .select('*, listings(title)');
+        .select(`
+          *,
+          listings(title, landlord_id),
+          student:student_id(first_name, last_name)
+        `);
 
       const { data: subscriptions } = await supabase
         .from('subscriptions')
@@ -372,12 +395,14 @@ export default function Admin() {
         .eq('is_active', true);
 
       const confirmedBookings = bookings?.filter(b => b.status === 'confirmed') || [];
+      const paidBookings = confirmedBookings.filter(b => b.payment_status === 'paid');
+      const pendingPaymentBookings = confirmedBookings.filter(b => b.payment_status === 'pending');
       const pendingBookings = bookings?.filter(b => b.status === 'pending') || [];
       const cancelledBookings = bookings?.filter(b => b.status === 'cancelled') || [];
 
       const studentBookingPlan = pricingPlans?.find(p => p.type === 'student' && p.plan_category === 'booking_fee');
       const bookingFeePrice = studentBookingPlan?.price || 500;
-      const bookingRevenue = confirmedBookings.length * bookingFeePrice;
+      const bookingRevenue = paidBookings.length * bookingFeePrice;
 
       const activeSubscriptions = subscriptions?.filter(s => s.status === 'active') || [];
       const premiumSubs = activeSubscriptions.filter(s => s.plan_type === 'premium');
@@ -393,6 +418,46 @@ export default function Admin() {
       const conversionRate = bookings && bookings.length > 0
         ? (confirmedBookings.length / bookings.length) * 100
         : 0;
+
+      const paymentRate = confirmedBookings.length > 0
+        ? (paidBookings.length / confirmedBookings.length) * 100
+        : 0;
+
+      const landlordIds = Array.from(new Set(pendingPaymentBookings.map(b => (b as any).listings?.landlord_id).filter(Boolean)));
+      const { data: landlords } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', landlordIds.length > 0 ? landlordIds : ['00000000-0000-0000-0000-000000000000']);
+
+      const landlordMap = new Map(landlords?.map(l => [l.id, l]) || []);
+
+      const now = new Date();
+      const pendingPayments: PendingPaymentBooking[] = pendingPaymentBookings.map(b => {
+        const landlord = landlordMap.get((b as any).listings?.landlord_id);
+        const deadline = b.payment_deadline ? new Date(b.payment_deadline) : null;
+        const daysRemaining = deadline
+          ? Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          : -1;
+
+        return {
+          id: b.id,
+          student_first_name: (b as any).student?.first_name || 'N/A',
+          student_last_name: (b as any).student?.last_name || 'N/A',
+          landlord_first_name: landlord?.first_name || 'N/A',
+          landlord_last_name: landlord?.last_name || 'N/A',
+          listing_title: (b as any).listings?.title || 'N/A',
+          payment_amount: parseFloat(b.payment_amount || '0'),
+          payment_deadline: b.payment_deadline,
+          start_date: b.start_date,
+          end_date: b.end_date,
+          created_at: b.created_at,
+          days_remaining: daysRemaining
+        };
+      }).sort((a, b) => {
+        if (a.days_remaining < 0 && b.days_remaining >= 0) return 1;
+        if (b.days_remaining < 0 && a.days_remaining >= 0) return -1;
+        return a.days_remaining - b.days_remaining;
+      });
 
       const cancelledSubs = subscriptions?.filter(s => s.status === 'cancelled') || [];
       const pendingCancellations = activeSubscriptions.filter(s => s.cancel_at_period_end === true);
@@ -491,9 +556,12 @@ export default function Admin() {
         arr,
         totalBookings: bookings?.length || 0,
         confirmedBookings: confirmedBookings.length,
+        paidBookings: paidBookings.length,
+        pendingPaymentBookings: pendingPaymentBookings.length,
         pendingBookings: pendingBookings.length,
         cancelledBookings: cancelledBookings.length,
         conversionRate,
+        paymentRate,
         freeSubscribers: freeSubs.length,
         premiumSubscribers: premiumSubs.length,
         bookingFeePrice,
@@ -502,6 +570,7 @@ export default function Admin() {
         churnedSubscribers: totalChurnedThisMonth,
         activeSubscribers: premiumSubs.length,
         churnedUsers,
+        pendingPayments,
         revenueGrowth,
         churnData,
       });
@@ -1762,18 +1831,27 @@ export default function Admin() {
                 <Calendar className="w-5 h-5 text-rose-600" />
                 Statistiques des Réservations
               </h3>
-              <div className="grid md:grid-cols-4 gap-4">
+              <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Total</p>
                   <p className="text-2xl font-bold text-gray-900">{financeStats.totalBookings}</p>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
                   <p className="text-sm text-gray-600 mb-1">Confirmées</p>
                   <p className="text-2xl font-bold text-green-600">{financeStats.confirmedBookings}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(financeStats.confirmedBookings * financeStats.bookingFeePrice).toFixed(2)}€ générés</p>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                  <p className="text-sm text-gray-600 mb-1">Payées</p>
+                  <p className="text-2xl font-bold text-blue-600">{financeStats.paidBookings}</p>
+                  <p className="text-xs text-gray-500 mt-1">{(financeStats.paidBookings * financeStats.bookingFeePrice).toFixed(2)}€ générés</p>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+                  <p className="text-sm text-gray-600 mb-1">En attente paiement</p>
+                  <p className="text-2xl font-bold text-orange-600">{financeStats.pendingPaymentBookings}</p>
+                  <p className="text-xs text-gray-500 mt-1">{(financeStats.pendingPaymentBookings * financeStats.bookingFeePrice).toFixed(2)}€ attendus</p>
                 </div>
                 <div className="p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">En attente</p>
+                  <p className="text-sm text-gray-600 mb-1">En attente validation</p>
                   <p className="text-2xl font-bold text-yellow-600">{financeStats.pendingBookings}</p>
                   <p className="text-xs text-gray-500 mt-1">{(financeStats.pendingBookings * financeStats.bookingFeePrice).toFixed(2)}€ potentiels</p>
                 </div>
@@ -1782,6 +1860,140 @@ export default function Admin() {
                   <p className="text-2xl font-bold text-red-600">{financeStats.cancelledBookings}</p>
                 </div>
               </div>
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Taux de Conversion (Confirmées / Total)</p>
+                    <p className="text-2xl font-bold text-rose-600">{financeStats.conversionRate.toFixed(1)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Taux de Paiement (Payées / Confirmées)</p>
+                    <p className="text-2xl font-bold text-blue-600">{financeStats.paymentRate.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pending Payments Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-orange-600" />
+                Réservations en Attente de Paiement
+              </h3>
+
+              {financeStats.pendingPayments.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="w-16 h-16 text-green-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">Aucun paiement en attente</p>
+                  <p className="text-gray-400 text-sm mt-2">Toutes les réservations confirmées ont été payées</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Étudiant
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Propriétaire
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Logement
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Montant
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date limite
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Délai restant
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Période
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {financeStats.pendingPayments.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <User className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {payment.student_first_name} {payment.student_last_name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {payment.landlord_first_name} {payment.landlord_last_name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 max-w-xs truncate">
+                              {payment.listing_title}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-gray-900">
+                              {payment.payment_amount.toFixed(2)}€
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {payment.payment_deadline ? (
+                              new Date(payment.payment_deadline).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            ) : (
+                              <span className="text-gray-400">Non définie</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {payment.days_remaining < 0 ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                Pas de limite
+                              </span>
+                            ) : payment.days_remaining === 0 ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Aujourd'hui !
+                              </span>
+                            ) : payment.days_remaining <= 2 ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                {payment.days_remaining} jour{payment.days_remaining > 1 ? 's' : ''}
+                              </span>
+                            ) : payment.days_remaining <= 5 ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                                {payment.days_remaining} jours
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                {payment.days_remaining} jours
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div>
+                              {new Date(payment.start_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                              {' → '}
+                              {new Date(payment.end_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Revenue Growth Chart */}
