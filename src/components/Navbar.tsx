@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import NotificationBell from './NotificationBell';
 
@@ -12,6 +12,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [notificationCounts, setNotificationCounts] = useState({
     messages: 0,
     bookingRequests: 0,
@@ -49,6 +50,25 @@ export default function Navbar() {
       loadNotificationCounts();
     }
   }, [location.pathname, profile?.id]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showUserMenu]);
+
+  useEffect(() => {
+    setShowUserMenu(false);
+  }, [location.pathname]);
 
   const loadNotificationCounts = async () => {
     if (!profile?.id) return;
@@ -136,7 +156,7 @@ export default function Navbar() {
 
             {user && <NotificationBell />}
 
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-3 border border-gray-300 rounded-full py-2 px-3 hover:shadow-md transition"
