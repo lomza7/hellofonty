@@ -85,7 +85,41 @@ export default function DashboardStudent() {
     }
 
     fetchDashboardData();
-  }, [user, profile, navigate]);
+  }, [user, profile?.role, navigate]);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    let completion = 0;
+    if (profile.avatar_url) completion += 33;
+    if (profile.phone) completion += 33;
+    if (profile.email_verified) completion += 34;
+    setProfileCompletion(completion);
+  }, [profile]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`profile_changes_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const fetchDashboardData = async () => {
     if (!user) return;
@@ -150,12 +184,6 @@ export default function DashboardStudent() {
         timestamp: notif.created_at
       }));
       setActivities(activityData);
-
-      let completion = 0;
-      if (profile?.avatar_url) completion += 33;
-      if (profile?.phone_number) completion += 33;
-      if (profile?.email_verified) completion += 34;
-      setProfileCompletion(completion);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

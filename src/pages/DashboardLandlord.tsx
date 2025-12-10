@@ -94,7 +94,31 @@ export default function DashboardLandlord() {
     }
 
     fetchDashboardData();
-  }, [user, profile, navigate]);
+  }, [user, profile?.role, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`profile_changes_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const fetchDashboardData = async () => {
     if (!user) return;
