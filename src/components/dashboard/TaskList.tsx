@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Filter, CheckCircle } from 'lucide-react';
 import TaskCard from './TaskCard';
 import { supabase } from '../../lib/supabase';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Task {
   id: string;
@@ -22,6 +23,7 @@ interface TaskListProps {
 }
 
 export default function TaskList({ userId, maxDisplay, showCompleted = false }: TaskListProps) {
+  const { t } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'urgent' | 'important' | 'normal'>('all');
@@ -107,7 +109,7 @@ export default function TaskList({ userId, maxDisplay, showCompleted = false }: 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-bold text-gray-900">
-            Tâches à faire
+            {t('tasks.title')}
             {pendingTasks.length > 0 && (
               <span className="ml-2 bg-rose-500 text-white text-xs px-2 py-1 rounded-full">
                 {pendingTasks.length}
@@ -117,7 +119,7 @@ export default function TaskList({ userId, maxDisplay, showCompleted = false }: 
           {completedToday > 0 && (
             <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
               <CheckCircle className="h-4 w-4" />
-              {completedToday} complétée{completedToday > 1 ? 's' : ''} aujourd'hui
+              {completedToday} {completedToday > 1 ? t('tasks.completedPlural') : t('tasks.completed')} {t('tasks.today')}
             </span>
           )}
         </div>
@@ -126,7 +128,7 @@ export default function TaskList({ userId, maxDisplay, showCompleted = false }: 
           <button
             onClick={() => setFilter(filter === 'all' ? 'urgent' : 'all')}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Filtrer"
+            title={t('tasks.filter')}
           >
             <Filter className="h-5 w-5 text-gray-600" />
           </button>
@@ -139,7 +141,7 @@ export default function TaskList({ userId, maxDisplay, showCompleted = false }: 
             onClick={() => setFilter('all')}
             className="text-sm text-rose-600 hover:text-rose-700 font-medium"
           >
-            ← Toutes les tâches
+            ← {t('tasks.allTasks')}
           </button>
         </div>
       )}
@@ -148,10 +150,10 @@ export default function TaskList({ userId, maxDisplay, showCompleted = false }: 
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 text-center border-2 border-green-200">
           <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Bravo ! 🎉
+            {t('tasks.congratulations')} 🎉
           </h3>
           <p className="text-gray-600">
-            Vous n'avez aucune tâche en attente
+            {t('tasks.noTasks')}
           </p>
         </div>
       ) : (

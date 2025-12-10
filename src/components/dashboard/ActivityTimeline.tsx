@@ -1,4 +1,5 @@
 import { CheckCircle, MessageSquare, Heart, Bell, FileText, Home } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Activity {
   id: string;
@@ -12,6 +13,7 @@ interface ActivityTimelineProps {
 }
 
 export default function ActivityTimeline({ activities }: ActivityTimelineProps) {
+  const { t } = useLanguage();
   const getIcon = (type: string) => {
     switch (type) {
       case 'booking':
@@ -36,14 +38,14 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
     const then = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - then.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'À l\'instant';
-    if (diffInMinutes < 60) return `Il y a ${diffInMinutes}min`;
+    if (diffInMinutes < 1) return t('activity.justNow');
+    if (diffInMinutes < 60) return t('activity.minutesAgo').replace('{minutes}', String(diffInMinutes));
 
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+    if (diffInHours < 24) return t('activity.hoursAgo').replace('{hours}', String(diffInHours));
 
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `Il y a ${diffInDays}j`;
+    if (diffInDays < 7) return t('activity.daysAgo').replace('{days}', String(diffInDays));
 
     return then.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
@@ -51,7 +53,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
   if (activities.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        Aucune activité récente
+        {t('activity.noActivity')}
       </div>
     );
   }
