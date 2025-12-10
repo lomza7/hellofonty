@@ -67,6 +67,18 @@ interface Conversation {
   messages: Message[];
 }
 
+interface ChurnedUser {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  plan_type: string;
+  cancelled_at: string;
+  cancellation_date: string;
+  status: 'cancelled' | 'pending_cancellation';
+  stripe_subscription_id: string | null;
+}
+
 interface FinanceStats {
   totalRevenue: number;
   bookingRevenue: number;
@@ -85,6 +97,7 @@ interface FinanceStats {
   churnRate: number;
   churnedSubscribers: number;
   activeSubscribers: number;
+  churnedUsers: ChurnedUser[];
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
   churnData: { date: string; churned: number; active: number; rate: number }[];
 }
@@ -345,7 +358,13 @@ export default function Admin() {
 
       const { data: subscriptions } = await supabase
         .from('subscriptions')
-        .select('*');
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `);
 
       const { data: pricingPlans } = await supabase
         .from('pricing_plans')
@@ -376,15 +395,49 @@ export default function Admin() {
         : 0;
 
       const cancelledSubs = subscriptions?.filter(s => s.status === 'cancelled') || [];
+      const pendingCancellations = activeSubscriptions.filter(s => s.cancel_at_period_end === true);
+
       const today = new Date();
       const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
       const churnedThisMonth = cancelledSubs.filter(s => {
         const cancelledDate = new Date(s.updated_at);
         return cancelledDate >= thirtyDaysAgo;
       }).length;
 
+      const pendingChurnThisMonth = pendingCancellations.filter(s => {
+        const requestDate = new Date(s.updated_at);
+        return requestDate >= thirtyDaysAgo;
+      }).length;
+
+      const totalChurnedThisMonth = churnedThisMonth + pendingChurnThisMonth;
       const totalActiveAtStart = premiumSubs.length + churnedThisMonth;
-      const churnRate = totalActiveAtStart > 0 ? (churnedThisMonth / totalActiveAtStart) * 100 : 0;
+      const churnRate = totalActiveAtStart > 0 ? (totalChurnedThisMonth / totalActiveAtStart) * 100 : 0;
+
+      const churnedUsers: ChurnedUser[] = [
+        ...cancelledSubs.map(s => ({
+          id: s.id,
+          user_id: s.user_id,
+          first_name: (s as any).profiles?.first_name || 'N/A',
+          last_name: (s as any).profiles?.last_name || 'N/A',
+          plan_type: s.plan_type,
+          cancelled_at: s.updated_at,
+          cancellation_date: s.updated_at,
+          status: 'cancelled' as const,
+          stripe_subscription_id: s.stripe_subscription_id
+        })),
+        ...pendingCancellations.map(s => ({
+          id: s.id,
+          user_id: s.user_id,
+          first_name: (s as any).profiles?.first_name || 'N/A',
+          last_name: (s as any).profiles?.last_name || 'N/A',
+          plan_type: s.plan_type,
+          cancelled_at: s.updated_at,
+          cancellation_date: s.current_period_end || s.updated_at,
+          status: 'pending_cancellation' as const,
+          stripe_subscription_id: s.stripe_subscription_id
+        }))
+      ].sort((a, b) => new Date(b.cancelled_at).getTime() - new Date(a.cancelled_at).getTime());
 
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
@@ -410,9 +463,13 @@ export default function Admin() {
       });
 
       const churnData = last30Days.map(date => {
-        const dayChurned = cancelledSubs.filter(s =>
+        const dayCancelled = cancelledSubs.filter(s =>
           s.updated_at.startsWith(date)
         ).length;
+        const dayPendingCancel = pendingCancellations.filter(s =>
+          s.updated_at.startsWith(date)
+        ).length;
+        const dayChurned = dayCancelled + dayPendingCancel;
         const dayActive = activeSubscriptions.filter(s =>
           new Date(s.created_at) <= new Date(date) &&
           (s.status === 'active' || new Date(s.updated_at) > new Date(date))
@@ -442,8 +499,9 @@ export default function Admin() {
         bookingFeePrice,
         premiumPrice,
         churnRate,
-        churnedSubscribers: churnedThisMonth,
+        churnedSubscribers: totalChurnedThisMonth,
         activeSubscribers: premiumSubs.length,
+        churnedUsers,
         revenueGrowth,
         churnData,
       });
@@ -1816,6 +1874,107 @@ export default function Admin() {
                 <span>{financeStats.churnData[0]?.date && new Date(financeStats.churnData[0].date).toLocaleDateString('fr-FR')}</span>
                 <span>{financeStats.churnData[financeStats.churnData.length - 1]?.date && new Date(financeStats.churnData[financeStats.churnData.length - 1].date).toLocaleDateString('fr-FR')}</span>
               </div>
+            </div>
+
+            {/* Churn Details Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-rose-600" />
+                Liste des Désabonnements
+              </h3>
+
+              {financeStats.churnedUsers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">Aucun désabonnement</p>
+                  <p className="text-gray-400 text-sm mt-2">Excellent ! Tous vos abonnés Premium sont satisfaits</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Client
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Plan
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Statut
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date demande
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date effective
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          ID Stripe
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {financeStats.churnedUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="h-5 w-5 text-gray-500" />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {user.first_name} {user.last_name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {user.user_id.substring(0, 8)}...
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
+                              {user.plan_type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {user.status === 'cancelled' ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Annulé
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                                En attente d'annulation
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(user.cancelled_at).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(user.cancellation_date).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                            {user.stripe_subscription_id ? (
+                              <span className="text-xs">{user.stripe_subscription_id.substring(0, 20)}...</span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Projections */}
