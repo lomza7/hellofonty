@@ -2002,31 +2002,147 @@ export default function Admin() {
                 <TrendingUp className="w-5 h-5 text-rose-600" />
                 Évolution du Revenu (30 derniers jours)
               </h3>
-              <div className="h-64 flex items-end justify-between gap-1">
-                {financeStats.revenueGrowth.map((day, index) => {
-                  const maxRevenue = Math.max(...financeStats.revenueGrowth.map(d => d.revenue), 1);
-                  const height = (day.revenue / maxRevenue) * 100;
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center group relative">
-                      <div
-                        className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t hover:from-emerald-600 hover:to-emerald-500 transition-all"
-                        style={{ height: `${height}%`, minHeight: day.revenue > 0 ? '4px' : '0' }}
-                      />
-                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                        {new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                        <br />
-                        {day.bookings > 0 && `${day.bookings} réservation${day.bookings > 1 ? 's' : ''} (${day.bookings * financeStats.bookingFeePrice}€)`}
-                        {day.bookings > 0 && day.subscriptions > 0 && <br />}
-                        {day.subscriptions > 0 && `${day.subscriptions} abonné${day.subscriptions > 1 ? 's' : ''} (${day.subscriptions * financeStats.premiumPrice}€)`}
-                        {day.revenue === 0 && 'Aucun revenu'}
-                      </div>
-                    </div>
-                  );
-                })}
+
+              <div className="mb-4 flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="text-gray-600">Revenu Total</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-gray-600">Réservations</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span className="text-gray-600">Abonnements</span>
+                </div>
               </div>
+
+              <div className="relative h-64">
+                <svg className="w-full h-full" viewBox="0 0 800 256" preserveAspectRatio="none">
+                  {(() => {
+                    const maxRevenue = Math.max(...financeStats.revenueGrowth.map(d => d.revenue), 1);
+                    const maxBookingRevenue = Math.max(...financeStats.revenueGrowth.map(d => d.bookings * financeStats.bookingFeePrice), 1);
+                    const maxSubRevenue = Math.max(...financeStats.revenueGrowth.map(d => d.subscriptions * financeStats.premiumPrice), 1);
+                    const points = financeStats.revenueGrowth.length;
+                    const stepX = 800 / (points - 1 || 1);
+
+                    const totalRevenuePoints = financeStats.revenueGrowth.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - (d.revenue / maxRevenue * 220)
+                    }));
+
+                    const bookingRevenuePoints = financeStats.revenueGrowth.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - ((d.bookings * financeStats.bookingFeePrice) / maxRevenue * 220)
+                    }));
+
+                    const subRevenuePoints = financeStats.revenueGrowth.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - ((d.subscriptions * financeStats.premiumPrice) / maxRevenue * 220)
+                    }));
+
+                    const createPath = (points: {x: number, y: number}[]) => {
+                      return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    };
+
+                    return (
+                      <>
+                        <defs>
+                          <linearGradient id="totalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <line
+                            key={i}
+                            x1="0"
+                            y1={36 + i * 55}
+                            x2="800"
+                            y2={36 + i * 55}
+                            stroke="#e5e7eb"
+                            strokeWidth="1"
+                            strokeDasharray="5,5"
+                          />
+                        ))}
+
+                        {/* Area fill for total revenue */}
+                        <path
+                          d={`${createPath(totalRevenuePoints)} L ${totalRevenuePoints[totalRevenuePoints.length - 1].x} 256 L 0 256 Z`}
+                          fill="url(#totalGradient)"
+                        />
+
+                        {/* Subscriptions line */}
+                        <path
+                          d={createPath(subRevenuePoints)}
+                          fill="none"
+                          stroke="#a855f7"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Bookings line */}
+                        <path
+                          d={createPath(bookingRevenuePoints)}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Total revenue line */}
+                        <path
+                          d={createPath(totalRevenuePoints)}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Data points */}
+                        {totalRevenuePoints.map((point, i) => (
+                          <g key={i}>
+                            <circle
+                              cx={point.x}
+                              cy={point.y}
+                              r="4"
+                              fill="#10b981"
+                              stroke="white"
+                              strokeWidth="2"
+                              className="hover:r-6 transition-all cursor-pointer"
+                            />
+                            <title>
+                              {new Date(financeStats.revenueGrowth[i].date).toLocaleDateString('fr-FR')}
+                              {'\n'}Revenu: {financeStats.revenueGrowth[i].revenue.toFixed(2)}€
+                              {'\n'}Réservations: {financeStats.revenueGrowth[i].bookings}
+                              {'\n'}Abonnements: {financeStats.revenueGrowth[i].subscriptions}
+                            </title>
+                          </g>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </svg>
+
+                {/* Y-axis labels */}
+                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 pr-2" style={{ width: '60px' }}>
+                  {[4, 3, 2, 1, 0].map((i) => {
+                    const maxRevenue = Math.max(...financeStats.revenueGrowth.map(d => d.revenue), 1);
+                    const value = (maxRevenue / 4) * i;
+                    return <span key={i}>{value.toFixed(0)}€</span>;
+                  })}
+                </div>
+              </div>
+
               <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                <span>{financeStats.revenueGrowth[0]?.date && new Date(financeStats.revenueGrowth[0].date).toLocaleDateString('fr-FR')}</span>
-                <span>{financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1]?.date && new Date(financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1].date).toLocaleDateString('fr-FR')}</span>
+                <span>{financeStats.revenueGrowth[0]?.date && new Date(financeStats.revenueGrowth[0].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                <span>{financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1]?.date && new Date(financeStats.revenueGrowth[financeStats.revenueGrowth.length - 1].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
               </div>
             </div>
 
@@ -2055,36 +2171,147 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="h-64 flex items-end justify-between gap-1">
-                {financeStats.churnData.map((day, index) => {
-                  const maxChurn = Math.max(...financeStats.churnData.map(d => d.churned), 1);
-                  const height = (day.churned / maxChurn) * 100;
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center group relative">
-                      <div
-                        className="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-t hover:from-red-600 hover:to-red-500 transition-all"
-                        style={{ height: `${height}%`, minHeight: day.churned > 0 ? '4px' : '0' }}
-                      />
-                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                        {new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                        <br />
-                        {day.churned > 0 ? `${day.churned} désabonnement${day.churned > 1 ? 's' : ''}` : 'Aucun churn'}
-                        <br />
-                        {day.active} actifs
-                        {day.rate > 0 && (
-                          <>
-                            <br />
-                            Taux: {day.rate.toFixed(1)}%
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="mb-4 flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-gray-600">Désabonnements</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-gray-600">Abonnés Actifs</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  <span className="text-gray-600">Taux de Churn (%)</span>
+                </div>
               </div>
+
+              <div className="relative h-64">
+                <svg className="w-full h-full" viewBox="0 0 800 256" preserveAspectRatio="none">
+                  {(() => {
+                    const maxChurned = Math.max(...financeStats.churnData.map(d => d.churned), 1);
+                    const maxActive = Math.max(...financeStats.churnData.map(d => d.active), 1);
+                    const maxRate = Math.max(...financeStats.churnData.map(d => d.rate), 1);
+                    const points = financeStats.churnData.length;
+                    const stepX = 800 / (points - 1 || 1);
+
+                    const churnedPoints = financeStats.churnData.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - (d.churned / maxChurned * 220)
+                    }));
+
+                    const activePoints = financeStats.churnData.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - (d.active / maxActive * 220)
+                    }));
+
+                    const ratePoints = financeStats.churnData.map((d, i) => ({
+                      x: i * stepX,
+                      y: 256 - (d.rate / (maxRate || 100) * 220)
+                    }));
+
+                    const createPath = (points: {x: number, y: number}[]) => {
+                      return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    };
+
+                    return (
+                      <>
+                        <defs>
+                          <linearGradient id="churnGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <line
+                            key={i}
+                            x1="0"
+                            y1={36 + i * 55}
+                            x2="800"
+                            y2={36 + i * 55}
+                            stroke="#e5e7eb"
+                            strokeWidth="1"
+                            strokeDasharray="5,5"
+                          />
+                        ))}
+
+                        {/* Area fill for churned */}
+                        <path
+                          d={`${createPath(churnedPoints)} L ${churnedPoints[churnedPoints.length - 1].x} 256 L 0 256 Z`}
+                          fill="url(#churnGradient)"
+                        />
+
+                        {/* Active subscribers line */}
+                        <path
+                          d={createPath(activePoints)}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Churn rate line */}
+                        <path
+                          d={createPath(ratePoints)}
+                          fill="none"
+                          stroke="#f97316"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeDasharray="5,5"
+                        />
+
+                        {/* Churned line */}
+                        <path
+                          d={createPath(churnedPoints)}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Data points for churned */}
+                        {churnedPoints.map((point, i) => (
+                          <g key={i}>
+                            <circle
+                              cx={point.x}
+                              cy={point.y}
+                              r="4"
+                              fill="#ef4444"
+                              stroke="white"
+                              strokeWidth="2"
+                              className="hover:r-6 transition-all cursor-pointer"
+                            />
+                            <title>
+                              {new Date(financeStats.churnData[i].date).toLocaleDateString('fr-FR')}
+                              {'\n'}Désabonnements: {financeStats.churnData[i].churned}
+                              {'\n'}Actifs: {financeStats.churnData[i].active}
+                              {'\n'}Taux: {financeStats.churnData[i].rate.toFixed(1)}%
+                            </title>
+                          </g>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </svg>
+
+                {/* Y-axis labels (left) */}
+                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 pr-2" style={{ width: '60px' }}>
+                  {[4, 3, 2, 1, 0].map((i) => {
+                    const maxChurned = Math.max(...financeStats.churnData.map(d => d.churned), 1);
+                    const value = (maxChurned / 4) * i;
+                    return <span key={i}>{value.toFixed(0)}</span>;
+                  })}
+                </div>
+              </div>
+
               <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                <span>{financeStats.churnData[0]?.date && new Date(financeStats.churnData[0].date).toLocaleDateString('fr-FR')}</span>
-                <span>{financeStats.churnData[financeStats.churnData.length - 1]?.date && new Date(financeStats.churnData[financeStats.churnData.length - 1].date).toLocaleDateString('fr-FR')}</span>
+                <span>{financeStats.churnData[0]?.date && new Date(financeStats.churnData[0].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                <span>{financeStats.churnData[financeStats.churnData.length - 1]?.date && new Date(financeStats.churnData[financeStats.churnData.length - 1].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
               </div>
             </div>
 
