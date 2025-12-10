@@ -417,6 +417,8 @@ const translations: Record<Language, Record<string, string>> = {
     'tasks.allTasks': 'Toutes les tâches',
     'tasks.congratulations': 'Bravo !',
     'tasks.noTasks': 'Vous n\'avez aucune tâche en attente',
+    'tasks.addPhone': 'Ajouter votre numéro de téléphone',
+    'tasks.addPhoneDesc': 'Ajoutez votre numéro de téléphone pour faciliter la communication.',
   },
   en: {
     'app.name': 'HELLOFONTY',
@@ -824,6 +826,8 @@ const translations: Record<Language, Record<string, string>> = {
     'tasks.allTasks': 'All tasks',
     'tasks.congratulations': 'Congratulations!',
     'tasks.noTasks': 'You have no pending tasks',
+    'tasks.addPhone': 'Add your phone number',
+    'tasks.addPhoneDesc': 'Add your phone number to facilitate communication.',
   },
 };
 

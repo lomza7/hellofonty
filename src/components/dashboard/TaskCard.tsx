@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, XCircle, AlertCircle, Upload, User as UserIcon, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, XCircle, AlertCircle, Upload, User as UserIcon, Phone, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -23,7 +23,7 @@ interface TaskCardProps {
 interface VerificationTaskAction {
   label: string;
   route: string;
-  icon: typeof Upload | typeof UserIcon;
+  icon: typeof Upload | typeof UserIcon | typeof Phone;
 }
 
 const verificationTaskActions: Record<string, VerificationTaskAction> = {
@@ -31,6 +31,11 @@ const verificationTaskActions: Record<string, VerificationTaskAction> = {
     label: 'Aller au profil',
     route: '/profil',
     icon: UserIcon
+  },
+  'Ajouter votre numéro de téléphone': {
+    label: 'Aller au profil',
+    route: '/profil',
+    icon: Phone
   },
   'Télécharger votre justificatif d\'identité': {
     label: 'Télécharger le document',
