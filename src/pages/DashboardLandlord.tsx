@@ -343,7 +343,7 @@ export default function DashboardLandlord() {
                     to="/mes-annonces"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
                   >
-                    Voir tout →
+                    {t('dashboard.seeAll')}
                   </Link>
                 </div>
                 <div className="space-y-3">
@@ -357,14 +357,14 @@ export default function DashboardLandlord() {
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900 mb-2">{listing.title}</h3>
                           <div className="flex items-center gap-4 text-xs text-gray-600">
-                            <span>👁️ {listing.listing_statistics?.total_views || 0} vues</span>
-                            <span>❤️ {listing.listing_statistics?.total_favorites || 0} favoris</span>
+                            <span>👁️ {listing.listing_statistics?.total_views || 0} {t('dashboard.views')}</span>
+                            <span>❤️ {listing.listing_statistics?.total_favorites || 0} {t('nav.favorites')}</span>
                           </div>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           listing.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {listing.is_active ? 'Active' : 'Inactive'}
+                          {listing.is_active ? t('dashboard.active') : t('dashboard.inactive')}
                         </span>
                       </div>
                     </Link>
@@ -379,13 +379,13 @@ export default function DashboardLandlord() {
           <div className="space-y-8">
             {activities.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Activité récente</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">{t('dashboard.recentActivity')}</h2>
                 <ActivityTimeline activities={activities} />
               </div>
             )}
 
 <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('dashboard.quickActions')}</h2>
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Home}
@@ -395,7 +395,7 @@ export default function DashboardLandlord() {
                 />
                 <QuickActionButton
                   icon={Calendar}
-                  label="Calendrier"
+                  label={t('dashboard.calendar')}
                   href="/mes-annonces"
                   color="blue"
                 />
@@ -408,44 +408,44 @@ export default function DashboardLandlord() {
                 />
                 <QuickActionButton
                   icon={Users}
-                  label="Demandes"
+                  label={t('dashboard.requests')}
                   href="/mes-demandes"
                   badge={pendingRequests.length}
                   color="orange"
                 />
                 <QuickActionButton
                   icon={CreditCard}
-                  label="Paiements"
+                  label={t('dashboard.payments')}
                   href="/proprietaire/loyers"
                   color="purple"
                 />
                 <QuickActionButton
                   icon={FileText}
-                  label="Documents"
+                  label={t('dashboard.documents')}
                   href="/documents-proprietaire"
                   color="yellow"
                 />
                 <QuickActionButton
                   icon={ClipboardList}
-                  label="Baux"
+                  label={t('dashboard.leases')}
                   href="/mes-baux"
                   color="blue"
                 />
                 <QuickActionButton
                   icon={CheckCircle}
-                  label="Inventaires"
+                  label={t('dashboard.inventories')}
                   href="/inventory"
                   color="green"
                 />
                 <QuickActionButton
                   icon={DollarSign}
-                  label="Virements"
+                  label={t('dashboard.payouts')}
                   href="/proprietaire/paiements"
                   color="green"
                 />
                 <QuickActionButton
                   icon={FileSignature}
-                  label="Guide d'accès"
+                  label={t('dashboard.accessGuide')}
                   href="/guide-acces"
                   color="purple"
                 />
@@ -457,7 +457,7 @@ export default function DashboardLandlord() {
                 />
                 <QuickActionButton
                   icon={CreditCard}
-                  label="Abonnement"
+                  label={t('dashboard.subscription')}
                   href="/mon-abonnement"
                   color="orange"
                 />

@@ -190,7 +190,7 @@ export default function DashboardStudent() {
             )}
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Bonjour, {profile ? `${profile.first_name} ${profile.last_name}` : t('auth.student')} 👋
+                {t('dashboard.hello')}, {profile ? `${profile.first_name} ${profile.last_name}` : t('auth.student')} 👋
               </h1>
               <p className="text-gray-600 mt-1">
                 {t('dashboard.student.subtitle')}
@@ -208,7 +208,7 @@ export default function DashboardStudent() {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-900">
-                  Complétude du profil
+                  {t('dashboard.profileCompletion')}
                 </span>
                 <span className="text-sm font-bold text-rose-600">
                   {profileCompletion}%
@@ -221,7 +221,7 @@ export default function DashboardStudent() {
                 ></div>
               </div>
               <p className="text-xs text-gray-600 mt-2">
-                Complétez votre profil pour maximiser vos chances de trouver un logement
+                {t('dashboard.completeProfile')}
               </p>
             </div>
           )}
@@ -272,7 +272,7 @@ export default function DashboardStudent() {
                     to="/mes-reservations"
                     className="text-sm text-rose-600 hover:text-rose-700 font-medium"
                   >
-                    Voir tout →
+                    {t('dashboard.seeAll')}
                   </Link>
                 </div>
                 <div className="space-y-4">
@@ -299,7 +299,7 @@ export default function DashboardStudent() {
                           booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
-                          {booking.status === 'confirmed' ? 'Confirmée' :
+                          {booking.status === 'confirmed' ? t('dashboard.confirmed') :
                            booking.status === 'pending' ? t('auth.pendingVerification') :
                            booking.status}
                         </span>
@@ -316,14 +316,14 @@ export default function DashboardStudent() {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Dépenses mensuelles</h2>
-                    <p className="text-sm text-gray-600 mt-1">Évolution sur les 6 derniers mois</p>
+                    <h2 className="text-xl font-bold text-gray-900">{t('dashboard.monthlyExpenses')}</h2>
+                    <p className="text-sm text-gray-600 mt-1">{t('dashboard.last6Months')}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-bold text-gray-900">
                       {monthlyExpenses[monthlyExpenses.length - 1]}€
                     </p>
-                    <p className="text-sm text-gray-600">Ce mois</p>
+                    <p className="text-sm text-gray-600">{t('dashboard.thisMonth')}</p>
                   </div>
                 </div>
                 <MiniChart data={monthlyExpenses} height={80} color="rgb(244, 63, 94)" />
@@ -338,7 +338,7 @@ export default function DashboardStudent() {
                   <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-1">{t('dashboard.student.upcomingPaymentsTitle')}</h2>
-                    <p className="text-sm text-gray-600">Dans les 7 prochains jours</p>
+                    <p className="text-sm text-gray-600">{t('dashboard.next7Days')}</p>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -364,13 +364,13 @@ export default function DashboardStudent() {
 
             {activities.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Activité récente</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">{t('dashboard.recentActivity')}</h2>
                 <ActivityTimeline activities={activities} />
               </div>
             )}
 
 <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('dashboard.quickActions')}</h2>
               <div className="grid grid-cols-2 gap-3">
                 <QuickActionButton
                   icon={Search}
@@ -401,7 +401,7 @@ export default function DashboardStudent() {
                 />
                 <QuickActionButton
                   icon={CreditCard}
-                  label="Mes loyers"
+                  label={t('dashboard.myRents')}
                   href="/mes-loyers"
                   badge={stats.upcomingPayments}
                   color="orange"
@@ -420,7 +420,7 @@ export default function DashboardStudent() {
                 />
                 <QuickActionButton
                   icon={HelpCircle}
-                  label="Aide"
+                  label={t('dashboard.help')}
                   href="/"
                   color="orange"
                 />
