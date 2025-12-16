@@ -43,7 +43,7 @@ export default function Features() {
       const { data, error } = await supabase
         .from('feature_carousel_images')
         .select('*')
-        .not('detailed_title_fr', 'is', null)
+        .eq('is_active', true)
         .order('display_order', { ascending: true });
 
       if (error) throw error;
@@ -102,8 +102,14 @@ export default function Features() {
 
         <div className="bg-white">
           {features.map((feature, index) => {
-            const title = language === 'fr' ? feature.detailed_title_fr : feature.detailed_title_en;
-            const description = language === 'fr' ? feature.detailed_description_fr : feature.detailed_description_en;
+            const title = language === 'fr'
+              ? (feature.detailed_title_fr || feature.title_fr || '')
+              : (feature.detailed_title_en || feature.title_en || '');
+
+            const description = language === 'fr'
+              ? (feature.detailed_description_fr || feature.description_fr || '')
+              : (feature.detailed_description_en || feature.description_en || '');
+
             const ctaText = language === 'fr' ? feature.cta_text_fr : feature.cta_text_en;
 
             const featureItems = feature.features?.map(f => ({
@@ -114,8 +120,8 @@ export default function Features() {
             return (
               <DetailedFeatureSection
                 key={feature.id}
-                title={title || ''}
-                description={description || ''}
+                title={title}
+                description={description}
                 features={featureItems}
                 imageUrl={feature.image_url}
                 videoUrl={feature.video_url}
