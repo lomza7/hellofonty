@@ -135,15 +135,15 @@ export default function Navbar() {
 
             <Link
               to="/fonctionnalites"
-              className="hidden sm:flex px-3 lg:px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
+              className="px-2 sm:px-3 lg:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >
               <span className="hidden lg:inline">{language === 'fr' ? 'Fonctionnalités' : 'Features'}</span>
-              <span className="lg:hidden">{language === 'fr' ? 'Fonctions' : 'Features'}</span>
+              <span className="lg:hidden">{language === 'fr' ? 'Fonct.' : 'Features'}</span>
             </Link>
 
             <Link
               to="/tarifs"
-              className="hidden sm:flex px-3 lg:px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
+              className="px-2 sm:px-3 lg:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >
               {t('nav.pricing')}
             </Link>
