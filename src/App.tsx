@@ -16,6 +16,7 @@ const MyListings = lazy(() => import('./pages/MyListings'));
 const AddEditListing = lazy(() => import('./pages/AddEditListing'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Pricing = lazy(() => import('./pages/Pricing'));
+const Features = lazy(() => import('./pages/Features'));
 const MyBookingRequests = lazy(() => import('./pages/MyBookingRequests'));
 const MyBookingRequestsStudent = lazy(() => import('./pages/MyBookingRequestsStudent'));
 const MyDocuments = lazy(() => import('./pages/MyDocuments'));
@@ -110,6 +111,7 @@ function AppContent() {
             <Route path="/recherche" element={<Search />} />
             <Route path="/logement/:id" element={<ListingDetail />} />
             <Route path="/tarifs" element={<Pricing />} />
+            <Route path="/fonctionnalites" element={<Features />} />
             <Route path="/partage/:token" element={<AccessGuidePreview />} />
 
             <Route path="/blog" element={<BlogList />} />

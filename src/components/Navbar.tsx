@@ -133,6 +133,13 @@ export default function Navbar() {
             </Link>
 
             <Link
+              to="/fonctionnalites"
+              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
+            >
+              {language === 'fr' ? 'Fonctionnalités' : 'Features'}
+            </Link>
+
+            <Link
               to="/tarifs"
               className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >

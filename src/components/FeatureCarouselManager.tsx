@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle, GripVertical, Plus } from 'lucide-react';
+import { Image, Upload, Save, Trash2, Eye, EyeOff, AlertCircle, GripVertical, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface FeatureImage {
   id: string;
@@ -12,6 +12,19 @@ interface FeatureImage {
   title_en?: string;
   description_fr?: string;
   description_en?: string;
+  detailed_title_fr?: string;
+  detailed_title_en?: string;
+  detailed_description_fr?: string;
+  detailed_description_en?: string;
+  features?: Array<{
+    icon: string;
+    text_fr: string;
+    text_en: string;
+  }>;
+  video_url?: string;
+  cta_text_fr?: string;
+  cta_text_en?: string;
+  cta_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +64,7 @@ export default function FeatureCarouselManager() {
   const [selectedCategory, setSelectedCategory] = useState<'landlords' | 'students'>('landlords');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newFeatureTitle, setNewFeatureTitle] = useState('');
+  const [expandedFeatures, setExpandedFeatures] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadFeatures();
@@ -298,6 +312,61 @@ export default function FeatureCarouselManager() {
     if (files && files[0]) {
       handleImageUpload(featureId, files[0]);
     }
+  }
+
+  function toggleExpanded(featureId: string) {
+    const newExpanded = new Set(expandedFeatures);
+    if (newExpanded.has(featureId)) {
+      newExpanded.delete(featureId);
+    } else {
+      newExpanded.add(featureId);
+    }
+    setExpandedFeatures(newExpanded);
+  }
+
+  function addFeatureItem(featureId: string) {
+    const newFeatures = features.map(f => {
+      if (f.id === featureId) {
+        const currentFeatures = f.features || [];
+        return {
+          ...f,
+          features: [...currentFeatures, { icon: 'Check', text_fr: '', text_en: '' }]
+        };
+      }
+      return f;
+    });
+    setFeatures(newFeatures);
+  }
+
+  function removeFeatureItem(featureId: string, index: number) {
+    const newFeatures = features.map(f => {
+      if (f.id === featureId) {
+        const currentFeatures = f.features || [];
+        return {
+          ...f,
+          features: currentFeatures.filter((_, i) => i !== index)
+        };
+      }
+      return f;
+    });
+    setFeatures(newFeatures);
+  }
+
+  function updateFeatureItem(featureId: string, index: number, field: 'icon' | 'text_fr' | 'text_en', value: string) {
+    const newFeatures = features.map(f => {
+      if (f.id === featureId) {
+        const currentFeatures = f.features || [];
+        const updated = currentFeatures.map((item, i) => {
+          if (i === index) {
+            return { ...item, [field]: value };
+          }
+          return item;
+        });
+        return { ...f, features: updated };
+      }
+      return f;
+    });
+    setFeatures(newFeatures);
   }
 
   if (loading) {
@@ -669,7 +738,16 @@ export default function FeatureCarouselManager() {
                           description_fr: feature.description_fr,
                           description_en: feature.description_en,
                           image_url: feature.image_url,
-                          display_order: feature.display_order
+                          display_order: feature.display_order,
+                          detailed_title_fr: feature.detailed_title_fr,
+                          detailed_title_en: feature.detailed_title_en,
+                          detailed_description_fr: feature.detailed_description_fr,
+                          detailed_description_en: feature.detailed_description_en,
+                          features: feature.features,
+                          video_url: feature.video_url,
+                          cta_text_fr: feature.cta_text_fr,
+                          cta_text_en: feature.cta_text_en,
+                          cta_url: feature.cta_url
                         })}
                         disabled={saving === feature.id}
                         className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
@@ -683,6 +761,228 @@ export default function FeatureCarouselManager() {
                           </>
                         )}
                       </button>
+                    </div>
+
+                    <div className="mt-6 border-t border-gray-200 pt-4">
+                      <button
+                        onClick={() => toggleExpanded(feature.id)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        {expandedFeatures.has(feature.id) ? (
+                          <>
+                            <ChevronUp className="w-5 h-5" />
+                            Masquer les détails pour la page Fonctionnalités
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-5 h-5" />
+                            Afficher les détails pour la page Fonctionnalités
+                          </>
+                        )}
+                      </button>
+
+                      {expandedFeatures.has(feature.id) && (
+                        <div className="mt-4 space-y-4 bg-gray-50 p-4 rounded-lg">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Titre détaillé (Français)
+                            </label>
+                            <input
+                              type="text"
+                              value={feature.detailed_title_fr || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, detailed_title_fr: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Titre pour la page détaillée..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Titre détaillé (Anglais)
+                            </label>
+                            <input
+                              type="text"
+                              value={feature.detailed_title_en || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, detailed_title_en: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Title for detailed page..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description détaillée (Français)
+                            </label>
+                            <textarea
+                              value={feature.detailed_description_fr || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, detailed_description_fr: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              rows={4}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                              placeholder="Description longue pour la page détaillée..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description détaillée (Anglais)
+                            </label>
+                            <textarea
+                              value={feature.detailed_description_en || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, detailed_description_en: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              rows={4}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                              placeholder="Long description for detailed page..."
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Points clés (bullets)
+                              </label>
+                              <button
+                                onClick={() => addFeatureItem(feature.id)}
+                                className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Ajouter
+                              </button>
+                            </div>
+
+                            <div className="space-y-3">
+                              {(feature.features || []).map((item, index) => (
+                                <div key={index} className="flex gap-2 items-start bg-white p-3 rounded border border-gray-200">
+                                  <div className="flex-1 space-y-2">
+                                    <input
+                                      type="text"
+                                      value={item.icon}
+                                      onChange={(e) => updateFeatureItem(feature.id, index, 'icon', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                      placeholder="Icône (ex: Check, Star, Shield)"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={item.text_fr}
+                                      onChange={(e) => updateFeatureItem(feature.id, index, 'text_fr', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                      placeholder="Texte en français"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={item.text_en}
+                                      onChange={(e) => updateFeatureItem(feature.id, index, 'text_en', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                      placeholder="Text in English"
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => removeFeatureItem(feature.id, index)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                              {(!feature.features || feature.features.length === 0) && (
+                                <p className="text-sm text-gray-500 italic">Aucun point clé ajouté</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              URL de la vidéo (YouTube)
+                            </label>
+                            <input
+                              type="text"
+                              value={feature.video_url || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, video_url: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="https://youtube.com/watch?v=..."
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Texte du bouton CTA (FR)
+                              </label>
+                              <input
+                                type="text"
+                                value={feature.cta_text_fr || ''}
+                                onChange={(e) => {
+                                  const newFeatures = features.map(f =>
+                                    f.id === feature.id ? { ...f, cta_text_fr: e.target.value } : f
+                                  );
+                                  setFeatures(newFeatures);
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="En savoir plus"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Texte du bouton CTA (EN)
+                              </label>
+                              <input
+                                type="text"
+                                value={feature.cta_text_en || ''}
+                                onChange={(e) => {
+                                  const newFeatures = features.map(f =>
+                                    f.id === feature.id ? { ...f, cta_text_en: e.target.value } : f
+                                  );
+                                  setFeatures(newFeatures);
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Learn more"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              URL du bouton CTA
+                            </label>
+                            <input
+                              type="text"
+                              value={feature.cta_url || ''}
+                              onChange={(e) => {
+                                const newFeatures = features.map(f =>
+                                  f.id === feature.id ? { ...f, cta_url: e.target.value } : f
+                                );
+                                setFeatures(newFeatures);
+                              }}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="/pricing ou https://..."
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
