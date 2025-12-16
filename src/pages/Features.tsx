@@ -87,12 +87,19 @@ export default function Features() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-blue-600 to-blue-700 text-white py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+        <div className="relative bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950 text-white py-20 sm:py-28 overflow-hidden">
+          {/* Decorative background circles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-rose-400/5 rounded-full blur-3xl"></div>
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-rose-100 to-pink-100 bg-clip-text text-transparent">
               {language === 'fr' ? 'Toutes nos fonctionnalités' : 'All our features'}
             </h1>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
               {language === 'fr'
                 ? 'Découvrez comment notre plateforme facilite la location étudiante à Fontainebleau'
                 : 'Discover how our platform makes student rentals in Fontainebleau easy'}
