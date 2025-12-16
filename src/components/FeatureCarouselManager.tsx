@@ -8,6 +8,7 @@ interface FeatureImage {
   image_url: string;
   display_order: number;
   is_active: boolean;
+  user_type?: 'both' | 'student' | 'landlord';
   title_fr?: string;
   title_en?: string;
   description_fr?: string;
@@ -731,6 +732,26 @@ export default function FeatureCarouselManager() {
                         />
                       </div>
 
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Visible pour
+                        </label>
+                        <select
+                          value={feature.user_type || 'both'}
+                          onChange={(e) => {
+                            const newFeatures = features.map(f =>
+                              f.id === feature.id ? { ...f, user_type: e.target.value as 'both' | 'student' | 'landlord' } : f
+                            );
+                            setFeatures(newFeatures);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-white"
+                        >
+                          <option value="both">Tous les utilisateurs</option>
+                          <option value="student">Étudiants uniquement</option>
+                          <option value="landlord">Propriétaires uniquement</option>
+                        </select>
+                      </div>
+
                       <button
                         onClick={() => updateFeature(feature.id, {
                           title_fr: feature.title_fr,
@@ -739,6 +760,7 @@ export default function FeatureCarouselManager() {
                           description_en: feature.description_en,
                           image_url: feature.image_url,
                           display_order: feature.display_order,
+                          user_type: feature.user_type || 'both',
                           detailed_title_fr: feature.detailed_title_fr,
                           detailed_title_en: feature.detailed_title_en,
                           detailed_description_fr: feature.detailed_description_fr,
