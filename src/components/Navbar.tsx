@@ -110,52 +110,55 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-screen-2xl mx-auto px-6 lg:px-20">
-        <div className="flex justify-between items-center h-20">
-          <Link to="/" className="flex items-center">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-20">
+        <div className="flex justify-between items-center h-16 sm:h-20">
+          <Link to="/" className="flex items-center flex-shrink-0">
             <img
               src="/3.png"
               alt="Hellofonty Logo"
-              className="h-16 w-16 object-contain"
+              className="h-12 w-12 sm:h-16 sm:w-16 object-contain"
             />
-            <span className="ml-2 text-xl font-semibold text-rose-500 hidden sm:block">
+            <span className="ml-2 text-lg sm:text-xl font-semibold text-rose-500 hidden sm:block">
               hellofonty
             </span>
           </Link>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link
               to="/blog"
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition flex items-center gap-2"
+              className="p-2 sm:px-5 sm:py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition flex items-center gap-2"
+              title="Blog"
             >
               <BookOpen className="w-4 h-4" />
-              <span className="hidden md:inline">Blog</span>
+              <span className="hidden lg:inline">Blog</span>
             </Link>
 
             <Link
               to="/fonctionnalites"
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
+              className="hidden sm:flex px-3 lg:px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >
-              {language === 'fr' ? 'Fonctionnalités' : 'Features'}
+              <span className="hidden lg:inline">{language === 'fr' ? 'Fonctionnalités' : 'Features'}</span>
+              <span className="lg:hidden">{language === 'fr' ? 'Fonctions' : 'Features'}</span>
             </Link>
 
             <Link
               to="/tarifs"
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
+              className="hidden sm:flex px-3 lg:px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-full transition"
             >
               {t('nav.pricing')}
             </Link>
 
             <button
               onClick={handleAddListing}
-              className="hidden md:block px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-full transition border border-gray-300"
+              className="hidden md:block px-3 lg:px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-full transition border border-gray-300"
             >
-              {t('nav.addListing')}
+              <span className="hidden lg:inline">{t('nav.addListing')}</span>
+              <span className="lg:hidden">+</span>
             </button>
 
             <button
               onClick={toggleLanguage}
-              className="p-2.5 hover:bg-gray-50 rounded-full transition text-xl"
+              className="p-2 sm:p-2.5 hover:bg-gray-50 rounded-full transition text-base sm:text-xl flex-shrink-0"
               title={language === 'fr' ? 'Switch to English' : 'Passer en français'}
             >
               {language === 'fr' ? '🇬🇧' : '🇫🇷'}
@@ -163,14 +166,14 @@ export default function Navbar() {
 
             {user && <NotificationBell />}
 
-            <div className="relative" ref={menuRef}>
+            <div className="relative flex-shrink-0" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 border border-gray-300 rounded-full py-2 px-3 hover:shadow-md transition"
+                className="flex items-center gap-2 sm:gap-3 border border-gray-300 rounded-full py-1.5 px-2 sm:py-2 sm:px-3 hover:shadow-md transition"
               >
-                <Menu className="h-4 w-4 text-gray-700" />
-                <div className="bg-gray-600 text-white rounded-full p-1.5">
-                  <User className="h-4 w-4" />
+                <Menu className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700" />
+                <div className="bg-gray-600 text-white rounded-full p-1 sm:p-1.5">
+                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
               </button>
 
