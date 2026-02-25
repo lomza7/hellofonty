@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Calendar, Home, Users } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, Calendar, Home, Users, Minus, Plus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type SearchBarProps = {
@@ -21,6 +21,19 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
   const [checkOut, setCheckOut] = useState<string>('');
   const [guests, setGuests] = useState<number>(1);
   const [showGuestPicker, setShowGuestPicker] = useState(false);
+  const guestButtonRef = useRef<HTMLButtonElement>(null);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  useEffect(() => {
+    if (showGuestPicker && guestButtonRef.current) {
+      const rect = guestButtonRef.current.getBoundingClientRect();
+      setPickerPos({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: Math.max(rect.width, 260),
+      });
+    }
+  }, [showGuestPicker]);
 
   const handleSearch = () => {
     onSearch({
@@ -123,45 +136,13 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
           <div className="relative max-w-full">
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none" />
             <button
+              ref={guestButtonRef}
               type="button"
               onClick={() => setShowGuestPicker(!showGuestPicker)}
               className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-left text-sm sm:text-xs text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition outline-none"
             >
               {guests} {guests === 1 ? t('search.guestSingular') : t('search.guestPlural')}
             </button>
-
-            {showGuestPicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-30"
-                  onClick={() => setShowGuestPicker(false)}
-                />
-                <div className="absolute bottom-full mb-2 md:bottom-auto md:top-full md:mt-2 left-0 sm:right-0 sm:left-auto bg-white rounded-xl shadow-2xl p-4 z-40 w-full sm:w-64 max-w-[calc(100vw-2rem)]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm sm:text-base text-gray-700 font-medium">{t('search.guestsLabel')}</span>
-                    <div className="flex items-center space-x-3">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setGuests(Math.max(1, guests - 1)); }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 transition disabled:opacity-30 disabled:cursor-not-allowed text-lg"
-                        disabled={guests <= 1}
-                      >
-                        −
-                      </button>
-                      <span className="w-8 text-center font-semibold text-sm sm:text-base">{guests}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setGuests(Math.min(10, guests + 1)); }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 transition disabled:opacity-30 disabled:cursor-not-allowed text-lg"
-                        disabled={guests >= 10}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -176,6 +157,46 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
           <span>{t('search.searchButton')}</span>
         </button>
       </div>
+
+      {showGuestPicker && (
+        <>
+          <div
+            className="fixed inset-0 z-[9998]"
+            onClick={() => setShowGuestPicker(false)}
+          />
+          <div
+            className="fixed z-[9999] bg-white rounded-2xl shadow-2xl border border-gray-100 p-5"
+            style={{
+              top: pickerPos.top,
+              left: pickerPos.left,
+              width: pickerPos.width,
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-semibold text-gray-800">{t('search.guestsLabel')}</span>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setGuests(Math.max(1, guests - 1)); }}
+                  className="w-9 h-9 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 hover:bg-gray-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  disabled={guests <= 1}
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-6 text-center font-bold text-lg tabular-nums">{guests}</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setGuests(Math.min(10, guests + 1)); }}
+                  className="w-9 h-9 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 hover:bg-gray-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  disabled={guests >= 10}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
