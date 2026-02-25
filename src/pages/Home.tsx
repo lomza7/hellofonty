@@ -53,8 +53,16 @@ export default function Home() {
   }
 
   const handleSearch = (filters: SearchFilters) => {
-    console.log('Search filters:', filters);
-    navigate('/recherche');
+    const params = new URLSearchParams();
+    if (filters.propertyType && filters.propertyType !== 'all') {
+      params.set('type', filters.propertyType);
+    }
+    if (filters.checkIn) params.set('checkIn', filters.checkIn);
+    if (filters.checkOut) params.set('checkOut', filters.checkOut);
+    if (filters.guests > 1) params.set('guests', String(filters.guests));
+
+    const queryString = params.toString();
+    navigate(queryString ? `/recherche?${queryString}` : '/recherche');
   };
 
   const getIconForFeature = (featureKey: string) => {

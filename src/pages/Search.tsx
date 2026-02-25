@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Star, Heart } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,6 +9,7 @@ export default function Search() {
   const { t } = useLanguage();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
@@ -17,10 +18,10 @@ export default function Search() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [cityFilter, setCityFilter] = useState('');
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState(searchParams.get('type') || '');
   const [maxPrice, setMaxPrice] = useState('');
   const [minBedrooms, setMinBedrooms] = useState('');
-  const [minGuests, setMinGuests] = useState('');
+  const [minGuests, setMinGuests] = useState(searchParams.get('guests') || '');
 
   useEffect(() => {
     loadListings();

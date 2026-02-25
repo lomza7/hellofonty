@@ -116,13 +116,14 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
         </div>
 
         {/* Nombre de personnes - Pleine largeur sur mobile */}
-        <div className="relative max-w-full overflow-hidden md:col-span-1">
+        <div className="relative max-w-full md:col-span-1">
           <label className="block text-xs sm:text-[11px] font-semibold text-white mb-1 px-2 pt-1">
             {t('search.guestsLabel')}
           </label>
           <div className="relative max-w-full">
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none" />
             <button
+              type="button"
               onClick={() => setShowGuestPicker(!showGuestPicker)}
               className="w-full max-w-full pl-10 sm:pl-8 pr-3 sm:pr-2 py-2.5 sm:py-1.5 text-left text-sm sm:text-xs text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition outline-none"
             >
@@ -132,15 +133,16 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
             {showGuestPicker && (
               <>
                 <div
-                  className="fixed inset-0 z-10"
+                  className="fixed inset-0 z-30"
                   onClick={() => setShowGuestPicker(false)}
                 />
-                <div className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto bg-white rounded-xl shadow-2xl p-4 z-20 w-full sm:w-64 max-w-[calc(100vw-2rem)]">
+                <div className="absolute bottom-full mb-2 md:bottom-auto md:top-full md:mt-2 left-0 sm:right-0 sm:left-auto bg-white rounded-xl shadow-2xl p-4 z-40 w-full sm:w-64 max-w-[calc(100vw-2rem)]">
                   <div className="flex items-center justify-between">
                     <span className="text-sm sm:text-base text-gray-700 font-medium">{t('search.guestsLabel')}</span>
                     <div className="flex items-center space-x-3">
                       <button
-                        onClick={() => setGuests(Math.max(1, guests - 1))}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setGuests(Math.max(1, guests - 1)); }}
                         className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 transition disabled:opacity-30 disabled:cursor-not-allowed text-lg"
                         disabled={guests <= 1}
                       >
@@ -148,7 +150,8 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
                       </button>
                       <span className="w-8 text-center font-semibold text-sm sm:text-base">{guests}</span>
                       <button
-                        onClick={() => setGuests(Math.min(10, guests + 1))}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setGuests(Math.min(10, guests + 1)); }}
                         className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 transition disabled:opacity-30 disabled:cursor-not-allowed text-lg"
                         disabled={guests >= 10}
                       >
