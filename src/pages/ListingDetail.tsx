@@ -10,7 +10,7 @@ import ListingMap from '../components/ListingMap';
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, translateFeature } = useLanguage();
+  const { t, translateFeature, language } = useLanguage();
   const { user, profile } = useAuth();
   const listingId = id!;
 
