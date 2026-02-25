@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Check, X, Zap, Flame, Droplets } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+
+type ChargeDetail = {
+  electricityCost?: number | null;
+  heatingCost?: number | null;
+  waterCost?: number | null;
+  customCharges?: Array<{ name: string; amount: string }> | null;
+};
 
 type BookingCalendarProps = {
   pricePerMonth: number;
@@ -8,6 +15,7 @@ type BookingCalendarProps = {
   minimumStayMonths?: number;
   existingBookings?: Array<{ start_date: string; end_date: string }>;
   blockedDates?: string[];
+  chargeDetails?: ChargeDetail;
   onBookingSelect: (startDate: Date, endDate: Date, totalPrice: number) => void;
 };
 
@@ -17,14 +25,16 @@ export default function BookingCalendar({
   minimumStayMonths = 1,
   existingBookings = [],
   blockedDates = [],
+  chargeDetails,
   onBookingSelect
 }: BookingCalendarProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [minimumStayError, setMinimumStayError] = useState<string | null>(null);
+  const [showChargesModal, setShowChargesModal] = useState(false);
 
   const monthlyTotal = pricePerMonth + charges;
   const dailyRate = monthlyTotal / 30;
@@ -195,7 +205,13 @@ export default function BookingCalendar({
               )}
 
               <div className="flex justify-between">
-                <span className="text-gray-600 underline">Charges mensuelles</span>
+                <button
+                  type="button"
+                  onClick={() => setShowChargesModal(true)}
+                  className="text-gray-600 underline cursor-pointer hover:text-gray-900 transition-colors text-left"
+                >
+                  {language === 'fr' ? 'Charges mensuelles' : 'Monthly charges'}
+                </button>
                 <span className="text-gray-900">{(charges * priceDetails.months).toFixed(0)}€</span>
               </div>
 
@@ -306,6 +322,125 @@ export default function BookingCalendar({
           </div>
         </div>
       </div>
+      {showChargesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowChargesModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-gray-900">
+                {language === 'fr' ? 'Detail des charges mensuelles' : 'Monthly charges breakdown'}
+              </h3>
+              <button
+                onClick={() => setShowChargesModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {chargeDetails?.electricityCost != null && chargeDetails.electricityCost > 0 && (
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {language === 'fr' ? 'Electricite' : 'Electricity'}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {chargeDetails.electricityCost.toFixed(0)}€{priceDetails ? ` / ${language === 'fr' ? 'mois' : 'mo'}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {chargeDetails?.heatingCost != null && chargeDetails.heatingCost > 0 && (
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                      <Flame className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {language === 'fr' ? 'Chauffage' : 'Heating'}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {chargeDetails.heatingCost.toFixed(0)}€{priceDetails ? ` / ${language === 'fr' ? 'mois' : 'mo'}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {chargeDetails?.waterCost != null && chargeDetails.waterCost > 0 && (
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <Droplets className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {language === 'fr' ? 'Eau' : 'Water'}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {chargeDetails.waterCost.toFixed(0)}€{priceDetails ? ` / ${language === 'fr' ? 'mois' : 'mo'}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {chargeDetails?.customCharges?.map((charge, index) => {
+                const amount = parseFloat(charge.amount);
+                if (!amount || amount <= 0) return null;
+                return (
+                  <div key={index} className="flex items-center justify-between py-2.5 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <span className="text-xs font-bold text-gray-500">{index + 1}</span>
+                      </div>
+                      <span className="text-sm text-gray-700">{charge.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {amount.toFixed(0)}€{priceDetails ? ` / ${language === 'fr' ? 'mois' : 'mo'}` : ''}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {(!chargeDetails || (
+                !chargeDetails.electricityCost &&
+                !chargeDetails.heatingCost &&
+                !chargeDetails.waterCost &&
+                (!chargeDetails.customCharges || chargeDetails.customCharges.length === 0)
+              )) && (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  {language === 'fr'
+                    ? 'Le detail des charges n\'a pas ete renseigne par le proprietaire.'
+                    : 'The landlord has not provided a breakdown of charges.'}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-900">
+                {language === 'fr' ? 'Total charges' : 'Total charges'}
+              </span>
+              <span className="text-lg font-bold text-gray-900">{charges.toFixed(0)}€ / {language === 'fr' ? 'mois' : 'mo'}</span>
+            </div>
+
+            {priceDetails && priceDetails.months > 1 && (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {language === 'fr'
+                    ? `Prorata sur ${priceDetails.months} mois`
+                    : `Prorated over ${priceDetails.months} months`}
+                </span>
+                <span className="text-sm font-semibold text-gray-700">
+                  {(charges * priceDetails.months).toFixed(0)}€
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

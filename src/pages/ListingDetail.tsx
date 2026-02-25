@@ -444,6 +444,12 @@ En attente de votre confirmation.`;
                 minimumStayMonths={listing.minimum_stay || 1}
                 existingBookings={existingBookings}
                 blockedDates={blockedDates}
+                chargeDetails={{
+                  electricityCost: listing.electricity_cost,
+                  heatingCost: listing.heating_cost,
+                  waterCost: listing.water_cost,
+                  customCharges: listing.custom_charges,
+                }}
                 onBookingSelect={handleBookingSelect}
               />
               {bookingData && (
