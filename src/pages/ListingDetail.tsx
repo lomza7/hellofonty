@@ -436,38 +436,6 @@ En attente de votre confirmation.`;
               );
             })()}
 
-            {listing.security_deposit && listing.security_deposit > 0 && (
-              <div className="mb-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-300 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {language === 'fr' ? 'Dépôt de garantie' : 'Security deposit'}
-                    </h3>
-                    <p className="text-xs text-gray-600">
-                      {language === 'fr'
-                        ? 'Remboursable en fin de location'
-                        : 'Refundable at end of lease'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-black text-purple-700">
-                      {listing.security_deposit.toFixed(0)} €
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 bg-purple-100 rounded-lg p-3">
-                  <Info className="w-4 h-4 text-purple-700 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-purple-900 leading-relaxed">
-                    {language === 'fr'
-                      ? 'Ce montant vous sera restitué à la fin de votre bail, après vérification de l\'état du logement.'
-                      : 'This amount will be returned to you at the end of your lease, after verification of the property condition.'}
-                  </p>
-                </div>
-              </div>
-            )}
 
             <div className="mb-8">
               <BookingCalendar
@@ -685,13 +653,33 @@ En attente de votre confirmation.`;
                   </p>
                 </div>
 
-                {/* Règles supplémentaires */}
                 {listing.additional_rules && (
                   <div className="bg-amber-50 rounded-xl p-4 border-2 border-amber-200">
                     <h3 className="font-bold text-gray-900 mb-2">
                       {profile?.preferred_language === 'fr' ? 'Règles supplémentaires' : 'Additional rules'}
                     </h3>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{listing.additional_rules}</p>
+                  </div>
+                )}
+
+                {listing.security_deposit && listing.security_deposit > 0 && (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">
+                          {language === 'fr' ? 'Dépôt de garantie' : 'Security deposit'}
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {listing.security_deposit.toFixed(0)} €
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                      {language === 'fr'
+                        ? 'Remboursable en fin de location'
+                        : 'Refundable at end of lease'}
+                    </p>
                   </div>
                 )}
               </div>
