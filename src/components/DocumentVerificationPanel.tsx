@@ -50,7 +50,11 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   tenant_insurance: "Assurance du locataire"
 };
 
-export default function DocumentVerificationPanel() {
+interface DocumentVerificationPanelProps {
+  onPendingCountChange?: (count: number) => void;
+}
+
+export default function DocumentVerificationPanel({ onPendingCountChange }: DocumentVerificationPanelProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
@@ -190,6 +194,8 @@ export default function DocumentVerificationPanel() {
       );
 
       setDocuments(allDocs);
+      const pending = allDocs.filter(d => d.status === 'pending').length;
+      onPendingCountChange?.(pending);
     } catch (error) {
       console.error('Erreur lors du chargement des documents:', error);
     } finally {

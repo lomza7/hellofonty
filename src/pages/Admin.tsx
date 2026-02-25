@@ -1137,7 +1137,11 @@ export default function Admin() {
 
         {/* Verifications Tab */}
         {activeTab === 'verifications' && (
-          <DocumentVerificationPanel />
+          <DocumentVerificationPanel onPendingCountChange={(count) => {
+            if (stats) {
+              setStats(prev => prev ? { ...prev, pendingVerifications: count } : prev);
+            }
+          }} />
         )}
 
         {/* Analytics Tab */}
