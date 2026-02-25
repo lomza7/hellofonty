@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan, X, Grid, Maximize } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +25,28 @@ export default function ListingDetail() {
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [bookingData, setBookingData] = useState<{ startDate: Date | null; endDate: Date | null; totalPrice: number } | null>(null);
   const [landlordStats, setLandlordStats] = useState<{ totalListings: number; memberSince: string } | null>(null);
+  const [showFullscreenGallery, setShowFullscreenGallery] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  const handleGalleryKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!showFullscreenGallery || !listing?.images) return;
+    if (e.key === 'Escape') setShowFullscreenGallery(false);
+    if (e.key === 'ArrowRight') setGalleryIndex(prev => (prev + 1) % listing.images.length);
+    if (e.key === 'ArrowLeft') setGalleryIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1);
+  }, [showFullscreenGallery, listing]);
+
+  useEffect(() => {
+    if (showFullscreenGallery) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleGalleryKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleGalleryKeyDown);
+    };
+  }, [showFullscreenGallery, handleGalleryKeyDown]);
 
   useEffect(() => {
     loadListing();
@@ -292,7 +314,8 @@ En attente de votre confirmation.`;
                 <img
                   src={listing.images[currentImageIndex].image_url}
                   alt={listing.title}
-                  className="w-full h-full object-cover rounded-2xl"
+                  className="w-full h-full object-cover rounded-2xl cursor-pointer"
+                  onClick={() => { setGalleryIndex(currentImageIndex); setShowFullscreenGallery(true); }}
                 />
                 {listing.images.length > 1 && (
                   <>
@@ -312,14 +335,22 @@ En attente de votre confirmation.`;
                       {listing.images.map((_, idx) => (
                         <div
                           key={idx}
-                          className={`h-2 w-2 rounded-full ${
+                          className={`h-2 w-2 rounded-full cursor-pointer ${
                             idx === currentImageIndex ? 'bg-white' : 'bg-white/50'
                           }`}
+                          onClick={() => setCurrentImageIndex(idx)}
                         />
                       ))}
                     </div>
                   </>
                 )}
+                <button
+                  onClick={() => { setGalleryIndex(0); setShowFullscreenGallery(true); }}
+                  className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white rounded-lg font-medium text-sm text-gray-900 hover:bg-gray-100 transition shadow-md"
+                >
+                  <Grid className="h-4 w-4" />
+                  {language === 'fr' ? 'Voir les photos' : 'Show all photos'} ({listing.images.length})
+                </button>
               </>
             ) : (
               <div className="w-full h-full flex items-center justify-center">
@@ -775,6 +806,72 @@ En attente de votre confirmation.`;
           </div>
         </div>
       </div>
+
+      {showFullscreenGallery && listing.images && listing.images.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black" onClick={() => setShowFullscreenGallery(false)}>
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 sm:px-6 py-4 bg-gradient-to-b from-black/60 to-transparent">
+            <button
+              onClick={() => setShowFullscreenGallery(false)}
+              className="flex items-center gap-2 text-white hover:text-gray-300 transition"
+            >
+              <X className="h-6 w-6" />
+              <span className="text-sm font-medium hidden sm:inline">
+                {language === 'fr' ? 'Fermer' : 'Close'}
+              </span>
+            </button>
+            <span className="text-white text-sm font-medium">
+              {galleryIndex + 1} / {listing.images.length}
+            </span>
+          </div>
+
+          <div
+            className="h-full flex items-center justify-center px-4 sm:px-16"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setGalleryIndex(galleryIndex === 0 ? listing.images.length - 1 : galleryIndex - 1)}
+              className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition z-10"
+            >
+              <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+            </button>
+
+            <img
+              src={listing.images[galleryIndex].image_url}
+              alt={`${listing.title} - ${galleryIndex + 1}`}
+              className="max-h-[85vh] max-w-full object-contain rounded-lg select-none"
+            />
+
+            <button
+              onClick={() => setGalleryIndex((galleryIndex + 1) % listing.images.length)}
+              className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition z-10"
+            >
+              <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+            </button>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pb-6 pt-12">
+            <div className="flex justify-center gap-1.5 px-4 overflow-x-auto">
+              {listing.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.stopPropagation(); setGalleryIndex(idx); }}
+                  className={`flex-shrink-0 w-16 h-12 sm:w-20 sm:h-14 rounded-lg overflow-hidden transition-all ${
+                    idx === galleryIndex
+                      ? 'ring-2 ring-white opacity-100 scale-105'
+                      : 'opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  <img
+                    src={img.image_url}
+                    alt={`${listing.title} - ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
