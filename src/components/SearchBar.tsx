@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Calendar, Home, Users, Minus, Plus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -158,7 +159,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
         </button>
       </div>
 
-      {showGuestPicker && (
+      {showGuestPicker && createPortal(
         <>
           <div
             className="fixed inset-0 z-[9998]"
@@ -177,7 +178,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setGuests(Math.max(1, guests - 1)); }}
+                  onClick={() => setGuests(Math.max(1, guests - 1))}
                   className="w-9 h-9 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 hover:bg-gray-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   disabled={guests <= 1}
                 >
@@ -186,7 +187,7 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
                 <span className="w-6 text-center font-bold text-lg tabular-nums">{guests}</span>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setGuests(Math.min(10, guests + 1)); }}
+                  onClick={() => setGuests(Math.min(10, guests + 1))}
                   className="w-9 h-9 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-900 hover:bg-gray-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   disabled={guests >= 10}
                 >
@@ -195,7 +196,8 @@ export default function SearchBar({ onSearch, compact = false }: SearchBarProps)
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
