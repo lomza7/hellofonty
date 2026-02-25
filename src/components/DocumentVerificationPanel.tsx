@@ -220,15 +220,22 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
 
       if (error) throw error;
 
-      // Créer une notification pour l'utilisateur
       const userId = document.type === 'student'
         ? (document as StudentDocument).student_id
         : (document as LandlordDocument).landlord_id;
 
+      await supabase
+        .from('profiles')
+        .update({
+          verification_status: 'approved',
+          verification_reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
       await supabase.from('notifications').insert({
         user_id: userId,
         type: 'booking_confirmed',
-        title: 'Document approuvé ✓',
+        title: 'Document approuvé',
         message: `Votre document "${DOCUMENT_TYPE_LABELS[document.document_type]}" a été approuvé.`,
         link: document.type === 'student' ? '/mes-documents' : '/mes-documents-proprietaire'
       });
@@ -262,10 +269,18 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
 
       if (error) throw error;
 
-      // Créer une notification pour l'utilisateur
       const userId = document.type === 'student'
         ? (document as StudentDocument).student_id
         : (document as LandlordDocument).landlord_id;
+
+      await supabase
+        .from('profiles')
+        .update({
+          verification_status: 'rejected',
+          verification_reviewed_at: new Date().toISOString(),
+          verification_rejection_reason: rejectionReason,
+        })
+        .eq('id', userId);
 
       await supabase.from('notifications').insert({
         user_id: userId,
