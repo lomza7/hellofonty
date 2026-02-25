@@ -36,7 +36,15 @@ export default function BookingCalendar({
   const [minimumStayError, setMinimumStayError] = useState<string | null>(null);
   const [showChargesModal, setShowChargesModal] = useState(false);
 
-  const monthlyTotal = pricePerMonth + charges;
+  const computedCharges = (() => {
+    if (charges > 0) return charges;
+    if (!chargeDetails) return 0;
+    return (chargeDetails.electricityCost || 0) +
+      (chargeDetails.heatingCost || 0) +
+      (chargeDetails.waterCost || 0) +
+      (chargeDetails.customCharges?.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) || 0);
+  })();
+  const monthlyTotal = pricePerMonth + computedCharges;
   const dailyRate = monthlyTotal / 30;
   const minimumStayDays = minimumStayMonths * 30;
 
@@ -212,7 +220,7 @@ export default function BookingCalendar({
                 >
                   {language === 'fr' ? 'Charges mensuelles' : 'Monthly charges'}
                 </button>
-                <span className="text-gray-900">{(charges * priceDetails.months).toFixed(0)}€</span>
+                <span className="text-gray-900">{(computedCharges * priceDetails.months).toFixed(0)}€</span>
               </div>
 
               <div className="flex justify-between pt-3 border-t border-gray-200 font-semibold">
@@ -425,7 +433,7 @@ export default function BookingCalendar({
                 (chargeDetails?.heatingCost || 0) +
                 (chargeDetails?.waterCost || 0) +
                 (chargeDetails?.customCharges?.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) || 0);
-              const displayTotal = totalFromDetails > 0 ? totalFromDetails : charges;
+              const displayTotal = totalFromDetails > 0 ? totalFromDetails : computedCharges;
               return (
                 <>
                   <div className="mt-5 pt-4 border-t border-gray-200 flex items-center justify-between">
