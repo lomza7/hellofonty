@@ -419,25 +419,36 @@ export default function BookingCalendar({
               )}
             </div>
 
-            <div className="mt-5 pt-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-900">
-                {language === 'fr' ? 'Total charges' : 'Total charges'}
-              </span>
-              <span className="text-lg font-bold text-gray-900">{charges.toFixed(0)}€ / {language === 'fr' ? 'mois' : 'mo'}</span>
-            </div>
-
-            {priceDetails && priceDetails.months > 1 && (
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-gray-500">
-                  {language === 'fr'
-                    ? `Prorata sur ${priceDetails.months} mois`
-                    : `Prorated over ${priceDetails.months} months`}
-                </span>
-                <span className="text-sm font-semibold text-gray-700">
-                  {(charges * priceDetails.months).toFixed(0)}€
-                </span>
-              </div>
-            )}
+            {(() => {
+              const totalFromDetails =
+                (chargeDetails?.electricityCost || 0) +
+                (chargeDetails?.heatingCost || 0) +
+                (chargeDetails?.waterCost || 0) +
+                (chargeDetails?.customCharges?.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) || 0);
+              const displayTotal = totalFromDetails > 0 ? totalFromDetails : charges;
+              return (
+                <>
+                  <div className="mt-5 pt-4 border-t border-gray-200 flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-900">
+                      {language === 'fr' ? 'Total charges' : 'Total charges'}
+                    </span>
+                    <span className="text-lg font-bold text-gray-900">{displayTotal.toFixed(0)}€ / {language === 'fr' ? 'mois' : 'mo'}</span>
+                  </div>
+                  {priceDetails && priceDetails.months > 1 && (
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        {language === 'fr'
+                          ? `Prorata sur ${priceDetails.months} mois`
+                          : `Prorated over ${priceDetails.months} months`}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-700">
+                        {(displayTotal * priceDetails.months).toFixed(0)}€
+                      </span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
