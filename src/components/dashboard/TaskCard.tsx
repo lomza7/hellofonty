@@ -235,6 +235,35 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             verification_status: 'pending',
             verification_submitted_at: new Date().toISOString()
           });
+
+          const storagePath = documentUrl?.split('/documents/')[1] || '';
+
+          const existingDoc = await supabase
+            .from('student_documents')
+            .select('id')
+            .eq('student_id', profile.id)
+            .eq('document_type', 'insead_attestation')
+            .maybeSingle();
+
+          if (existingDoc.data) {
+            await supabase
+              .from('student_documents')
+              .update({
+                file_url: storagePath,
+                file_name: selectedFile.name,
+                status: 'pending',
+                uploaded_at: new Date().toISOString(),
+              })
+              .eq('id', existingDoc.data.id);
+          } else {
+            await supabase.from('student_documents').insert({
+              student_id: profile.id,
+              document_type: 'insead_attestation',
+              file_url: storagePath,
+              file_name: selectedFile.name,
+              status: 'pending',
+            });
+          }
         } else {
           const tableMap = {
             'id_document': 'landlord_documents',

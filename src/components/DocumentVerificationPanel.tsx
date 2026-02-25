@@ -42,6 +42,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   insurance_certificate: "Attestation d'assurance",
   lease_copy: "Copie du bail",
   inventory_copy: "État des lieux",
+  insead_attestation: "Attestation INSEAD",
   // Landlord documents
   id_card: "Carte d'identité",
   kbis: "Extrait KBIS",
