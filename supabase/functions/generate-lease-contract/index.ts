@@ -374,15 +374,6 @@ function generateLeaseHTML(lease: any, landlord: any, tenant: any, listing: any)
       </div>
     </div>
 
-    ${lease.lease_type === 'student' ? `
-    <div class="legal-notice">
-      <strong>Bail étudiant :</strong> Ce contrat de location meublée est consenti pour une durée de 9 mois non reconductible automatiquement. Le locataire peut y mettre fin à tout moment après avoir donné congé avec un préavis d'un mois.
-    </div>
-    ` : `
-    <div class="legal-notice">
-      <strong>Bail mobilité :</strong> Ce contrat est conclu pour une durée de ${durationMonths} mois non reconductible. Aucun dépôt de garantie ne peut être exigé. Le locataire peut y mettre fin à tout moment avec un préavis d'un mois.
-    </div>
-    `}
   </div>
 
   <div class="page-break"></div>
