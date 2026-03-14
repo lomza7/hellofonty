@@ -23,76 +23,122 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 export default function ListingMap({ latitude, longitude, title, address }: ListingMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-
-  const distKm = haversineKm(latitude, longitude, INSEAD_LAT, INSEAD_LNG);
-  const distLabel = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`;
+  const routeInfoRef = useRef<{ distance: string; duration: string } | null>(null);
+  const infoBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      const midLat = (latitude + INSEAD_LAT) / 2;
-      const midLng = (longitude + INSEAD_LNG) / 2;
+    if (!mapContainerRef.current || mapRef.current) return;
 
-      const map = L.map(mapContainerRef.current, {
-        center: [midLat, midLng],
-        zoom: 13,
-        zoomControl: true,
-        scrollWheelZoom: false,
-        dragging: true,
-        touchZoom: true,
-        doubleClickZoom: true,
-      });
+    const map = L.map(mapContainerRef.current, {
+      center: [(latitude + INSEAD_LAT) / 2, (longitude + INSEAD_LNG) / 2],
+      zoom: 13,
+      zoomControl: true,
+      scrollWheelZoom: false,
+      dragging: true,
+      touchZoom: true,
+      doubleClickZoom: true,
+    });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-      }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
 
-      const listingIcon = L.divIcon({
-        className: 'custom-marker',
-        html: `
-          <div class="relative">
-            <svg class="h-12 w-12 drop-shadow-lg" style="color:#e11d48" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-          </div>
-        `,
-        iconSize: [48, 48],
-        iconAnchor: [24, 48],
-      });
+    const listingIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <div>
+          <svg style="width:48px;height:48px;color:#e11d48;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
+      `,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+    });
 
-      const inseadIcon = L.divIcon({
-        className: 'custom-marker-insead',
-        html: `
-          <div style="display:flex;flex-direction:column;align-items:center;">
-            <div style="background:#1e3a5f;color:white;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);letter-spacing:0.05em;">INSEAD</div>
-            <svg width="14" height="8" viewBox="0 0 14 8" fill="none" style="margin-top:-1px"><path d="M7 8L0 0h14L7 8z" fill="#1e3a5f"/></svg>
-          </div>
-        `,
-        iconSize: [60, 36],
-        iconAnchor: [30, 36],
-      });
+    const inseadIcon = L.divIcon({
+      className: 'custom-marker-insead',
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="background:#1e3a5f;color:white;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);letter-spacing:0.05em;">INSEAD</div>
+          <svg width="14" height="8" viewBox="0 0 14 8" fill="none" style="margin-top:-1px"><path d="M7 8L0 0h14L7 8z" fill="#1e3a5f"/></svg>
+        </div>
+      `,
+      iconSize: [60, 36],
+      iconAnchor: [30, 36],
+    });
 
-      L.marker([latitude, longitude], { icon: listingIcon }).addTo(map);
-      L.marker([INSEAD_LAT, INSEAD_LNG], { icon: inseadIcon }).addTo(map);
+    L.marker([latitude, longitude], { icon: listingIcon }).addTo(map);
+    L.marker([INSEAD_LAT, INSEAD_LNG], { icon: inseadIcon }).addTo(map);
 
-      L.polyline(
-        [[latitude, longitude], [INSEAD_LAT, INSEAD_LNG]],
-        {
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${longitude},${latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=full&geometries=geojson`;
+
+    fetch(osrmUrl)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.routes || data.routes.length === 0) return;
+
+        const route = data.routes[0];
+        const coords: [number, number][] = route.geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
+
+        L.polyline(coords, {
           color: '#1e3a5f',
-          weight: 3,
-          opacity: 0.75,
-          dashArray: '8, 6',
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(map);
+
+        const bounds = L.latLngBounds(coords);
+        map.fitBounds(bounds, { padding: [60, 60] });
+
+        const distM = route.distance as number;
+        const durS = route.duration as number;
+        const distLabel = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(1)} km`;
+        const durMin = Math.round(durS / 60);
+        const durLabel = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
+
+        routeInfoRef.current = { distance: distLabel, duration: durLabel };
+
+        if (infoBoxRef.current) {
+          const el = infoBoxRef.current.querySelector('[data-route-info]');
+          if (el) {
+            el.innerHTML = `
+              <div class="mt-2 pt-2 border-t border-gray-100">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span style="font-size:10px;font-weight:700;color:#1e3a5f;background:rgba(30,58,95,0.1);padding:2px 8px;border-radius:9999px;">INSEAD</span>
+                  <span style="font-size:12px;color:#4b5563;">
+                    <strong>${distLabel}</strong> · <strong>${durLabel}</strong> en voiture
+                  </span>
+                </div>
+              </div>
+            `;
+          }
         }
-      ).addTo(map);
+      })
+      .catch(() => {
+        const fallbackDist = haversineKm(latitude, longitude, INSEAD_LAT, INSEAD_LNG);
+        const label = fallbackDist < 1 ? `${Math.round(fallbackDist * 1000)} m` : `${fallbackDist.toFixed(1)} km`;
+        L.polyline([[latitude, longitude], [INSEAD_LAT, INSEAD_LNG]], {
+          color: '#1e3a5f', weight: 3, opacity: 0.7, dashArray: '8,6',
+        }).addTo(map);
+        const bounds = L.latLngBounds([latitude, longitude], [INSEAD_LAT, INSEAD_LNG]);
+        map.fitBounds(bounds, { padding: [60, 60] });
+        if (infoBoxRef.current) {
+          const el = infoBoxRef.current.querySelector('[data-route-info]');
+          if (el) {
+            el.innerHTML = `
+              <div class="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
+                <span style="font-size:10px;font-weight:700;color:#1e3a5f;background:rgba(30,58,95,0.1);padding:2px 8px;border-radius:9999px;">INSEAD</span>
+                <span style="font-size:12px;color:#4b5563;">${label} du campus</span>
+              </div>
+            `;
+          }
+        }
+      });
 
-      const bounds = L.latLngBounds(
-        [latitude, longitude],
-        [INSEAD_LAT, INSEAD_LNG]
-      );
-      map.fitBounds(bounds, { padding: [60, 60] });
-
-      mapRef.current = map;
-    }
+    mapRef.current = map;
 
     return () => {
       if (mapRef.current) {
@@ -108,7 +154,7 @@ export default function ListingMap({ latitude, longitude, title, address }: List
       <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-lg border border-gray-200">
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-3 z-[1000] max-w-[calc(100%-2rem)]">
+        <div ref={infoBoxRef} className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-3 z-[1000] max-w-[calc(100%-2rem)]">
           <div className="flex items-start space-x-2">
             <MapPin className="h-5 w-5 text-rose-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -116,9 +162,11 @@ export default function ListingMap({ latitude, longitude, title, address }: List
               <p className="text-xs text-gray-600 mt-0.5">{address}</p>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
-            <span className="text-xs font-bold text-[#1e3a5f] bg-[#1e3a5f]/10 px-2 py-0.5 rounded-full">INSEAD</span>
-            <span className="text-xs text-gray-600">{distLabel} du campus</span>
+          <div data-route-info>
+            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
+              <span className="text-xs font-bold text-[#1e3a5f] bg-[#1e3a5f]/10 px-2 py-0.5 rounded-full">INSEAD</span>
+              <span className="text-xs text-gray-500 italic">Calcul en cours...</span>
+            </div>
           </div>
         </div>
       </div>
