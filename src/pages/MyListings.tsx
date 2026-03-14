@@ -8,7 +8,7 @@ import CalendarManager from '../components/CalendarManager';
 import ICalSyncManager from '../components/ICalSyncManager';
 
 export default function MyListings() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { profile } = useAuth();
   const navigate = useNavigate();
 
@@ -38,7 +38,7 @@ export default function MyListings() {
   };
 
   const deleteListing = async (listingId: string) => {
-    if (!confirm('Êtes-vous sûr ? / Are you sure?')) return;
+    if (!confirm(t('myListings.confirmDelete') || 'Are you sure?')) return;
 
     await supabase.from('listings').delete().eq('id', listingId);
     setListings((prev) => prev.filter((l) => l.id !== listingId));
@@ -70,7 +70,7 @@ export default function MyListings() {
         .single();
 
       if (fetchError || !originalListing) {
-        alert('Erreur lors de la duplication / Error during duplication');
+        alert(language === 'fr' ? 'Erreur lors de la duplication' : 'Error during duplication');
         return;
       }
 
@@ -78,7 +78,7 @@ export default function MyListings() {
 
       const newListingData = {
         ...listingData,
-        title: `${listingData.title} (Copie)`,
+        title: `${listingData.title} (${language === 'fr' ? 'Copie' : 'Copy'})`,
         is_active: false,
       };
 
@@ -89,7 +89,7 @@ export default function MyListings() {
         .single();
 
       if (insertError || !newListing) {
-        alert('Erreur lors de la création / Error during creation');
+        alert(language === 'fr' ? 'Erreur lors de la création' : 'Error during creation');
         return;
       }
 
@@ -107,7 +107,7 @@ export default function MyListings() {
       alert(t('myListings.duplicateSuccess'));
     } catch (err) {
       console.error('Duplication error:', err);
-      alert('Erreur lors de la duplication / Error during duplication');
+      alert(language === 'fr' ? 'Erreur lors de la duplication' : 'Error during duplication');
     }
   };
 
@@ -179,7 +179,7 @@ export default function MyListings() {
                                 : 'bg-gray-100 text-gray-800'
                             }`}
                           >
-                            {listing.is_active ? 'Active' : 'Inactive'}
+                            {listing.is_active ? (language === 'fr' ? 'Active' : 'Active') : (language === 'fr' ? 'Inactive' : 'Inactive')}
                           </span>
                         </div>
 
@@ -226,7 +226,7 @@ export default function MyListings() {
                             setShowCalendar(listing.id);
                           }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
-                          title="Calendrier / Calendar"
+                          title={language === 'fr' ? 'Calendrier' : 'Calendar'}
                         >
                           <Calendar className="h-5 w-5" />
                         </button>
@@ -236,7 +236,7 @@ export default function MyListings() {
                             setShowICalSync(listing.id);
                           }}
                           className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
-                          title="Synchronisation iCal (Airbnb/Booking)"
+                          title={language === 'fr' ? 'Synchronisation iCal (Airbnb/Booking)' : 'iCal Sync (Airbnb/Booking)'}
                         >
                           <RefreshCw className="h-5 w-5" />
                         </button>
@@ -250,14 +250,14 @@ export default function MyListings() {
                         <button
                           onClick={() => duplicateListing(listing.id)}
                           className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
-                          title="Dupliquer / Duplicate"
+                          title={language === 'fr' ? 'Dupliquer' : 'Duplicate'}
                         >
                           <Copy className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => toggleActive(listing.id, listing.is_active)}
                           className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition text-xs font-semibold"
-                          title={listing.is_active ? 'Désactiver' : 'Activer'}
+                          title={listing.is_active ? (language === 'fr' ? 'Désactiver' : 'Deactivate') : (language === 'fr' ? 'Activer' : 'Activate')}
                         >
                           {listing.is_active ? 'OFF' : 'ON'}
                         </button>

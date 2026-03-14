@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type Booking = {
   id: string;
@@ -25,6 +26,7 @@ type Booking = {
 
 export default function MyBookingRequestsStudent() {
   const { profile } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function MyBookingRequestsStudent() {
   };
 
   const cancelBooking = async (booking: Booking) => {
-    if (!confirm('Voulez-vous vraiment annuler cette demande de réservation ?')) {
+    if (!confirm(language === 'fr' ? 'Voulez-vous vraiment annuler cette demande de réservation ?' : 'Are you sure you want to cancel this booking request?')) {
       return;
     }
 
@@ -94,7 +96,7 @@ export default function MyBookingRequestsStudent() {
       .eq('id', booking.id);
 
     if (updateError) {
-      alert('Erreur lors de l\'annulation de la demande');
+      alert(language === 'fr' ? "Erreur lors de l'annulation de la demande" : 'Error cancelling the request');
       return;
     }
 
@@ -123,7 +125,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
     });
 
     loadBookings();
-    alert('Demande annulée avec succès!');
+    alert(language === 'fr' ? 'Demande annulée avec succès!' : 'Request cancelled successfully!');
   };
 
   const getStatusBadge = (status: string) => {
@@ -132,21 +134,21 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
         return (
           <div className="flex items-center space-x-2 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full">
             <AlertCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">En attente</span>
+            <span className="text-sm font-medium">{language === 'fr' ? 'En attente' : 'Pending'}</span>
           </div>
         );
       case 'confirmed':
         return (
           <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-100 text-green-800 rounded-full">
             <CheckCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Confirmée</span>
+            <span className="text-sm font-medium">{language === 'fr' ? 'Confirmée' : 'Confirmed'}</span>
           </div>
         );
       case 'cancelled':
         return (
           <div className="flex items-center space-x-2 px-3 py-1.5 bg-red-100 text-red-800 rounded-full">
             <XCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Annulée</span>
+            <span className="text-sm font-medium">{language === 'fr' ? 'Annulée' : 'Cancelled'}</span>
           </div>
         );
       default:
@@ -170,9 +172,9 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Mes demandes de réservation</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Mes demandes de réservation' : 'My booking requests'}</h1>
           <p className="text-lg text-gray-600">
-            Suivez l'état de toutes vos demandes de réservation
+            {language === 'fr' ? "Suivez l'état de toutes vos demandes de réservation" : 'Track the status of all your booking requests'}
           </p>
         </div>
 
@@ -180,16 +182,16 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Aucune demande de réservation
+              {language === 'fr' ? 'Aucune demande de réservation' : 'No booking requests'}
             </h2>
             <p className="text-gray-600 mb-6">
-              Vous n'avez pas encore effectué de demande de réservation.
+              {language === 'fr' ? "Vous n'avez pas encore effectué de demande de réservation." : "You haven't made any booking requests yet."}
             </p>
             <button
               onClick={() => navigate('/recherche')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
             >
-              Rechercher un logement
+              {language === 'fr' ? 'Rechercher un logement' : 'Search for a listing'}
             </button>
           </div>
         ) : (
@@ -240,10 +242,10 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                       <div className="flex items-center space-x-3 text-gray-700 bg-gray-50 px-4 py-3 rounded-lg">
                         <Calendar className="w-5 h-5 text-blue-600" />
                         <div>
-                          <p className="text-xs text-gray-500 font-medium">Période</p>
+                          <p className="text-xs text-gray-500 font-medium">{language === 'fr' ? 'Période' : 'Period'}</p>
                           <p className="text-sm font-semibold">
-                            {new Date(booking.start_date).toLocaleDateString('fr-FR')} -{' '}
-                            {new Date(booking.end_date).toLocaleDateString('fr-FR')}
+                            {new Date(booking.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')} -{' '}
+                            {new Date(booking.end_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')}
                           </p>
                         </div>
                       </div>
@@ -251,24 +253,24 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                       <div className="flex items-center space-x-3 text-gray-700 bg-gray-50 px-4 py-3 rounded-lg">
                         <Clock className="w-5 h-5 text-blue-600" />
                         <div>
-                          <p className="text-xs text-gray-500 font-medium">Durée</p>
-                          <p className="text-sm font-semibold">{booking.total_days} jours</p>
+                          <p className="text-xs text-gray-500 font-medium">{language === 'fr' ? 'Durée' : 'Duration'}</p>
+                          <p className="text-sm font-semibold">{booking.total_days} {language === 'fr' ? 'jours' : 'days'}</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">Prix total</p>
+                        <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Prix total' : 'Total price'}</p>
                         <p className="text-3xl font-bold text-gray-900">
                           {booking.total_price.toFixed(0)}€
                         </p>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
-                          <p className="text-xs text-gray-500">Demande effectuée le</p>
+                          <p className="text-xs text-gray-500">{language === 'fr' ? 'Demande effectuée le' : 'Request made on'}</p>
                           <p className="text-sm font-medium text-gray-700">
-                            {new Date(booking.created_at).toLocaleDateString('fr-FR')}
+                            {new Date(booking.created_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')}
                           </p>
                         </div>
                         {booking.status === 'pending' && (
@@ -277,7 +279,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                             className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
                           >
                             <Trash2 className="w-4 h-4" />
-                            <span>Annuler</span>
+                            <span>{language === 'fr' ? 'Annuler' : 'Cancel'}</span>
                           </button>
                         )}
                       </div>

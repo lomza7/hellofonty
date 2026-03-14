@@ -29,7 +29,7 @@ type Booking = {
 
 export default function MyBookingRequests() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function MyBookingRequests() {
 
     if (!error) {
       loadBookings();
-      alert(status === 'confirmed' ? 'Réservation confirmée!' : 'Réservation refusée');
+      alert(status === 'confirmed' ? (language === 'fr' ? 'Réservation confirmée!' : 'Booking confirmed!') : (language === 'fr' ? 'Réservation refusée' : 'Booking declined'));
     }
   };
 
@@ -123,11 +123,20 @@ export default function MyBookingRequests() {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'En attente';
-      case 'confirmed': return 'Confirmée';
-      case 'cancelled': return 'Refusée';
-      default: return status;
+    if (language === 'fr') {
+      switch (status) {
+        case 'pending': return 'En attente';
+        case 'confirmed': return 'Confirmée';
+        case 'cancelled': return 'Refusée';
+        default: return status;
+      }
+    } else {
+      switch (status) {
+        case 'pending': return 'Pending';
+        case 'confirmed': return 'Confirmed';
+        case 'cancelled': return 'Declined';
+        default: return status;
+      }
     }
   };
 
@@ -136,7 +145,7 @@ export default function MyBookingRequests() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
+          <p className="mt-4 text-gray-600">{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
         </div>
       </div>
     );
@@ -146,8 +155,8 @@ export default function MyBookingRequests() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-screen-xl mx-auto px-6 lg:px-20 py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Mes demandes de réservation</h1>
-          <p className="text-gray-600">Gérez les demandes de location pour vos annonces</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Mes demandes de réservation' : 'My booking requests'}</h1>
+          <p className="text-gray-600">{language === 'fr' ? 'Gérez les demandes de location pour vos annonces' : 'Manage rental requests for your listings'}</p>
         </div>
 
         <div className="mb-6 flex space-x-2">
@@ -159,7 +168,7 @@ export default function MyBookingRequests() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Toutes ({bookings.length})
+            {language === 'fr' ? 'Toutes' : 'All'} ({bookings.length})
           </button>
           <button
             onClick={() => setFilter('pending')}
@@ -169,7 +178,7 @@ export default function MyBookingRequests() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            En attente ({bookings.filter(b => b.status === 'pending').length})
+            {language === 'fr' ? 'En attente' : 'Pending'} ({bookings.filter(b => b.status === 'pending').length})
           </button>
           <button
             onClick={() => setFilter('confirmed')}
@@ -179,7 +188,7 @@ export default function MyBookingRequests() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Confirmées ({bookings.filter(b => b.status === 'confirmed').length})
+            {language === 'fr' ? 'Confirmées' : 'Confirmed'} ({bookings.filter(b => b.status === 'confirmed').length})
           </button>
           <button
             onClick={() => setFilter('cancelled')}
@@ -189,18 +198,18 @@ export default function MyBookingRequests() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Refusées ({bookings.filter(b => b.status === 'cancelled').length})
+            {language === 'fr' ? 'Refusées' : 'Declined'} ({bookings.filter(b => b.status === 'cancelled').length})
           </button>
         </div>
 
         {filteredBookings.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Aucune demande</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Aucune demande' : 'No requests'}</h2>
             <p className="text-gray-600">
               {filter === 'all'
-                ? "Vous n'avez pas encore reçu de demande de réservation"
-                : `Aucune demande ${getStatusLabel(filter).toLowerCase()}`}
+                ? (language === 'fr' ? "Vous n'avez pas encore reçu de demande de réservation" : "You haven't received any booking requests yet")
+                : (language === 'fr' ? `Aucune demande ${getStatusLabel(filter).toLowerCase()}` : `No ${getStatusLabel(filter).toLowerCase()} requests`)}
             </p>
           </div>
         ) : (
@@ -237,7 +246,7 @@ export default function MyBookingRequests() {
                     <div>
                       <div className="flex items-center text-gray-700 mb-2">
                         <User className="w-5 h-5 mr-2 text-blue-600" />
-                        <span className="font-semibold">Locataire</span>
+                        <span className="font-semibold">{language === 'fr' ? 'Locataire' : 'Tenant'}</span>
                       </div>
                       <p className="text-gray-900 font-medium">
                         {booking.student.first_name} {booking.student.last_name}
@@ -247,16 +256,16 @@ export default function MyBookingRequests() {
                     <div>
                       <div className="flex items-center text-gray-700 mb-2">
                         <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                        <span className="font-semibold">Période</span>
+                        <span className="font-semibold">{language === 'fr' ? 'Période' : 'Period'}</span>
                       </div>
                       <p className="text-gray-900">
-                        Du {new Date(booking.start_date).toLocaleDateString('fr-FR')}
+                        {language === 'fr' ? 'Du' : 'From'} {new Date(booking.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')}
                       </p>
                       <p className="text-gray-900">
-                        Au {new Date(booking.end_date).toLocaleDateString('fr-FR')}
+                        {language === 'fr' ? 'Au' : 'To'} {new Date(booking.end_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')}
                       </p>
                       <p className="text-gray-600 text-sm mt-1">
-                        {booking.total_days} jours
+                        {booking.total_days} {language === 'fr' ? 'jours' : 'days'}
                       </p>
                     </div>
                   </div>
@@ -264,7 +273,7 @@ export default function MyBookingRequests() {
                   <div className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg mb-4">
                     <div className="flex items-center">
                       <Euro className="w-6 h-6 text-blue-600 mr-2" />
-                      <span className="text-gray-700 font-semibold">Montant total</span>
+                      <span className="text-gray-700 font-semibold">{language === 'fr' ? 'Montant total' : 'Total amount'}</span>
                     </div>
                     <span className="text-3xl font-bold text-blue-600">
                       {booking.total_price.toFixed(2)}€
@@ -273,7 +282,7 @@ export default function MyBookingRequests() {
 
                   <div className="flex items-center text-gray-500 text-sm mb-4">
                     <Clock className="w-4 h-4 mr-2" />
-                    Demande reçue le {new Date(booking.created_at).toLocaleDateString('fr-FR')} à {new Date(booking.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    {language === 'fr' ? 'Demande reçue le' : 'Request received on'} {new Date(booking.created_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')} {language === 'fr' ? 'à' : 'at'} {new Date(booking.created_at).toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}
                   </div>
 
                   {booking.status === 'pending' && (

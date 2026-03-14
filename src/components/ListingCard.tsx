@@ -40,7 +40,7 @@ function ListingCard({
       : null
   );
   const navigate = useNavigate();
-  const { t, translateFeature } = useLanguage();
+  const { t, translateFeature, language } = useLanguage();
 
   useEffect(() => {
     if (listing.insead_distance_text && listing.insead_duration_text) return;
@@ -131,10 +131,10 @@ function ListingCard({
             <Car className="h-3.5 w-3.5 text-[#1e3a5f] flex-shrink-0" />
             {routeInfo ? (
               <span className="text-xs font-medium text-[#1e3a5f]">
-                {routeInfo.distance} · {routeInfo.duration} d'INSEAD
+                {routeInfo.distance} · {routeInfo.duration} {language === 'fr' ? "d'INSEAD" : 'from INSEAD'}
               </span>
             ) : (
-              <span className="text-xs text-gray-400 italic">Calcul...</span>
+              <span className="text-xs text-gray-400 italic">{language === 'fr' ? 'Calcul...' : 'Loading...'}</span>
             )}
           </div>
         )}

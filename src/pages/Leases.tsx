@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download, Edit } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Listing {
@@ -408,13 +408,14 @@ export default function Leases() {
   };
 
   const getStatusBadge = (status: Lease['status']) => {
+    const fr = language === 'fr';
     const badges = {
-      draft: { text: 'Brouillon', color: 'bg-gray-100 text-gray-800', icon: AlertCircle },
-      pending_signature: { text: 'En attente de signature', color: 'bg-orange-100 text-orange-800', icon: Clock },
-      signed: { text: 'Signé', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      active: { text: 'Actif', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
-      terminated: { text: 'Terminé', color: 'bg-gray-100 text-gray-600', icon: AlertCircle },
-      cancelled: { text: 'Annulé', color: 'bg-red-100 text-red-800', icon: X }
+      draft: { text: fr ? 'Brouillon' : 'Draft', color: 'bg-gray-100 text-gray-800', icon: AlertCircle },
+      pending_signature: { text: fr ? 'En attente de signature' : 'Awaiting signature', color: 'bg-orange-100 text-orange-800', icon: Clock },
+      signed: { text: fr ? 'Signé' : 'Signed', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      active: { text: fr ? 'Actif' : 'Active', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+      terminated: { text: fr ? 'Terminé' : 'Terminated', color: 'bg-gray-100 text-gray-600', icon: AlertCircle },
+      cancelled: { text: fr ? 'Annulé' : 'Cancelled', color: 'bg-red-100 text-red-800', icon: X }
     };
 
     const badge = badges[status];
@@ -433,7 +434,7 @@ export default function Leases() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des baux...</p>
+          <p className="mt-4 text-gray-600">{language === 'fr' ? 'Chargement des baux...' : 'Loading leases...'}</p>
         </div>
       </div>
     );
@@ -446,30 +447,30 @@ export default function Leases() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center">
               <FileText className="w-8 h-8 mr-3 text-blue-600" />
-              Mes Baux
+              {language === 'fr' ? 'Mes Baux' : 'My Leases'}
             </h1>
-            <p className="text-gray-600 mt-1">Gérez vos contrats de location</p>
+            <p className="text-gray-600 mt-1">{language === 'fr' ? 'Gérez vos contrats de location' : 'Manage your rental contracts'}</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Créer un bail
+            {language === 'fr' ? 'Créer un bail' : 'Create a lease'}
           </button>
         </div>
 
         {leases.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucun bail</h3>
-            <p className="text-gray-600 mb-6">Commencez par créer votre premier bail à partir d'une réservation acceptée</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{language === 'fr' ? 'Aucun bail' : 'No leases'}</h3>
+            <p className="text-gray-600 mb-6">{language === 'fr' ? "Commencez par créer votre premier bail à partir d'une réservation acceptée" : 'Start by creating your first lease from an accepted booking'}</p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Créer un bail
+              {language === 'fr' ? 'Créer un bail' : 'Create a lease'}
             </button>
           </div>
         ) : (
@@ -488,27 +489,27 @@ export default function Leases() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-gray-600 mb-1">
-                          <span className="font-medium">Adresse :</span> {lease.listing?.address}
+                          <span className="font-medium">{language === 'fr' ? 'Adresse :' : 'Address:'}</span> {lease.listing?.address}
                         </p>
                         <p className="text-gray-600 mb-1">
-                          <span className="font-medium">Locataire :</span>{' '}
-                          {lease.tenant ? `${lease.tenant.first_name} ${lease.tenant.last_name}` : 'Non assigné'}
+                          <span className="font-medium">{language === 'fr' ? 'Locataire :' : 'Tenant:'}</span>{' '}
+                          {lease.tenant ? `${lease.tenant.first_name} ${lease.tenant.last_name}` : (language === 'fr' ? 'Non assigné' : 'Not assigned')}
                         </p>
                         <p className="text-gray-600">
-                          <span className="font-medium">Type :</span>{' '}
-                          {lease.lease_type === 'furnished' ? 'Meublé' : 'Non meublé'}
+                          <span className="font-medium">{language === 'fr' ? 'Type :' : 'Type:'}</span>{' '}
+                          {lease.lease_type === 'furnished' ? (language === 'fr' ? 'Meublé' : 'Furnished') : (language === 'fr' ? 'Non meublé' : 'Unfurnished')}
                         </p>
                       </div>
                       <div>
                         <p className="text-gray-600 mb-1">
-                          <span className="font-medium">Période :</span>{' '}
-                          {new Date(lease.start_date).toLocaleDateString('fr-FR')} - {new Date(lease.end_date).toLocaleDateString('fr-FR')}
+                          <span className="font-medium">{language === 'fr' ? 'Période :' : 'Period:'}</span>{' '}
+                          {new Date(lease.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')} - {new Date(lease.end_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB')}
                         </p>
                         <p className="text-gray-600 mb-1">
-                          <span className="font-medium">Loyer :</span> {lease.monthly_rent}€/mois
+                          <span className="font-medium">{language === 'fr' ? 'Loyer :' : 'Rent:'}</span> {lease.monthly_rent}€/{language === 'fr' ? 'mois' : 'month'}
                         </p>
                         <p className="text-gray-600">
-                          <span className="font-medium">Caution :</span> {lease.security_deposit}€
+                          <span className="font-medium">{language === 'fr' ? 'Caution :' : 'Deposit:'}</span> {lease.security_deposit}€
                         </p>
                       </div>
                     </div>
@@ -518,7 +519,7 @@ export default function Leases() {
                     <button
                       onClick={() => handleViewContract(lease)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Voir le bail"
+                      title={language === 'fr' ? 'Voir le bail' : 'View lease'}
                     >
                       <Eye className="w-5 h-5" />
                     </button>
@@ -527,7 +528,7 @@ export default function Leases() {
                       <button
                         onClick={() => handleEditLease(lease)}
                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Modifier le bail"
+                        title={language === 'fr' ? 'Modifier le bail' : 'Edit lease'}
                       >
                         <Edit className="w-5 h-5" />
                       </button>
@@ -536,7 +537,7 @@ export default function Leases() {
                     <button
                       onClick={() => handleDownloadContract(lease.id)}
                       className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      title="Télécharger le contrat"
+                      title={language === 'fr' ? 'Télécharger le contrat' : 'Download contract'}
                     >
                       <Download className="w-5 h-5" />
                     </button>
@@ -545,7 +546,7 @@ export default function Leases() {
                       <button
                         onClick={() => handleDelete(lease.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Supprimer"
+                        title={language === 'fr' ? 'Supprimer' : 'Delete'}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -567,7 +568,7 @@ export default function Leases() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-2xl font-bold text-white flex items-center">
                       <FileText className="w-6 h-6 mr-2" />
-                      Créer un nouveau bail
+                      {language === 'fr' ? 'Créer un nouveau bail' : 'Create a new lease'}
                     </h3>
                     <button
                       onClick={() => {

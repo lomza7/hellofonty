@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw } from 'lucide-react';
 import StripeStatusBadge from '../components/StripeStatusBadge';
@@ -8,6 +9,7 @@ import type { StripeOnboardingStatus } from '../types/stripe';
 
 export default function Payouts() {
   const { user, profile, refreshProfile } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,33 +79,34 @@ export default function Payouts() {
       window.location.href = linkData.url;
     } catch (err: any) {
       console.error('Erreur activation paiements:', err);
-      setError(err.message || 'Une erreur est survenue');
+      setError(err.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusMessage = () => {
+    const fr = language === 'fr';
     switch (stripeStatus) {
       case 'not_connected':
         return {
-          title: 'Paiements non activés',
-          description: 'Vous n\'avez pas encore configuré votre compte de paiement. Activez-le pour recevoir vos loyers directement sur votre compte bancaire.',
+          title: fr ? 'Paiements non activés' : 'Payments not activated',
+          description: fr ? "Vous n'avez pas encore configuré votre compte de paiement. Activez-le pour recevoir vos loyers directement sur votre compte bancaire." : "You haven't set up your payment account yet. Activate it to receive rent payments directly to your bank account.",
         };
       case 'pending':
         return {
-          title: 'Configuration en cours',
-          description: 'Votre compte Stripe Connect est en cours de configuration. Complétez l\'onboarding pour commencer à recevoir des paiements.',
+          title: fr ? 'Configuration en cours' : 'Setup in progress',
+          description: fr ? "Votre compte Stripe Connect est en cours de configuration. Complétez l'onboarding pour commencer à recevoir des paiements." : 'Your Stripe Connect account is being configured. Complete the onboarding to start receiving payments.',
         };
       case 'complete':
         return {
-          title: 'Paiements activés',
-          description: 'Votre compte est configuré et vérifié. Vous pouvez maintenant recevoir des paiements de loyers.',
+          title: fr ? 'Paiements activés' : 'Payments activated',
+          description: fr ? 'Votre compte est configuré et vérifié. Vous pouvez maintenant recevoir des paiements de loyers.' : 'Your account is configured and verified. You can now receive rent payments.',
         };
       default:
         return {
-          title: 'Statut inconnu',
-          description: 'Veuillez actualiser la page ou contacter le support.',
+          title: fr ? 'Statut inconnu' : 'Unknown status',
+          description: fr ? 'Veuillez actualiser la page ou contacter le support.' : 'Please refresh the page or contact support.',
         };
     }
   };
@@ -114,9 +117,9 @@ export default function Payouts() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestion des Paiements</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Gestion des Paiements' : 'Payment Management'}</h1>
           <p className="text-gray-600">
-            Configurez votre compte Stripe Connect pour recevoir les paiements de loyers
+            {language === 'fr' ? 'Configurez votre compte Stripe Connect pour recevoir les paiements de loyers' : 'Set up your Stripe Connect account to receive rent payments'}
           </p>
         </div>
 
@@ -133,7 +136,7 @@ export default function Payouts() {
             <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start">
               <AlertCircle className="w-5 h-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-800">Erreur</p>
+                <p className="text-sm font-medium text-red-800">{language === 'fr' ? 'Erreur' : 'Error'}</p>
                 <p className="text-sm text-red-700">{error}</p>
               </div>
             </div>
@@ -149,12 +152,12 @@ export default function Payouts() {
                 {loading ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin" />
-                    Chargement...
+                    {language === 'fr' ? 'Chargement...' : 'Loading...'}
                   </>
                 ) : (
                   <>
                     <CreditCard className="w-5 h-5" />
-                    Activer les paiements Stripe
+                    {language === 'fr' ? 'Activer les paiements Stripe' : 'Activate Stripe payments'}
                   </>
                 )}
               </button>
@@ -169,12 +172,12 @@ export default function Payouts() {
                 {loading ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin" />
-                    Chargement...
+                    {language === 'fr' ? 'Chargement...' : 'Loading...'}
                   </>
                 ) : (
                   <>
                     <ExternalLink className="w-5 h-5" />
-                    Continuer l'onboarding
+                    {language === 'fr' ? "Continuer l'onboarding" : 'Continue onboarding'}
                   </>
                 )}
               </button>
@@ -185,8 +188,8 @@ export default function Payouts() {
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center">
                   <CreditCard className="w-6 h-6 text-green-600 mr-3" />
                   <div>
-                    <p className="font-medium text-green-900">Compte vérifié</p>
-                    <p className="text-sm text-green-700">Vous pouvez recevoir des paiements</p>
+                    <p className="font-medium text-green-900">{language === 'fr' ? 'Compte vérifié' : 'Account verified'}</p>
+                    <p className="text-sm text-green-700">{language === 'fr' ? 'Vous pouvez recevoir des paiements' : 'You can receive payments'}</p>
                   </div>
                 </div>
                 <button
@@ -197,12 +200,12 @@ export default function Payouts() {
                   {loading ? (
                     <>
                       <RefreshCw className="w-5 h-5 animate-spin" />
-                      Chargement...
+                      {language === 'fr' ? 'Chargement...' : 'Loading...'}
                     </>
                   ) : (
                     <>
                       <ExternalLink className="w-4 h-4" />
-                      Mettre à jour mes informations Stripe
+                      {language === 'fr' ? 'Mettre à jour mes informations Stripe' : 'Update my Stripe information'}
                     </>
                   )}
                 </button>
@@ -215,27 +218,27 @@ export default function Payouts() {
           <div className="flex items-start">
             <Info className="w-6 h-6 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-blue-900 mb-2">Ce que Stripe va vous demander</h3>
+              <h3 className="font-semibold text-blue-900 mb-2">{language === 'fr' ? 'Ce que Stripe va vous demander' : 'What Stripe will ask for'}</h3>
               <ul className="space-y-2 text-sm text-blue-800">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Vos informations personnelles (nom, prénom, date de naissance)</span>
+                  <span>{language === 'fr' ? 'Vos informations personnelles (nom, prénom, date de naissance)' : 'Your personal information (name, date of birth)'}</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Votre numéro d'identification fiscale (SIRET ou numéro de sécurité sociale)</span>
+                  <span>{language === 'fr' ? "Votre numéro d'identification fiscale (SIRET ou numéro de sécurité sociale)" : 'Your tax identification number (SIRET or social security number)'}</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Votre IBAN (compte bancaire pour recevoir les virements)</span>
+                  <span>{language === 'fr' ? 'Votre IBAN (compte bancaire pour recevoir les virements)' : 'Your IBAN (bank account to receive transfers)'}</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Une pièce d'identité (carte d'identité ou passeport) pour vérification</span>
+                  <span>{language === 'fr' ? "Une pièce d'identité (carte d'identité ou passeport) pour vérification" : 'A photo ID (identity card or passport) for verification'}</span>
                 </li>
               </ul>
               <p className="mt-4 text-sm text-blue-700 font-medium">
-                La vérification prend généralement quelques minutes à quelques jours selon les informations fournies.
+                {language === 'fr' ? 'La vérification prend généralement quelques minutes à quelques jours selon les informations fournies.' : 'Verification usually takes a few minutes to a few days depending on the information provided.'}
               </p>
             </div>
           </div>
@@ -244,7 +247,7 @@ export default function Payouts() {
         {profile?.stripe_account_id && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              ID du compte Stripe : <span className="font-mono text-gray-700">{profile.stripe_account_id}</span>
+              {language === 'fr' ? 'ID du compte Stripe :' : 'Stripe account ID:'} <span className="font-mono text-gray-700">{profile.stripe_account_id}</span>
             </p>
           </div>
         )}

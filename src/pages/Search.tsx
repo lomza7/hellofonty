@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 export default function Search() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -130,7 +130,7 @@ export default function Search() {
             className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour
+            {language === 'fr' ? 'Retour' : 'Back'}
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -222,7 +222,7 @@ export default function Search() {
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-20 py-10">
         <div className="mb-6">
           <p className="text-sm text-gray-600">
-            {filteredListings.length} {filteredListings.length === 1 ? 'logement' : 'logements'}
+            {filteredListings.length} {language === 'fr' ? (filteredListings.length === 1 ? 'logement' : 'logements') : (filteredListings.length === 1 ? 'listing' : 'listings')}
           </p>
         </div>
 
@@ -251,7 +251,7 @@ export default function Search() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400">Pas d'image</span>
+                      <span className="text-gray-400">{language === 'fr' ? "Pas d'image" : 'No image'}</span>
                     </div>
                   )}
 
@@ -287,9 +287,9 @@ export default function Search() {
                   <p className="text-gray-600 text-sm truncate">{listing.title}</p>
 
                   <p className="text-gray-600 text-sm">
-                    {listing.bedrooms} {listing.bedrooms === 1 ? 'chambre' : 'chambres'} · {listing.max_guests} {listing.max_guests === 1 ? 'voyageur' : 'voyageurs'}
+                    {listing.bedrooms} {language === 'fr' ? (listing.bedrooms === 1 ? 'chambre' : 'chambres') : (listing.bedrooms === 1 ? 'bedroom' : 'bedrooms')} · {listing.max_guests} {language === 'fr' ? (listing.max_guests === 1 ? 'voyageur' : 'voyageurs') : (listing.max_guests === 1 ? 'guest' : 'guests')}
                     {listing.apartment_area ? ` · ${Math.round(Number(listing.apartment_area))} m²` : ''}
-                    {listing.floor != null ? ` · ${listing.floor === 0 ? 'RDC' : `${listing.floor}e ét.`}` : ''}
+                    {listing.floor != null ? ` · ${listing.floor === 0 ? (language === 'fr' ? 'RDC' : 'GF') : `${listing.floor}${language === 'fr' ? 'e ét.' : (listing.floor === 1 ? 'st' : listing.floor === 2 ? 'nd' : listing.floor === 3 ? 'rd' : 'th') + ' fl.'}`}` : ''}
                   </p>
 
                   <div className="pt-1">

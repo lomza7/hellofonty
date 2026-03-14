@@ -324,7 +324,7 @@ En attente de votre confirmation.`;
           className="flex items-center space-x-2 mb-6 px-4 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
         >
           <ArrowLeft className="h-5 w-5" />
-          <span>Retour</span>
+          <span>{language === 'fr' ? 'Retour' : 'Back'}</span>
         </button>
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -393,10 +393,10 @@ En attente de votre confirmation.`;
                   <img src="/logo-insead.jpg" alt="INSEAD" className="h-5 w-auto object-contain rounded" />
                   {routeInfo ? (
                     <span className="text-sm font-semibold text-gray-700">
-                      {routeInfo.distance} · {routeInfo.duration} en voiture du campus INSEAD
+                      {routeInfo.distance} · {routeInfo.duration} {language === 'fr' ? 'en voiture du campus INSEAD' : 'by car from INSEAD campus'}
                     </span>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">Calcul en cours...</span>
+                    <span className="text-sm text-gray-400 italic">{language === 'fr' ? 'Calcul en cours...' : 'Calculating...'}</span>
                   )}
                 </div>
               )}
@@ -450,7 +450,7 @@ En attente de votre confirmation.`;
                           <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                         </svg>
                       </span>
-                      Visite Vidéo
+                      {language === 'fr' ? 'Visite Vidéo' : 'Video Tour'}
                     </h3>
                   </div>
                   <div className="relative w-full bg-black" style={{ paddingBottom: '56.25%' }}>
@@ -528,7 +528,7 @@ En attente de votre confirmation.`;
                 <div className="flex flex-col sm:flex-row items-center sm:space-x-2 text-center sm:text-left">
                   <Building className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mb-1 sm:mb-0" />
                   <span className="text-sm sm:text-base md:text-lg">
-                    {listing.floor === 0 ? 'RDC' : `${listing.floor}er ét.`}
+                    {listing.floor === 0 ? (language === 'fr' ? 'RDC' : 'GF') : `${listing.floor}${language === 'fr' ? 'er ét.' : language === 'fr' ? 'er' : (listing.floor === 1 ? 'st' : listing.floor === 2 ? 'nd' : listing.floor === 3 ? 'rd' : 'th') + ' fl.'}`}
                     {listing.total_floors ? `/${listing.total_floors}` : ''}
                   </span>
                 </div>
@@ -727,7 +727,7 @@ En attente de votre confirmation.`;
               <div className="flex items-center mb-4">
                 <Shield className="w-6 h-6 text-blue-600 mr-2" />
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {t('listing.houseRules') || (profile?.preferred_language === 'fr' ? 'Règles de la maison' : 'House rules')}
+                  {t('listing.houseRules') || (language === 'fr' ? 'Règles de la maison' : 'House rules')}
                 </h2>
               </div>
 
@@ -735,17 +735,17 @@ En attente de votre confirmation.`;
                 {/* Check-in / Check-out */}
                 <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
                   <h3 className="font-bold text-gray-900 mb-3">
-                    {profile?.preferred_language === 'fr' ? 'Horaires' : 'Schedule'}
+                    {language === 'fr' ? 'Horaires' : 'Schedule'}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-700">{profile?.preferred_language === 'fr' ? 'Check-in' : 'Check-in'}:</span>
+                      <span className="text-gray-700">{language === 'fr' ? 'Check-in' : 'Check-in'}:</span>
                       <span className="font-semibold text-gray-900">
                         {listing.check_in_start || '14:00'} - {listing.check_in_end || '22:00'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-700">{profile?.preferred_language === 'fr' ? 'Check-out' : 'Check-out'}:</span>
+                      <span className="text-gray-700">{language === 'fr' ? 'Check-out' : 'Check-out'}:</span>
                       <span className="font-semibold text-gray-900">{listing.check_out_time || '11:00'}</span>
                     </div>
                   </div>
@@ -754,31 +754,31 @@ En attente de votre confirmation.`;
                 {/* Autorisations */}
                 <div className="bg-green-50 rounded-xl p-4 border-2 border-green-200">
                   <h3 className="font-bold text-gray-900 mb-3">
-                    {profile?.preferred_language === 'fr' ? 'Autorisations' : 'Permissions'}
+                    {language === 'fr' ? 'Autorisations' : 'Permissions'}
                   </h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${listing.pets_allowed ? 'bg-green-500' : 'bg-red-500'}`}></span>
                       <span className={listing.pets_allowed ? 'text-green-700 font-semibold' : 'text-gray-600'}>
-                        {profile?.preferred_language === 'fr' ? 'Animaux' : 'Pets'} {listing.pets_allowed ? '✓' : '✗'}
+                        {language === 'fr' ? 'Animaux' : 'Pets'} {listing.pets_allowed ? '✓' : '✗'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${listing.smoking_allowed ? 'bg-green-500' : 'bg-red-500'}`}></span>
                       <span className={listing.smoking_allowed ? 'text-green-700 font-semibold' : 'text-gray-600'}>
-                        {profile?.preferred_language === 'fr' ? 'Fumeur' : 'Smoking'} {listing.smoking_allowed ? '✓' : '✗'}
+                        {language === 'fr' ? 'Fumeur' : 'Smoking'} {listing.smoking_allowed ? '✓' : '✗'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${listing.parties_allowed ? 'bg-green-500' : 'bg-red-500'}`}></span>
                       <span className={listing.parties_allowed ? 'text-green-700 font-semibold' : 'text-gray-600'}>
-                        {profile?.preferred_language === 'fr' ? 'Fêtes' : 'Parties'} {listing.parties_allowed ? '✓' : '✗'}
+                        {language === 'fr' ? 'Fêtes' : 'Parties'} {listing.parties_allowed ? '✓' : '✗'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${listing.children_allowed ? 'bg-green-500' : 'bg-red-500'}`}></span>
                       <span className={listing.children_allowed ? 'text-green-700 font-semibold' : 'text-gray-600'}>
-                        {profile?.preferred_language === 'fr' ? 'Enfants' : 'Children'} {listing.children_allowed ? '✓' : '✗'}
+                        {language === 'fr' ? 'Enfants' : 'Children'} {listing.children_allowed ? '✓' : '✗'}
                       </span>
                     </div>
                   </div>
@@ -787,7 +787,7 @@ En attente de votre confirmation.`;
                 {/* Heures de calme */}
                 <div className="bg-purple-50 rounded-xl p-4 border-2 border-purple-200">
                   <h3 className="font-bold text-gray-900 mb-2">
-                    {profile?.preferred_language === 'fr' ? 'Heures de calme' : 'Quiet hours'}
+                    {language === 'fr' ? 'Heures de calme' : 'Quiet hours'}
                   </h3>
                   <p className="text-sm text-gray-700">
                     {listing.quiet_hours_start || '22:00'} - {listing.quiet_hours_end || '08:00'}
@@ -797,11 +797,11 @@ En attente de votre confirmation.`;
                 {/* Séjour minimum */}
                 <div className="bg-rose-50 rounded-xl p-4 border-2 border-rose-200">
                   <h3 className="font-bold text-gray-900 mb-2">
-                    {profile?.preferred_language === 'fr' ? 'Séjour minimum' : 'Minimum stay'}
+                    {language === 'fr' ? 'Séjour minimum' : 'Minimum stay'}
                   </h3>
                   <p className="text-sm text-gray-700">
                     <span className="text-lg font-bold text-rose-700">{listing.minimum_stay || 1}</span>{' '}
-                    {profile?.preferred_language === 'fr'
+                    {language === 'fr'
                       ? (listing.minimum_stay && listing.minimum_stay > 1 ? 'mois' : 'mois')
                       : (listing.minimum_stay && listing.minimum_stay > 1 ? 'months' : 'month')}
                   </p>
@@ -810,7 +810,7 @@ En attente de votre confirmation.`;
                 {listing.additional_rules && (
                   <div className="bg-amber-50 rounded-xl p-4 border-2 border-amber-200">
                     <h3 className="font-bold text-gray-900 mb-2">
-                      {profile?.preferred_language === 'fr' ? 'Règles supplémentaires' : 'Additional rules'}
+                      {language === 'fr' ? 'Règles supplémentaires' : 'Additional rules'}
                     </h3>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{listing.additional_rules}</p>
                   </div>
