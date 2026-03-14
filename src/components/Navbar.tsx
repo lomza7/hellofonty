@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
+import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, Ligature as FileSignature, BookOpen, Wallet, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect, useRef } from 'react';
@@ -112,16 +112,28 @@ export default function Navbar() {
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-20">
         <div className="flex justify-between items-center h-16 sm:h-20">
-          <Link to="/" className="flex items-center flex-shrink-0">
-            <img
-              src="/3.png"
-              alt="Hellofonty Logo"
-              className="h-12 w-12 sm:h-16 sm:w-16 object-contain"
-            />
-            <span className="ml-2 text-lg sm:text-xl font-semibold text-rose-500 hidden sm:block">
-              hellofonty
-            </span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {location.pathname !== '/' && (
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full px-3 py-2 transition"
+                title={language === 'fr' ? 'Revenir en arrière' : 'Go back'}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{language === 'fr' ? 'Retour' : 'Back'}</span>
+              </button>
+            )}
+            <Link to="/" className="flex items-center flex-shrink-0">
+              <img
+                src="/3.png"
+                alt="Hellofonty Logo"
+                className="h-12 w-12 sm:h-16 sm:w-16 object-contain"
+              />
+              <span className="ml-2 text-lg sm:text-xl font-semibold text-rose-500 hidden sm:block">
+                hellofonty
+              </span>
+            </Link>
+          </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
             <Link
