@@ -707,9 +707,14 @@ En attente de votre confirmation.`;
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
                         <Receipt className="w-4 h-4 text-emerald-600" />
                       </div>
-                      <span className="text-emerald-800 font-bold">
-                        {language === 'fr' ? 'Total mensuel' : 'Monthly total'}
-                      </span>
+                      <div>
+                        <span className="text-emerald-800 font-bold">
+                          {language === 'fr' ? 'Total mensuel' : 'Monthly total'}
+                        </span>
+                        <p className="text-xs text-emerald-600 font-normal mt-0.5">
+                          {language === 'fr' ? 'pour un mois' : 'per month'}
+                        </p>
+                      </div>
                     </div>
                     <span className="font-bold text-emerald-800 text-lg">{Number(listing.price_per_month).toFixed(0)} €</span>
                   </div>
