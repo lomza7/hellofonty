@@ -19,7 +19,7 @@ export default function Search() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [routeInfoMap, setRouteInfoMap] = useState<Record<string, { distance: string; duration: string }>>({});
+  const [routeInfoMap, setRouteInfoMap] = useState<Record<string, { distance: string; duration: string } | null>>({});
 
   const [cityFilter, setCityFilter] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState(searchParams.get('type') || '');
@@ -39,8 +39,19 @@ export default function Search() {
   }, [listings, cityFilter, propertyTypeFilter, maxPrice, minBedrooms, minGuests]);
 
   useEffect(() => {
+    const newMap: Record<string, { distance: string; duration: string } | null> = {};
     filteredListings.forEach((listing) => {
-      if (!listing.latitude || !listing.longitude || routeInfoMap[listing.id]) return;
+      if (listing.insead_distance_text && listing.insead_duration_text) {
+        newMap[listing.id] = { distance: listing.insead_distance_text, duration: listing.insead_duration_text };
+      }
+    });
+    setRouteInfoMap(prev => ({ ...prev, ...newMap }));
+
+    filteredListings.forEach((listing) => {
+      if (listing.insead_distance_text && listing.insead_duration_text) return;
+      if (!listing.latitude || !listing.longitude) return;
+      if (routeInfoMap[listing.id]) return;
+
       const url = `https://router.project-osrm.org/route/v1/driving/${listing.longitude},${listing.latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=false`;
       fetch(url)
         .then(r => r.json())
@@ -52,6 +63,11 @@ export default function Search() {
           const durMin = Math.round(durS / 60);
           const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
           setRouteInfoMap(prev => ({ ...prev, [listing.id]: { distance, duration } }));
+          supabase
+            .from('listings')
+            .update({ insead_distance_text: distance, insead_duration_text: duration })
+            .eq('id', listing.id)
+            .then(() => {});
         })
         .catch(() => {});
     });

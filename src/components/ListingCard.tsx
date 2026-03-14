@@ -1,7 +1,8 @@
-import { Heart, MapPin, Home, Sparkles, Car } from 'lucide-react';
+import { Heart, MapPin, Sparkles, Car } from 'lucide-react';
 import { useState, memo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../lib/supabase';
 
 const INSEAD_LAT = 48.405527;
 const INSEAD_LNG = 2.686894;
@@ -20,6 +21,8 @@ type ListingCardProps = {
     bonus_features?: string[];
     latitude?: number | null;
     longitude?: number | null;
+    insead_distance_text?: string | null;
+    insead_duration_text?: string | null;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (listingId: string) => void;
@@ -31,12 +34,18 @@ function ListingCard({
   onToggleFavorite,
 }: ListingCardProps) {
   const [imageError, setImageError] = useState(false);
-  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(
+    listing.insead_distance_text && listing.insead_duration_text
+      ? { distance: listing.insead_distance_text, duration: listing.insead_duration_text }
+      : null
+  );
   const navigate = useNavigate();
   const { t, translateFeature } = useLanguage();
 
   useEffect(() => {
+    if (listing.insead_distance_text && listing.insead_duration_text) return;
     if (!listing.latitude || !listing.longitude) return;
+
     const url = `https://router.project-osrm.org/route/v1/driving/${listing.longitude},${listing.latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=false`;
     fetch(url)
       .then(r => r.json())
@@ -48,9 +57,14 @@ function ListingCard({
         const durMin = Math.round(durS / 60);
         const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
         setRouteInfo({ distance, duration });
+        supabase
+          .from('listings')
+          .update({ insead_distance_text: distance, insead_duration_text: duration })
+          .eq('id', listing.id)
+          .then(() => {});
       })
       .catch(() => {});
-  }, [listing.latitude, listing.longitude]);
+  }, [listing.id, listing.latitude, listing.longitude, listing.insead_distance_text, listing.insead_duration_text]);
 
   const getPropertyTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -112,7 +126,7 @@ function ListingCard({
           </span>
         </div>
 
-        {listing.latitude && listing.longitude && (
+        {(listing.latitude && listing.longitude) && (
           <div className="flex items-center gap-1.5 mb-2">
             <Car className="h-3.5 w-3.5 text-[#1e3a5f] flex-shrink-0" />
             {routeInfo ? (
@@ -124,7 +138,6 @@ function ListingCard({
             )}
           </div>
         )}
-
 
         {listing.bonus_features && listing.bonus_features.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-1">

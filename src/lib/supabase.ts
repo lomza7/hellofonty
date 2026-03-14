@@ -81,6 +81,8 @@ export type Listing = {
   additional_rules?: string;
   minimum_stay?: number;
   charges?: number;
+  insead_distance_text?: string | null;
+  insead_duration_text?: string | null;
 };
 
 export type ListingImage = {
