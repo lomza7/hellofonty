@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import CalendarManager from '../components/CalendarManager';
 import ICalSyncManager from '../components/ICalSyncManager';
+import BackButton from '../components/BackButton';
 
 export default function MyListings() {
   const { t, language } = useLanguage();
@@ -114,6 +115,7 @@ export default function MyListings() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">{t('myListings.title')}</h1>
           <button

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { CreditCard, Calendar, CheckCircle, Clock, AlertCircle, Home } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 interface RentPayment {
   id: string;
@@ -341,6 +342,7 @@ export default function MyMonthlyRents() {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes loyers mensuels</h1>
           <p className="text-gray-600">Gérez et payez vos loyers mensuels</p>

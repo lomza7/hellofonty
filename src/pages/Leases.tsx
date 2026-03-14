@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import BackButton from '../components/BackButton';
 
 interface Listing {
   id: string;
@@ -443,6 +444,7 @@ export default function Leases() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center">

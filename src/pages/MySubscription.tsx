@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useStripeCheckout } from '../hooks/useStripeCheckout';
+import BackButton from '../components/BackButton';
 
 type Subscription = {
   id: string;
@@ -397,6 +398,7 @@ export default function MySubscription() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <BackButton />
         {successParam && (
           <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
             <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />

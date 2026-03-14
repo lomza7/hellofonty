@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertCircle, ArrowRight, Home } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 export default function PayoutsRefresh() {
   const { profile } = useAuth();
@@ -30,6 +31,7 @@ export default function PayoutsRefresh() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-50 py-12 px-4 flex items-center justify-center">
       <div className="max-w-lg mx-auto">
+        <BackButton />
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-4">

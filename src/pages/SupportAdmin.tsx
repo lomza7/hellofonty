@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Search, Send, CheckCircle, Clock, User, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import BackButton from '../components/BackButton';
 
 type Message = {
   id: string;
@@ -245,13 +246,7 @@ export default function SupportAdmin() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <button
-            onClick={() => window.location.href = '/?page=admin'}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour à l'administration</span>
-          </button>
+          <BackButton />
           <div className="flex items-center gap-3">
             <MessageCircle className="w-8 h-8 text-rose-600" />
             <h1 className="text-3xl font-bold text-gray-900">Support Client</h1>

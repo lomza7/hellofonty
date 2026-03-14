@@ -4,6 +4,7 @@ import { Search, Calendar, Clock, Tag, ChevronRight, Sun, Moon, MapPin, Graduati
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import SEO from '../components/SEO';
+import BackButton from '../components/BackButton';
 
 interface BlogPost {
   id: string;
@@ -117,6 +118,7 @@ export default function BlogList() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <BackButton />
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             {language === 'fr' ? 'Blog HELLOFONTY' : 'HELLOFONTY Blog'}

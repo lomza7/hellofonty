@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Home, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import BackButton from '../components/BackButton';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -52,6 +53,7 @@ export default function PaymentSuccess() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
+        <BackButton />
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-8 text-white text-center">
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">

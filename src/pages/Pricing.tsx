@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useStripeCheckout } from '../hooks/useStripeCheckout';
+import BackButton from '../components/BackButton';
 
 interface PricingPlan {
   id: string;
@@ -189,6 +190,7 @@ export default function Pricing() {
           </div>
         )}
 
+        <BackButton />
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             {isFrench ? 'Nos Tarifs' : 'Our Pricing'}

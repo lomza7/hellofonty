@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
+import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, CreditCard as Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
@@ -13,6 +13,7 @@ import DocumentVerificationPanel from '../components/DocumentVerificationPanel';
 import PlatformSettings from '../components/PlatformSettings';
 import PartnerOffersManager from '../components/PartnerOffersManager';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
+import BackButton from '../components/BackButton';
 
 interface UserData {
   id: string;
@@ -704,6 +705,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-rose-600" />

@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { detectProhibitedContent, shouldAllowContactSharing } from '../utils/messageDetection';
 import BlockedMessageModal from '../components/BlockedMessageModal';
+import BackButton from '../components/BackButton';
 
 type Conversation = {
   otherUserId: string;
@@ -361,6 +362,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
       <div className="max-w-7xl mx-auto h-full flex">
         <div className={`w-full md:w-1/3 bg-white border-r overflow-y-auto ${selectedConversation ? 'hidden md:block' : 'block'}`}>
           <div className="p-6 border-b">
+            <BackButton />
             <h2 className="text-2xl font-bold text-gray-900">{t('messages.conversations')}</h2>
           </div>
 

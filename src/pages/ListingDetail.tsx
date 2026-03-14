@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import BookingCalendar from '../components/BookingCalendar';
 import ListingMap from '../components/ListingMap';
+import BackButton from '../components/BackButton';
 
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -319,13 +320,7 @@ En attente de votre confirmation.`;
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 mb-6 px-4 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>{language === 'fr' ? 'Retour' : 'Back'}</span>
-        </button>
+        <BackButton />
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="relative h-96 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl overflow-hidden">

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, Clock, Calendar, ArrowRight, Home } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 export default function PayoutsCongratulations() {
   const { profile } = useAuth();
@@ -16,6 +17,7 @@ export default function PayoutsCongratulations() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-12 px-4">
       <div className="max-w-3xl mx-auto">
+        <BackButton />
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6 animate-bounce">

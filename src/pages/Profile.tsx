@@ -1,24 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  Upload,
-  Camera,
-  User,
-  Mail,
-  Phone,
-  Globe,
-  Shield,
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  Save,
-  UserCircle,
-  Settings,
-  Eye,
-  Clock as ClockIcon
-} from 'lucide-react';
+import { Upload, Camera, User, Mail, Phone, Globe, Shield, CheckCircle, AlertCircle, FileText, Save, CircleUser as UserCircle, Settings, Eye, Clock as ClockIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import BackButton from '../components/BackButton';
 
 interface LandlordDocument {
   id: string;
@@ -317,6 +302,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
           <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 px-8 py-12 relative overflow-hidden">
             <div className="absolute inset-0 bg-black/5"></div>

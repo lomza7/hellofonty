@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CreditCard, Clock, Euro, Shield, ArrowLeft, CheckCircle, AlertCircle, Home } from 'lucide-react';
+import BackButton from '../components/BackButton';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -209,13 +210,7 @@ export default function Payment() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <button
-          onClick={() => navigate('/messages')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Retour aux messages</span>
-        </button>
+        <BackButton />
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8">

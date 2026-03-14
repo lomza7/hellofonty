@@ -4,6 +4,7 @@ import { Heart, ArrowLeft, Car } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import BackButton from '../components/BackButton';
 
 
 export default function Search() {
@@ -125,13 +126,7 @@ export default function Search() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-gray-200 bg-white sticky top-20 z-40">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-20 py-4 flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 transition"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {language === 'fr' ? 'Retour' : 'Back'}
-          </button>
+          <BackButton />
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="px-6 py-3 border border-gray-300 rounded-full hover:border-gray-900 transition text-sm font-medium"

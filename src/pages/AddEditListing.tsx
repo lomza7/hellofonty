@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import BackButton from '../components/BackButton';
 
 const commonAmenities = [
   'WiFi',
@@ -1752,6 +1753,7 @@ export default function AddEditListing() {
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="mb-4 sm:mb-8">
           <div className="flex items-center justify-between mb-4 sm:mb-8">
             {STEPS.map((step, index) => {

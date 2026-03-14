@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, EyeOff, Save } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, EyeOff, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import ImageUpload from '../components/ImageUpload';
+import BackButton from '../components/BackButton';
 
 interface BlogPost {
   id: string;
@@ -177,6 +178,7 @@ export default function BlogAdmin() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <BackButton />
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
           {language === 'fr' ? 'Gestion du Blog' : 'Blog Management'}

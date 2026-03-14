@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
+import BackButton from '../components/BackButton';
 
 interface Listing {
   id: string;
@@ -310,6 +311,7 @@ export default function AccessGuide() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className={`${selectedListing ? 'max-w-4xl' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8`}>
+        <BackButton />
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8">

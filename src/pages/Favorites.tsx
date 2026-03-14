@@ -4,6 +4,7 @@ import { MapPin, BedDouble, Bath, Users, Heart } from 'lucide-react';
 import { supabase, Favorite } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import BackButton from '../components/BackButton';
 
 export default function Favorites() {
   const { t } = useLanguage();
@@ -48,6 +49,7 @@ export default function Favorites() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <h1 className="text-4xl font-bold text-gray-900 mb-8">{t('favorites.title')}</h1>
 
         {loading ? (

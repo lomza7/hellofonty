@@ -1,5 +1,6 @@
 import { useLanguage } from '../contexts/LanguageContext';
 import SEO from '../components/SEO';
+import BackButton from '../components/BackButton';
 
 export default function TermsOfUse() {
   const { language } = useLanguage();
@@ -13,6 +14,7 @@ export default function TermsOfUse() {
 
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <BackButton />
           <div className="bg-white rounded-2xl shadow-sm p-8">
             {language === 'fr' ? (
               <>
@@ -111,7 +113,7 @@ export default function TermsOfUse() {
                   <p className="text-gray-700">
                     <strong>Annulation :</strong> sauf indication contraire sur le Site, l'annulation et ses conditions
                     (acceptation, pénalités, remboursement) sont déterminées par le bailleur. Hellofonty n'est pas
-                    responsable d'un refus d'annulation ou d'un désaccord entre parties.
+                    responsable d'un refus d\'annulation ou d'un désaccord entre parties.
                   </p>
                 </section>
 

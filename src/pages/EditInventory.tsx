@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Camera, ChevronDown, ChevronUp, CreditCard as Edit2, Check, X } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 interface Room {
   id?: string;
@@ -363,13 +364,7 @@ export default function EditInventory() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button
-          onClick={() => navigate('/inventory')}
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          {language === 'fr' ? 'Retour' : 'Back'}
-        </button>
+        <BackButton />
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-8 py-6">

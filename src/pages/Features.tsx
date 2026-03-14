@@ -5,6 +5,7 @@ import DetailedFeatureSection from '../components/DetailedFeatureSection';
 import SEO from '../components/SEO';
 import Breadcrumb from '../components/Breadcrumb';
 import { Loader2 } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 interface FeatureData {
   id: string;
@@ -84,7 +85,7 @@ export default function Features() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Breadcrumb items={breadcrumbItems} />
+            <BackButton />
           </div>
         </div>
 

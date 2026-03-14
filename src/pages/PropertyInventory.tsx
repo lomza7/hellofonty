@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import {
-  Home, FileText, Plus, Clock, CheckCircle, AlertCircle,
-  Trash2, Edit, Eye, Download, Filter, Search
-} from 'lucide-react';
+import { Home, FileText, Plus, Clock, CheckCircle, AlertCircle, Trash2, CreditCard as Edit, Eye, Download, Filter, Search } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import BackButton from '../components/BackButton';
 
 interface Inventory {
   id: string;
@@ -231,6 +229,7 @@ export default function PropertyInventory() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <BackButton />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             {language === 'fr' ? 'États des lieux' : 'Property Inventories'}

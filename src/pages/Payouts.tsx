@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw } from 'lucide-react';
 import StripeStatusBadge from '../components/StripeStatusBadge';
 import type { StripeOnboardingStatus } from '../types/stripe';
+import BackButton from '../components/BackButton';
 
 export default function Payouts() {
   const { user, profile, refreshProfile } = useAuth();
@@ -116,6 +117,7 @@ export default function Payouts() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        <BackButton />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Gestion des Paiements' : 'Payment Management'}</h1>
           <p className="text-gray-600">

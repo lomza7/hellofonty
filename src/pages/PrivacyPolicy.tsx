@@ -1,5 +1,6 @@
 import { useLanguage } from '../contexts/LanguageContext';
 import SEO from '../components/SEO';
+import BackButton from '../components/BackButton';
 
 export default function PrivacyPolicy() {
   const { language } = useLanguage();
@@ -13,6 +14,7 @@ export default function PrivacyPolicy() {
 
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <BackButton />
           <div className="bg-white rounded-2xl shadow-sm p-8">
             {language === 'fr' ? (
               <>
