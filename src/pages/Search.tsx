@@ -288,6 +288,8 @@ export default function Search() {
 
                   <p className="text-gray-600 text-sm">
                     {listing.bedrooms} {listing.bedrooms === 1 ? 'chambre' : 'chambres'} · {listing.max_guests} {listing.max_guests === 1 ? 'voyageur' : 'voyageurs'}
+                    {listing.apartment_area ? ` · ${Math.round(Number(listing.apartment_area))} m²` : ''}
+                    {listing.floor != null ? ` · ${listing.floor === 0 ? 'RDC' : `${listing.floor}e ét.`}` : ''}
                   </p>
 
                   <div className="pt-1">
