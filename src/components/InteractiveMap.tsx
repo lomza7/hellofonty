@@ -1,9 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
-import { MapPin, Home, Euro, X } from 'lucide-react';
+import { MapPin, Home, Euro, X, Car } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
+
+const INSEAD_LAT = 48.405527;
+const INSEAD_LNG = 2.686894;
 
 type Listing = {
   id: string;
@@ -23,6 +26,7 @@ export default function InteractiveMap() {
   const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -62,6 +66,24 @@ export default function InteractiveMap() {
       }
     };
   }, [listings]);
+
+  useEffect(() => {
+    if (!selectedListing) { setRouteInfo(null); return; }
+    setRouteInfo(null);
+    const url = `https://router.project-osrm.org/route/v1/driving/${selectedListing.longitude},${selectedListing.latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=false`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.routes?.length) return;
+        const distM = data.routes[0].distance as number;
+        const durS = data.routes[0].duration as number;
+        const distance = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(1)} km`;
+        const durMin = Math.round(durS / 60);
+        const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
+        setRouteInfo({ distance, duration });
+      })
+      .catch(() => {});
+  }, [selectedListing]);
 
   const createMarker = (listing: Listing, map: L.Map) => {
     const customIcon = L.divIcon({
@@ -266,10 +288,21 @@ export default function InteractiveMap() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {selectedListing.title}
               </h3>
-              <p className="text-gray-600 mb-4 flex items-center">
+              <p className="text-gray-600 mb-2 flex items-center">
                 <MapPin className="h-4 w-4 mr-1 text-gray-400" />
                 {selectedListing.address || selectedListing.city}
               </p>
+
+              <div className="flex items-center gap-1.5 mb-4">
+                <Car className="h-3.5 w-3.5 text-[#1e3a5f] flex-shrink-0" />
+                {routeInfo ? (
+                  <span className="text-xs font-semibold text-[#1e3a5f]">
+                    {routeInfo.distance} · {routeInfo.duration} d'INSEAD
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">Calcul en cours...</span>
+                )}
+              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
