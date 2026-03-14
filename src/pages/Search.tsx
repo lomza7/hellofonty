@@ -5,8 +5,6 @@ import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 
-const INSEAD_LAT = 48.405527;
-const INSEAD_LNG = 2.686894;
 
 export default function Search() {
   const { t } = useLanguage();
@@ -19,7 +17,6 @@ export default function Search() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [routeInfoMap, setRouteInfoMap] = useState<Record<string, { distance: string; duration: string } | null>>({});
 
   const [cityFilter, setCityFilter] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState(searchParams.get('type') || '');
@@ -38,40 +35,6 @@ export default function Search() {
     applyFilters();
   }, [listings, cityFilter, propertyTypeFilter, maxPrice, minBedrooms, minGuests]);
 
-  useEffect(() => {
-    const newMap: Record<string, { distance: string; duration: string } | null> = {};
-    filteredListings.forEach((listing) => {
-      if (listing.insead_distance_text && listing.insead_duration_text) {
-        newMap[listing.id] = { distance: listing.insead_distance_text, duration: listing.insead_duration_text };
-      }
-    });
-    setRouteInfoMap(prev => ({ ...prev, ...newMap }));
-
-    filteredListings.forEach((listing) => {
-      if (listing.insead_distance_text && listing.insead_duration_text) return;
-      if (!listing.latitude || !listing.longitude) return;
-      if (routeInfoMap[listing.id]) return;
-
-      const url = `https://router.project-osrm.org/route/v1/driving/${listing.longitude},${listing.latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=false`;
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          if (!data.routes?.length) return;
-          const distM = data.routes[0].distance as number;
-          const durS = data.routes[0].duration as number;
-          const distance = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(1)} km`;
-          const durMin = Math.round(durS / 60);
-          const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
-          setRouteInfoMap(prev => ({ ...prev, [listing.id]: { distance, duration } }));
-          supabase
-            .from('listings')
-            .update({ insead_distance_text: distance, insead_duration_text: duration })
-            .eq('id', listing.id)
-            .then(() => {});
-        })
-        .catch(() => {});
-    });
-  }, [filteredListings]);
 
   const loadListings = async () => {
     setLoading(true);
@@ -313,13 +276,11 @@ export default function Search() {
                     <h3 className="font-semibold text-gray-900 truncate pr-2">
                       {listing.city}
                     </h3>
-                    {routeInfoMap[listing.id] ? (
+                    {listing.insead_distance_text && listing.insead_duration_text ? (
                       <div className="flex items-center gap-1 text-xs font-medium text-[#1e3a5f] flex-shrink-0">
                         <Car className="h-3 w-3" />
-                        <span>{routeInfoMap[listing.id].distance} · {routeInfoMap[listing.id].duration}</span>
+                        <span>{listing.insead_distance_text} · {listing.insead_duration_text}</span>
                       </div>
-                    ) : listing.latitude && listing.longitude ? (
-                      <span className="text-xs text-gray-400 italic flex-shrink-0">...</span>
                     ) : null}
                   </div>
 
