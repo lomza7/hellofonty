@@ -718,6 +718,17 @@ En attente de votre confirmation.`;
                     </div>
                     <span className="font-bold text-emerald-800 text-lg">{Number(listing.price_per_month).toFixed(0)} €</span>
                   </div>
+
+                  <div className="mt-3 pt-3 border-t border-emerald-200">
+                    <p className="text-xs text-emerald-700 italic flex items-start gap-1.5">
+                      <span className="mt-0.5 shrink-0">ℹ️</span>
+                      <span>
+                        {language === 'fr'
+                          ? 'Les charges sont incluses au forfait. En cas de dépassement, le propriétaire se réserve le droit de prélever la différence.'
+                          : 'Utilities are included as a flat rate. In case of excess consumption, the landlord reserves the right to charge the difference.'}
+                      </span>
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
