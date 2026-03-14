@@ -27,6 +27,26 @@ export default function ListingDetail() {
   const [landlordStats, setLandlordStats] = useState<{ totalListings: number; memberSince: string } | null>(null);
   const [showFullscreenGallery, setShowFullscreenGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+
+  useEffect(() => {
+    if (!listing?.latitude || !listing?.longitude) return;
+    const lat = parseFloat(listing.latitude.toString());
+    const lng = parseFloat(listing.longitude.toString());
+    const url = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};2.686894,48.405527?overview=false`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.routes?.length) return;
+        const distM = data.routes[0].distance as number;
+        const durS = data.routes[0].duration as number;
+        const distance = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(1)} km`;
+        const durMin = Math.round(durS / 60);
+        const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
+        setRouteInfo({ distance, duration });
+      })
+      .catch(() => {});
+  }, [listing?.latitude, listing?.longitude]);
 
   const handleGalleryKeyDown = useCallback((e: KeyboardEvent) => {
     if (!showFullscreenGallery || !listing?.images) return;
@@ -368,22 +388,18 @@ En attente de votre confirmation.`;
                   {listing.address}, {listing.city} {listing.postal_code}
                 </span>
               </div>
-              {listing.latitude && listing.longitude && (() => {
-                const R = 6371;
-                const lat1 = parseFloat(listing.latitude.toString()) * Math.PI / 180;
-                const lat2 = 48.405527 * Math.PI / 180;
-                const dLat = (48.405527 - parseFloat(listing.latitude.toString())) * Math.PI / 180;
-                const dLon = (2.686894 - parseFloat(listing.longitude.toString())) * Math.PI / 180;
-                const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-                const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                const distLabel = d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
-                return (
-                  <div className="flex items-center gap-2 mt-2">
-                    <img src="/logo-insead.jpg" alt="INSEAD" className="h-5 w-auto object-contain rounded" />
-                    <span className="text-sm font-semibold text-gray-700">{distLabel} du campus INSEAD</span>
-                  </div>
-                );
-              })()}
+              {listing.latitude && listing.longitude && (
+                <div className="flex items-center gap-2 mt-2">
+                  <img src="/logo-insead.jpg" alt="INSEAD" className="h-5 w-auto object-contain rounded" />
+                  {routeInfo ? (
+                    <span className="text-sm font-semibold text-gray-700">
+                      {routeInfo.distance} · {routeInfo.duration} en voiture du campus INSEAD
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-400 italic">Calcul en cours...</span>
+                  )}
+                </div>
+              )}
             </div>
 
 {listing.video_url && (() => {
