@@ -1,7 +1,10 @@
-import { Heart, MapPin, Home, Sparkles } from 'lucide-react';
-import { useState, memo } from 'react';
+import { Heart, MapPin, Home, Sparkles, Car } from 'lucide-react';
+import { useState, memo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+
+const INSEAD_LAT = 48.405527;
+const INSEAD_LNG = 2.686894;
 
 type ListingCardProps = {
   listing: {
@@ -15,6 +18,8 @@ type ListingCardProps = {
     bathrooms: number;
     image_url?: string;
     bonus_features?: string[];
+    latitude?: number | null;
+    longitude?: number | null;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (listingId: string) => void;
@@ -26,8 +31,26 @@ function ListingCard({
   onToggleFavorite,
 }: ListingCardProps) {
   const [imageError, setImageError] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
   const navigate = useNavigate();
   const { t, translateFeature } = useLanguage();
+
+  useEffect(() => {
+    if (!listing.latitude || !listing.longitude) return;
+    const url = `https://router.project-osrm.org/route/v1/driving/${listing.longitude},${listing.latitude};${INSEAD_LNG},${INSEAD_LAT}?overview=false`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.routes?.length) return;
+        const distM = data.routes[0].distance as number;
+        const durS = data.routes[0].duration as number;
+        const distance = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(1)} km`;
+        const durMin = Math.round(durS / 60);
+        const duration = durMin < 60 ? `${durMin} min` : `${Math.floor(durMin / 60)}h${String(durMin % 60).padStart(2, '0')}`;
+        setRouteInfo({ distance, duration });
+      })
+      .catch(() => {});
+  }, [listing.latitude, listing.longitude]);
 
   const getPropertyTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -82,12 +105,25 @@ function ListingCard({
           {listing.title}
         </h3>
 
-        <div className="flex items-center text-gray-600 mb-2">
+        <div className="flex items-center text-gray-600 mb-1">
           <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
           <span className="text-xs line-clamp-1">
             {listing.address ? `${listing.address}, ${listing.city}` : listing.city}
           </span>
         </div>
+
+        {listing.latitude && listing.longitude && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <Car className="h-3.5 w-3.5 text-[#1e3a5f] flex-shrink-0" />
+            {routeInfo ? (
+              <span className="text-xs font-medium text-[#1e3a5f]">
+                {routeInfo.distance} · {routeInfo.duration} d'INSEAD
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400 italic">Calcul...</span>
+            )}
+          </div>
+        )}
 
 
         {listing.bonus_features && listing.bonus_features.length > 0 && (

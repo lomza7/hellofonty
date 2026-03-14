@@ -17,6 +17,8 @@ type Listing = {
   bathrooms: number;
   image_url?: string;
   bonus_features?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export default function FeaturedListings() {
@@ -74,6 +76,8 @@ export default function FeaturedListings() {
           bedrooms,
           bathrooms,
           bonus_features,
+          latitude,
+          longitude,
           listing_images(image_url)
         `)
         .eq('is_active', true)
@@ -94,6 +98,8 @@ export default function FeaturedListings() {
           bathrooms: listing.bathrooms,
           image_url: listing.listing_images?.[0]?.image_url,
           bonus_features: listing.bonus_features,
+          latitude: listing.latitude,
+          longitude: listing.longitude,
         }));
 
         setListings(listingsWithImages);
