@@ -623,6 +623,100 @@ En attente de votre confirmation.`;
               </div>
             )}
 
+            {/* Ce qui est inclus */}
+            {(listing.base_rent || listing.electricity_cost || listing.heating_cost || listing.water_cost || (listing.custom_charges && listing.custom_charges.length > 0)) && (
+              <div className="mb-8">
+                <div className="flex items-center mb-4">
+                  <Receipt className="w-6 h-6 text-emerald-600 mr-2" />
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {language === 'fr' ? 'Ce qui est inclus' : "What's included"}
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {listing.base_rent && listing.base_rent > 0 && (
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Home className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {language === 'fr' ? 'Loyer de base' : 'Base rent'}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{Number(listing.base_rent).toFixed(0)} €</span>
+                    </div>
+                  )}
+
+                  {listing.electricity_cost && listing.electricity_cost > 0 && (
+                    <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                          <Zap className="w-4 h-4 text-yellow-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {language === 'fr' ? 'Électricité' : 'Electricity'}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{Number(listing.electricity_cost).toFixed(0)} €</span>
+                    </div>
+                  )}
+
+                  {listing.heating_cost && listing.heating_cost > 0 && (
+                    <div className="bg-orange-50 rounded-xl p-4 border border-orange-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                          <Flame className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {language === 'fr' ? 'Chauffage' : 'Heating'}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{Number(listing.heating_cost).toFixed(0)} €</span>
+                    </div>
+                  )}
+
+                  {listing.water_cost && listing.water_cost > 0 && (
+                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Waves className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {language === 'fr' ? 'Eau' : 'Water'}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{Number(listing.water_cost).toFixed(0)} €</span>
+                    </div>
+                  )}
+
+                  {listing.custom_charges && listing.custom_charges.map((charge, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Euro className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">{charge.name}</span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{Number(charge.amount).toFixed(0)} €</span>
+                    </div>
+                  ))}
+
+                  <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <Receipt className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <span className="text-emerald-800 font-bold">
+                        {language === 'fr' ? 'Total mensuel' : 'Monthly total'}
+                      </span>
+                    </div>
+                    <span className="font-bold text-emerald-800 text-lg">{Number(listing.price_per_month).toFixed(0)} €</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* House Rules Section */}
             <div className="mb-8">
               <div className="flex items-center mb-4">
