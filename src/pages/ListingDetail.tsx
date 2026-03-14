@@ -497,7 +497,7 @@ En attente de votre confirmation.`;
             </div>
 
 
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 md:flex md:items-center md:space-x-6 mb-8 pb-8 border-b">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4 md:flex md:items-center md:space-x-6 mb-8 pb-8 border-b">
               <div className="flex flex-col sm:flex-row items-center sm:space-x-2 text-center sm:text-left">
                 <BedDouble className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mb-1 sm:mb-0" />
                 <span className="text-sm sm:text-base md:text-lg">
@@ -516,6 +516,23 @@ En attente de votre confirmation.`;
                   {listing.max_guests} {t('listing.guests')}
                 </span>
               </div>
+              {listing.apartment_area && (
+                <div className="flex flex-col sm:flex-row items-center sm:space-x-2 text-center sm:text-left">
+                  <Maximize className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mb-1 sm:mb-0" />
+                  <span className="text-sm sm:text-base md:text-lg">
+                    {Math.round(Number(listing.apartment_area))} m²
+                  </span>
+                </div>
+              )}
+              {listing.floor != null && (
+                <div className="flex flex-col sm:flex-row items-center sm:space-x-2 text-center sm:text-left">
+                  <Building className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mb-1 sm:mb-0" />
+                  <span className="text-sm sm:text-base md:text-lg">
+                    {listing.floor === 0 ? 'RDC' : `${listing.floor}er ét.`}
+                    {listing.total_floors ? `/${listing.total_floors}` : ''}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="mb-8">
