@@ -736,7 +736,7 @@ export default function AddEditListing() {
                   <div className="flex-shrink-0">
                     <MapPin className="h-5 w-5 text-green-600" />
                   </div>
-                  <div className="ml-3">
+                  <div className="ml-3 flex-1">
                     <h3 className="text-sm font-semibold text-green-900">
                       {language === 'fr' ? 'Position GPS enregistrée' : 'GPS position saved'}
                     </h3>
@@ -748,6 +748,23 @@ export default function AddEditListing() {
                     <p className="text-xs text-green-600 mt-2 font-mono">
                       {latitude.toFixed(6)}, {longitude.toFixed(6)}
                     </p>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5 text-green-700 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M12 3l9 9-9 9"/></svg>
+                      <p className="text-xs font-semibold text-green-800">
+                        {(() => {
+                          const R = 6371;
+                          const lat1 = latitude * Math.PI / 180;
+                          const lat2 = 48.405527 * Math.PI / 180;
+                          const dLat = (48.405527 - latitude) * Math.PI / 180;
+                          const dLon = (2.686894 - longitude) * Math.PI / 180;
+                          const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                          const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                          return d < 1
+                            ? `${Math.round(d * 1000)} m du campus INSEAD`
+                            : `${d.toFixed(1)} km du campus INSEAD`;
+                        })()}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

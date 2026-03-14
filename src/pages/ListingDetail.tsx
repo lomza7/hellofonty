@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan, X, Grid, Maximize } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan, X, Grid2x2 as Grid, Maximize } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -368,6 +368,22 @@ En attente de votre confirmation.`;
                   {listing.address}, {listing.city} {listing.postal_code}
                 </span>
               </div>
+              {listing.latitude && listing.longitude && (() => {
+                const R = 6371;
+                const lat1 = parseFloat(listing.latitude.toString()) * Math.PI / 180;
+                const lat2 = 48.405527 * Math.PI / 180;
+                const dLat = (48.405527 - parseFloat(listing.latitude.toString())) * Math.PI / 180;
+                const dLon = (2.686894 - parseFloat(listing.longitude.toString())) * Math.PI / 180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const distLabel = d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
+                return (
+                  <div className="flex items-center gap-2 mt-2">
+                    <img src="/logo-insead.jpg" alt="INSEAD" className="h-5 w-auto object-contain rounded" />
+                    <span className="text-sm font-semibold text-gray-700">{distLabel} du campus INSEAD</span>
+                  </div>
+                );
+              })()}
             </div>
 
 {listing.video_url && (() => {
