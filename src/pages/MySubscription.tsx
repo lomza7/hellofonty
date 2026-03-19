@@ -54,32 +54,39 @@ export default function MySubscription() {
   const [syncingInvoices, setSyncingInvoices] = useState(false);
   const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
 
-  const successParam = searchParams.get('success');
-  const canceledParam = searchParams.get('canceled');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showCanceled, setShowCanceled] = useState(false);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success || canceled) {
+      if (success) setShowSuccess(true);
+      if (canceled) setShowCanceled(true);
+
+      const params = new URLSearchParams(searchParams);
+      params.delete('success');
+      params.delete('canceled');
+      setSearchParams(params, { replace: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showSuccess || showCanceled) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+        setShowCanceled(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess, showCanceled]);
 
   useEffect(() => {
     if (user && profile?.role === 'landlord') {
       loadSubscriptionData();
     }
   }, [user, profile]);
-
-  useEffect(() => {
-    if (successParam) {
-      loadSubscriptionData();
-      setTimeout(() => {
-        const params = new URLSearchParams(searchParams);
-        params.delete('success');
-        setSearchParams(params);
-      }, 5000);
-    }
-    if (canceledParam) {
-      setTimeout(() => {
-        const params = new URLSearchParams(searchParams);
-        params.delete('canceled');
-        setSearchParams(params);
-      }, 5000);
-    }
-  }, [successParam, canceledParam]);
 
   const loadSubscriptionData = async () => {
     try {
@@ -399,7 +406,7 @@ export default function MySubscription() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <BackButton />
-        {successParam && (
+        {showSuccess && (
           <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
             <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -415,7 +422,7 @@ export default function MySubscription() {
           </div>
         )}
 
-        {canceledParam && (
+        {showCanceled && (
           <div className="mb-8 bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start space-x-3">
             <AlertCircle className="h-6 w-6 text-orange-600 flex-shrink-0 mt-0.5" />
             <div>
