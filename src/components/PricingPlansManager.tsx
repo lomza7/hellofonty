@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DollarSign, Plus, Edit2, Trash2, Save, X, Check } from 'lucide-react';
+import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2 } from 'lucide-react';
 
 interface PricingPlan {
   id: string;
@@ -31,10 +31,20 @@ interface EditingPlan {
   is_active: boolean;
 }
 
+interface StripePrice {
+  price_id: string;
+  amount: number;
+  currency: string;
+  interval: string | null;
+}
+
 export default function PricingPlansManager() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [availablePrices, setAvailablePrices] = useState<StripePrice[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingData, setEditingData] = useState<EditingPlan>({
@@ -72,6 +82,8 @@ export default function PricingPlansManager() {
 
   function startEdit(plan: PricingPlan) {
     setEditingId(plan.id);
+    setSyncMessage(null);
+    setAvailablePrices([]);
     setEditingData({
       name: plan.name,
       type: plan.type,
@@ -87,6 +99,8 @@ export default function PricingPlansManager() {
 
   function startCreate() {
     setIsCreating(true);
+    setSyncMessage(null);
+    setAvailablePrices([]);
     setEditingData({
       name: '',
       type: 'landlord',
@@ -103,6 +117,8 @@ export default function PricingPlansManager() {
   function cancelEdit() {
     setEditingId(null);
     setIsCreating(false);
+    setSyncMessage(null);
+    setAvailablePrices([]);
     setEditingData({
       name: '',
       type: 'landlord',
@@ -114,6 +130,116 @@ export default function PricingPlansManager() {
       features: '',
       is_active: true,
     });
+  }
+
+  async function fetchStripeInfo() {
+    if (syncing) return;
+
+    const { stripe_price_id, stripe_product_id } = editingData;
+    if (!stripe_price_id && !stripe_product_id) {
+      setSyncMessage({ type: 'error', text: 'Entrez un ID Produit ou ID Prix Stripe pour synchroniser.' });
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      setSyncMessage(null);
+      setAvailablePrices([]);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSyncMessage({ type: 'error', text: 'Session expirée. Reconnectez-vous.' });
+        return;
+      }
+
+      const body: Record<string, string> = {};
+      if (stripe_price_id) {
+        body.price_id = stripe_price_id;
+      } else if (stripe_product_id) {
+        body.product_id = stripe_product_id;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-get-price`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur Stripe');
+      }
+
+      const data = await response.json();
+
+      if (stripe_price_id) {
+        const interval = data.interval;
+        let billing: 'monthly' | 'yearly' | 'one_time' = 'one_time';
+        if (interval === 'month') billing = 'monthly';
+        else if (interval === 'year') billing = 'yearly';
+
+        setEditingData(prev => ({
+          ...prev,
+          price: data.amount.toString(),
+          stripe_product_id: data.product_id || prev.stripe_product_id,
+          billing_period: billing,
+        }));
+
+        setSyncMessage({
+          type: 'success',
+          text: `Synchronise : ${data.product_name} - ${data.amount}EUR/${interval || 'unique'}`,
+        });
+      } else {
+        if (data.prices && data.prices.length > 0) {
+          setAvailablePrices(data.prices);
+
+          const firstPrice = data.prices[0];
+          const interval = firstPrice.interval;
+          let billing: 'monthly' | 'yearly' | 'one_time' = 'one_time';
+          if (interval === 'month') billing = 'monthly';
+          else if (interval === 'year') billing = 'yearly';
+
+          setEditingData(prev => ({
+            ...prev,
+            price: firstPrice.amount.toString(),
+            stripe_price_id: firstPrice.price_id,
+            billing_period: billing,
+          }));
+
+          setSyncMessage({
+            type: 'success',
+            text: `${data.product_name} - ${data.prices.length} prix disponible(s). Selectionnez ci-dessous.`,
+          });
+        } else {
+          setSyncMessage({ type: 'error', text: 'Aucun prix actif pour ce produit Stripe.' });
+        }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
+      setSyncMessage({ type: 'error', text: `Erreur : ${msg}` });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function selectStripePrice(price: StripePrice) {
+    const interval = price.interval;
+    let billing: 'monthly' | 'yearly' | 'one_time' = 'one_time';
+    if (interval === 'month') billing = 'monthly';
+    else if (interval === 'year') billing = 'yearly';
+
+    setEditingData(prev => ({
+      ...prev,
+      price: price.amount.toString(),
+      stripe_price_id: price.price_id,
+      billing_period: billing,
+    }));
   }
 
   async function translateToEnglish(text: string | string[]): Promise<string | string[]> {
@@ -409,8 +535,10 @@ export default function PricingPlansManager() {
               step="0.01"
               value={editingData.price}
               onChange={e => setEditingData({ ...editingData, price: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent bg-gray-50"
+              readOnly
             />
+            <p className="text-xs text-gray-400 mt-1">Rempli automatiquement depuis Stripe</p>
           </div>
 
           <div>
@@ -446,32 +574,93 @@ export default function PricingPlansManager() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ID Produit Stripe (optionnel)
-            </label>
-            <input
-              type="text"
-              value={editingData.stripe_product_id}
-              onChange={e => setEditingData({ ...editingData, stripe_product_id: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-              placeholder="prod_xxxxx"
-            />
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h5 className="text-sm font-semibold text-gray-800">Configuration Stripe</h5>
+            <button
+              type="button"
+              onClick={fetchStripeInfo}
+              disabled={syncing}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {syncing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {syncing ? 'Synchronisation...' : 'Synchroniser depuis Stripe'}
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ID Prix Stripe (optionnel)
-            </label>
-            <input
-              type="text"
-              value={editingData.stripe_price_id}
-              onChange={e => setEditingData({ ...editingData, stripe_price_id: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-              placeholder="price_xxxxx"
-            />
+          {syncMessage && (
+            <div className={`text-sm px-3 py-2 rounded-lg ${
+              syncMessage.type === 'success'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {syncMessage.text}
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ID Produit Stripe
+              </label>
+              <input
+                type="text"
+                value={editingData.stripe_product_id}
+                onChange={e => setEditingData({ ...editingData, stripe_product_id: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="prod_xxxxx"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ID Prix Stripe
+              </label>
+              <input
+                type="text"
+                value={editingData.stripe_price_id}
+                onChange={e => setEditingData({ ...editingData, stripe_price_id: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="price_xxxxx"
+              />
+            </div>
           </div>
+
+          {availablePrices.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prix disponibles pour ce produit :
+              </label>
+              <div className="space-y-2">
+                {availablePrices.map((p) => (
+                  <button
+                    key={p.price_id}
+                    type="button"
+                    onClick={() => selectStripePrice(p)}
+                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                      editingData.stripe_price_id === p.price_id
+                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-gray-900">{p.amount}€</span>
+                        <span className="text-gray-500 text-sm ml-1">
+                          {p.interval === 'month' ? '/mois' : p.interval === 'year' ? '/an' : 'unique'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400 font-mono">{p.price_id}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
