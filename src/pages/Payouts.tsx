@@ -67,7 +67,7 @@ export default function Payouts() {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ accountId }),
+          body: JSON.stringify({ accountId, origin: window.location.origin }),
         }
       );
 

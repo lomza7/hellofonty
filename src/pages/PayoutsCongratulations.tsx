@@ -1,18 +1,44 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { CheckCircle, Clock, Calendar, ArrowRight, Home } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
 export default function PayoutsCongratulations() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (profile?.role !== 'landlord') {
       navigate('/');
+      return;
     }
-  }, [profile, navigate]);
+
+    const updateStripeStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-get-account-status`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        await refreshProfile();
+      } catch (err) {
+        console.error('Error updating stripe status:', err);
+      }
+    };
+
+    updateStripeStatus();
+  }, [profile?.role, navigate, refreshProfile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-12 px-4">

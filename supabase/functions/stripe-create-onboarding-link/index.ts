@@ -19,8 +19,6 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const returnUrl = Deno.env.get('STRIPE_CONNECT_RETURN_URL') || `${supabaseUrl.replace('//', '//').split('/')[0]}//${supabaseUrl.split('/')[2]}/proprietaire/paiements/felicitations`;
-    const refreshUrl = Deno.env.get('STRIPE_CONNECT_REFRESH_URL') || `${supabaseUrl.replace('//', '//').split('/')[0]}//${supabaseUrl.split('/')[2]}/proprietaire/paiements/reprendre`;
 
     if (!stripeSecretKey) {
       throw new Error('STRIPE_SECRET_KEY non configurée');
@@ -36,7 +34,11 @@ Deno.serve(async (req: Request) => {
       throw new Error('Non authentifié');
     }
 
-    const { accountId } = await req.json();
+    const { accountId, origin } = await req.json();
+
+    if (!origin) {
+      throw new Error('Origin manquant');
+    }
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -64,8 +66,8 @@ Deno.serve(async (req: Request) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
-      refresh_url: refreshUrl,
-      return_url: returnUrl,
+      refresh_url: `${origin}/proprietaire/paiements/reprendre`,
+      return_url: `${origin}/proprietaire/paiements/felicitations`,
       type: 'account_onboarding',
     });
 
