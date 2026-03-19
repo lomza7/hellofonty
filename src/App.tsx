@@ -5,50 +5,67 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import LazyErrorBoundary from './components/LazyErrorBoundary';
 
-const Home = lazy(() => import('./pages/Home'));
-const Auth = lazy(() => import('./pages/Auth'));
-const Search = lazy(() => import('./pages/Search'));
-const ListingDetail = lazy(() => import('./pages/ListingDetail'));
-const Favorites = lazy(() => import('./pages/Favorites'));
-const Messages = lazy(() => import('./pages/Messages'));
-const MyListings = lazy(() => import('./pages/MyListings'));
-const AddEditListing = lazy(() => import('./pages/AddEditListing'));
-const Profile = lazy(() => import('./pages/Profile'));
-const Pricing = lazy(() => import('./pages/Pricing'));
-const Features = lazy(() => import('./pages/Features'));
-const MyBookingRequests = lazy(() => import('./pages/MyBookingRequests'));
-const MyBookingRequestsStudent = lazy(() => import('./pages/MyBookingRequestsStudent'));
-const MyDocuments = lazy(() => import('./pages/MyDocuments'));
-const MyDocumentsLandlord = lazy(() => import('./pages/MyDocumentsLandlord'));
-const Admin = lazy(() => import('./pages/Admin'));
-const SupportAdmin = lazy(() => import('./pages/SupportAdmin'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const MySubscription = lazy(() => import('./pages/MySubscription'));
-const AccessGuide = lazy(() => import('./pages/AccessGuide'));
-const PropertyInventory = lazy(() => import('./pages/PropertyInventory'));
-const CreateInventory = lazy(() => import('./pages/CreateInventory'));
-const EditInventory = lazy(() => import('./pages/EditInventory'));
-const ReviewInventory = lazy(() => import('./pages/ReviewInventory'));
-const ViewInventory = lazy(() => import('./pages/ViewInventory'));
-const AccessGuidePreview = lazy(() => import('./pages/AccessGuidePreview'));
-const Leases = lazy(() => import('./pages/Leases'));
-const BlogList = lazy(() => import('./pages/BlogList'));
-const BlogPost = lazy(() => import('./pages/BlogPost'));
-const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
-const Payouts = lazy(() => import('./pages/Payouts'));
-const PayoutsCongratulations = lazy(() => import('./pages/PayoutsCongratulations'));
-const PayoutsRefresh = lazy(() => import('./pages/PayoutsRefresh'));
-const Payment = lazy(() => import('./pages/Payment'));
-const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
-const MyMonthlyRents = lazy(() => import('./pages/MyMonthlyRents'));
-const LandlordRentPayments = lazy(() => import('./pages/LandlordRentPayments'));
-const DashboardStudent = lazy(() => import('./pages/DashboardStudent'));
-const DashboardLandlord = lazy(() => import('./pages/DashboardLandlord'));
-const LegalNotice = lazy(() => import('./pages/LegalNotice'));
-const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
-const TermsOfSale = lazy(() => import('./pages/TermsOfSale'));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
+  importFn: () => Promise<T>,
+  retries = 2
+): React.LazyExoticComponent<T['default']> {
+  return lazy(() => {
+    const attempt = (remaining: number): Promise<T> =>
+      importFn().catch((err) => {
+        if (remaining <= 0) throw err;
+        return new Promise<T>((resolve) =>
+          setTimeout(() => resolve(attempt(remaining - 1)), 1000)
+        );
+      });
+    return attempt(retries);
+  });
+}
+
+const Home = lazyRetry(() => import('./pages/Home'));
+const Auth = lazyRetry(() => import('./pages/Auth'));
+const Search = lazyRetry(() => import('./pages/Search'));
+const ListingDetail = lazyRetry(() => import('./pages/ListingDetail'));
+const Favorites = lazyRetry(() => import('./pages/Favorites'));
+const Messages = lazyRetry(() => import('./pages/Messages'));
+const MyListings = lazyRetry(() => import('./pages/MyListings'));
+const AddEditListing = lazyRetry(() => import('./pages/AddEditListing'));
+const Profile = lazyRetry(() => import('./pages/Profile'));
+const Pricing = lazyRetry(() => import('./pages/Pricing'));
+const Features = lazyRetry(() => import('./pages/Features'));
+const MyBookingRequests = lazyRetry(() => import('./pages/MyBookingRequests'));
+const MyBookingRequestsStudent = lazyRetry(() => import('./pages/MyBookingRequestsStudent'));
+const MyDocuments = lazyRetry(() => import('./pages/MyDocuments'));
+const MyDocumentsLandlord = lazyRetry(() => import('./pages/MyDocumentsLandlord'));
+const Admin = lazyRetry(() => import('./pages/Admin'));
+const SupportAdmin = lazyRetry(() => import('./pages/SupportAdmin'));
+const ResetPassword = lazyRetry(() => import('./pages/ResetPassword'));
+const MySubscription = lazyRetry(() => import('./pages/MySubscription'));
+const AccessGuide = lazyRetry(() => import('./pages/AccessGuide'));
+const PropertyInventory = lazyRetry(() => import('./pages/PropertyInventory'));
+const CreateInventory = lazyRetry(() => import('./pages/CreateInventory'));
+const EditInventory = lazyRetry(() => import('./pages/EditInventory'));
+const ReviewInventory = lazyRetry(() => import('./pages/ReviewInventory'));
+const ViewInventory = lazyRetry(() => import('./pages/ViewInventory'));
+const AccessGuidePreview = lazyRetry(() => import('./pages/AccessGuidePreview'));
+const Leases = lazyRetry(() => import('./pages/Leases'));
+const BlogList = lazyRetry(() => import('./pages/BlogList'));
+const BlogPost = lazyRetry(() => import('./pages/BlogPost'));
+const BlogAdmin = lazyRetry(() => import('./pages/BlogAdmin'));
+const Payouts = lazyRetry(() => import('./pages/Payouts'));
+const PayoutsCongratulations = lazyRetry(() => import('./pages/PayoutsCongratulations'));
+const PayoutsRefresh = lazyRetry(() => import('./pages/PayoutsRefresh'));
+const Payment = lazyRetry(() => import('./pages/Payment'));
+const PaymentSuccess = lazyRetry(() => import('./pages/PaymentSuccess'));
+const MyMonthlyRents = lazyRetry(() => import('./pages/MyMonthlyRents'));
+const LandlordRentPayments = lazyRetry(() => import('./pages/LandlordRentPayments'));
+const DashboardStudent = lazyRetry(() => import('./pages/DashboardStudent'));
+const DashboardLandlord = lazyRetry(() => import('./pages/DashboardLandlord'));
+const LegalNotice = lazyRetry(() => import('./pages/LegalNotice'));
+const TermsOfUse = lazyRetry(() => import('./pages/TermsOfUse'));
+const TermsOfSale = lazyRetry(() => import('./pages/TermsOfSale'));
+const PrivacyPolicy = lazyRetry(() => import('./pages/PrivacyPolicy'));
 
 function LoadingScreen() {
   return (
@@ -102,6 +119,7 @@ function AppContent() {
       <ScrollToTop />
 
       <main className="flex-grow">
+        <LazyErrorBoundary>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -370,6 +388,7 @@ function AppContent() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </LazyErrorBoundary>
       </main>
 
       {/* Large HELLOFONTY branding section */}
