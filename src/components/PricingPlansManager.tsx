@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2 } from 'lucide-react';
+import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2, Euro, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface PricingPlan {
   id: string;
@@ -59,8 +59,15 @@ export default function PricingPlansManager() {
     is_active: true,
   });
 
+  const [platformFeeAmount, setPlatformFeeAmount] = useState('');
+  const [feeLoading, setFeeLoading] = useState(true);
+  const [feeSaving, setFeeSaving] = useState(false);
+  const [feeError, setFeeError] = useState('');
+  const [feeSuccess, setFeeSuccess] = useState('');
+
   useEffect(() => {
     loadPlans();
+    loadPlatformFee();
   }, []);
 
   async function loadPlans() {
@@ -77,6 +84,52 @@ export default function PricingPlansManager() {
       console.error('Error loading plans:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadPlatformFee() {
+    try {
+      setFeeLoading(true);
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('*')
+        .in('setting_key', ['platform_fee_amount']);
+
+      if (error) throw error;
+      const feeAmount = data?.find(s => s.setting_key === 'platform_fee_amount');
+      setPlatformFeeAmount(feeAmount?.setting_value || '390');
+    } catch (err: any) {
+      console.error('Erreur lors du chargement des frais:', err);
+      setFeeError(err.message);
+    } finally {
+      setFeeLoading(false);
+    }
+  }
+
+  async function savePlatformFee() {
+    try {
+      setFeeSaving(true);
+      setFeeError('');
+      setFeeSuccess('');
+
+      const feeAmountValue = parseFloat(platformFeeAmount);
+      if (isNaN(feeAmountValue) || feeAmountValue < 0) {
+        throw new Error('Les frais de plateforme doivent être un nombre positif');
+      }
+
+      const { error } = await supabase
+        .from('platform_settings')
+        .update({ setting_value: platformFeeAmount })
+        .eq('setting_key', 'platform_fee_amount');
+
+      if (error) throw error;
+      setFeeSuccess('Frais de plateforme sauvegardés');
+      setTimeout(() => setFeeSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erreur lors de la sauvegarde:', err);
+      setFeeError(err.message);
+    } finally {
+      setFeeSaving(false);
     }
   }
 
@@ -361,6 +414,105 @@ export default function PricingPlansManager() {
           <Plus className="w-5 h-5" />
           Nouveau Plan
         </button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-5 border-b border-gray-200">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Euro className="w-5 h-5 text-rose-600" />
+            Frais de plateforme
+          </h3>
+          <p className="text-gray-500 text-sm mt-1">Montant fixe prélevé par la plateforme lors de chaque réservation</p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {feeError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{feeError}</p>
+            </div>
+          )}
+
+          {feeSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{feeSuccess}</p>
+            </div>
+          )}
+
+          {feeLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-600"></div>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row gap-5">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Montant fixe par réservation
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={platformFeeAmount}
+                    onChange={(e) => setPlatformFeeAmount(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent text-lg font-semibold"
+                    placeholder="390"
+                  />
+                  <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                    EUR
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-sm text-gray-600 font-medium mb-3">Apercu de la repartition (ex: 850 EUR)</p>
+                {(() => {
+                  const total = 850;
+                  const platformFee = parseFloat(platformFeeAmount || '390');
+                  const landlordAmount = total - platformFee;
+                  return (
+                    <div className="text-sm text-gray-700 space-y-1.5">
+                      <div className="flex justify-between">
+                        <span>Montant total</span>
+                        <span className="font-semibold">{total.toFixed(2)} EUR</span>
+                      </div>
+                      <div className="flex justify-between text-rose-700">
+                        <span>Frais plateforme</span>
+                        <span className="font-bold">{platformFee.toFixed(2)} EUR</span>
+                      </div>
+                      <div className="flex justify-between text-green-700 pt-1.5 border-t border-gray-200">
+                        <span>Proprietaire</span>
+                        <span className="font-bold">{landlordAmount.toFixed(2)} EUR</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={savePlatformFee}
+              disabled={feeSaving || feeLoading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {feeSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Sauvegarder
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {isCreating && (
