@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, CreditCard, FileText, TrendingUp, Calendar, AlertCircle, CheckCircle2, RefreshCw, X } from 'lucide-react';
 import { useStripeCheckout } from '../hooks/useStripeCheckout';
 import BackButton from '../components/BackButton';
 
@@ -14,6 +14,7 @@ type Subscription = {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 };
 
 type Invoice = {
@@ -56,6 +57,10 @@ export default function MySubscription() {
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCanceled, setShowCanceled] = useState(false);
+  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
+  const [cancelEndDate, setCancelEndDate] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -230,23 +235,10 @@ export default function MySubscription() {
   };
 
   const handleCancelSubscription = async () => {
-    console.log('handleCancelSubscription called', { subscription });
+    setCancelError('');
 
-    if (!subscription) {
-      console.error('No subscription found');
-      alert(
-        language === 'fr'
-          ? 'Impossible de charger les informations d\'abonnement. Veuillez rafraîchir la page.'
-          : 'Unable to load subscription information. Please refresh the page.'
-      );
-      return;
-    }
-
-    console.log('Subscription exists, checking stripe_subscription_id:', subscription.stripe_subscription_id);
-
-    if (!subscription.stripe_subscription_id) {
-      console.error('No stripe_subscription_id found');
-      alert(
+    if (!subscription || !subscription.stripe_subscription_id) {
+      setCancelError(
         language === 'fr'
           ? 'Aucun abonnement actif trouvé. Veuillez contacter le support si vous pensez qu\'il s\'agit d\'une erreur.'
           : 'No active subscription found. Please contact support if you believe this is an error.'
@@ -254,22 +246,12 @@ export default function MySubscription() {
       return;
     }
 
-    console.log('About to show confirmation dialog');
+    setShowCancelConfirm(true);
+  };
 
-    const confirmMessage = language === 'fr'
-      ? 'Êtes-vous sûr de vouloir annuler votre abonnement Premium ? Vous conserverez vos avantages jusqu\'à la fin de la période en cours.'
-      : 'Are you sure you want to cancel your Premium subscription? You will keep your benefits until the end of the current period.';
-
-    console.log('Confirmation message:', confirmMessage);
-
-    const confirmed = window.confirm(confirmMessage);
-
-    console.log('User confirmed:', confirmed);
-
-    if (!confirmed) {
-      console.log('User cancelled the action');
-      return;
-    }
+  const confirmCancelSubscription = async () => {
+    setShowCancelConfirm(false);
+    setCancelError('');
 
     try {
       setCancelingSubscription(true);
@@ -277,7 +259,7 @@ export default function MySubscription() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        alert(
+        setCancelError(
           language === 'fr'
             ? 'Erreur d\'authentification. Veuillez vous reconnecter.'
             : 'Authentication error. Please sign in again.'
@@ -306,16 +288,13 @@ export default function MySubscription() {
         ? formatDate(result.current_period_end)
         : '';
 
-      alert(
-        language === 'fr'
-          ? `Votre abonnement a été annulé avec succès. Vous conserverez vos avantages Premium jusqu'au ${endDate}.`
-          : `Your subscription has been successfully canceled. You will keep your Premium benefits until ${endDate}.`
-      );
+      setCancelEndDate(endDate);
+      setShowCancelSuccess(true);
+      setTimeout(() => setShowCancelSuccess(false), 8000);
 
       await loadSubscriptionData();
     } catch (error: any) {
-      console.error('Error canceling subscription:', error);
-      alert(
+      setCancelError(
         language === 'fr'
           ? error.message || 'Une erreur est survenue. Veuillez réessayer.'
           : error.message || 'An error occurred. Please try again.'
@@ -450,6 +429,75 @@ export default function MySubscription() {
           </div>
         )}
 
+        {showCancelSuccess && (
+          <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start space-x-3">
+            <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-green-900 mb-1">
+                {language === 'fr' ? 'Abonnement résilié' : 'Subscription canceled'}
+              </h3>
+              <p className="text-sm text-green-700">
+                {language === 'fr'
+                  ? `Votre abonnement a été résilié avec succès. Vous conserverez vos avantages Premium jusqu'au ${cancelEndDate}.`
+                  : `Your subscription has been successfully canceled. You will keep your Premium benefits until ${cancelEndDate}.`}
+              </p>
+            </div>
+            <button onClick={() => setShowCancelSuccess(false)} className="text-green-400 hover:text-green-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {cancelError && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900 mb-1">
+                {language === 'fr' ? 'Erreur de résiliation' : 'Cancellation error'}
+              </h3>
+              <p className="text-sm text-red-700">{cancelError}</p>
+            </div>
+            <button onClick={() => setCancelError('')} className="text-red-400 hover:text-red-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {showCancelConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setShowCancelConfirm(false)} />
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {language === 'fr' ? 'Résilier votre abonnement ?' : 'Cancel your subscription?'}
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                {language === 'fr'
+                  ? 'Vous conserverez vos avantages Premium jusqu\'à la fin de votre période de facturation en cours. Après cela, votre compte passera au forfait Gratuit.'
+                  : 'You will keep your Premium benefits until the end of your current billing period. After that, your account will switch to the Free plan.'}
+              </p>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  {language === 'fr' ? 'Garder mon abonnement' : 'Keep my subscription'}
+                </button>
+                <button
+                  onClick={() => confirmCancelSubscription()}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                >
+                  {language === 'fr' ? 'Confirmer la résiliation' : 'Confirm cancellation'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -555,22 +603,21 @@ export default function MySubscription() {
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Cancel button clicked', {
-                          cancelingSubscription,
-                          subscription,
-                          hasHandler: typeof handleCancelSubscription === 'function'
-                        });
-                        handleCancelSubscription();
-                      }}
+                      onClick={() => handleCancelSubscription()}
                       disabled={cancelingSubscription}
                       className="px-4 py-2 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {cancelingSubscription
-                        ? (language === 'fr' ? 'Annulation en cours...' : 'Canceling...')
-                        : (language === 'fr' ? 'Annuler mon abonnement' : 'Cancel my subscription')}
+                      {cancelingSubscription ? (
+                        <span className="flex items-center space-x-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>{language === 'fr' ? 'Résiliation en cours...' : 'Canceling...'}</span>
+                        </span>
+                      ) : (
+                        language === 'fr' ? 'Résilier mon abonnement' : 'Cancel my subscription'
+                      )}
                     </button>
                   </div>
                 )}
