@@ -1760,7 +1760,7 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Frais de Plateforme</p>
+                      <p className="text-sm font-medium text-gray-600">Frais de Réservation Étudiants</p>
                       <p className="text-xs text-gray-500 mt-1">{financeStats.confirmedBookings} réservations × {financeStats.bookingFeePrice}€</p>
                     </div>
                     <p className="text-xl font-bold text-emerald-600">{financeStats.bookingRevenue.toFixed(2)}€</p>

@@ -138,8 +138,8 @@ Deno.serve(async (req: Request) => {
       price_data: {
         currency: 'eur',
         product_data: {
-          name: 'Frais de plateforme Hellofonty',
-          description: 'Frais de mise en relation (paiement unique)',
+          name: 'Frais de réservation Hellofonty',
+          description: 'Frais de réservation étudiant (paiement unique)',
         },
         unit_amount: platformFee,
       },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2, Euro, AlertCircle, CheckCircle } from 'lucide-react';
+import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2, Euro, AlertCircle, CheckCircle, GraduationCap } from 'lucide-react';
 
 interface PricingPlan {
   id: string;
@@ -38,6 +38,14 @@ interface StripePrice {
   interval: string | null;
 }
 
+interface StudentFeeConfig {
+  amount: string;
+  stripe_price_id: string;
+  stripe_product_id: string;
+  features_fr: string[];
+  features_en: string[];
+}
+
 export default function PricingPlansManager() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,15 +67,25 @@ export default function PricingPlansManager() {
     is_active: true,
   });
 
-  const [platformFeeAmount, setPlatformFeeAmount] = useState('');
-  const [feeLoading, setFeeLoading] = useState(true);
-  const [feeSaving, setFeeSaving] = useState(false);
-  const [feeError, setFeeError] = useState('');
-  const [feeSuccess, setFeeSuccess] = useState('');
+  const [studentFee, setStudentFee] = useState<StudentFeeConfig>({
+    amount: '390',
+    stripe_price_id: '',
+    stripe_product_id: '',
+    features_fr: [],
+    features_en: [],
+  });
+  const [studentFeeLoading, setStudentFeeLoading] = useState(true);
+  const [studentFeeSaving, setStudentFeeSaving] = useState(false);
+  const [studentFeeError, setStudentFeeError] = useState('');
+  const [studentFeeSuccess, setStudentFeeSuccess] = useState('');
+  const [studentFeeSyncing, setStudentFeeSyncing] = useState(false);
+  const [studentFeeSyncMessage, setStudentFeeSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [studentFeeAvailablePrices, setStudentFeeAvailablePrices] = useState<StripePrice[]>([]);
+  const [editingStudentFeatures, setEditingStudentFeatures] = useState('');
 
   useEffect(() => {
     loadPlans();
-    loadPlatformFee();
+    loadStudentFee();
   }, []);
 
   async function loadPlans() {
@@ -87,50 +105,194 @@ export default function PricingPlansManager() {
     }
   }
 
-  async function loadPlatformFee() {
+  async function loadStudentFee() {
     try {
-      setFeeLoading(true);
+      setStudentFeeLoading(true);
       const { data, error } = await supabase
         .from('platform_settings')
-        .select('*')
-        .in('setting_key', ['platform_fee_amount']);
+        .select('setting_key, setting_value')
+        .in('setting_key', [
+          'platform_fee_amount',
+          'student_fee_stripe_price_id',
+          'student_fee_stripe_product_id',
+          'student_fee_features_fr',
+          'student_fee_features_en',
+        ]);
 
       if (error) throw error;
-      const feeAmount = data?.find(s => s.setting_key === 'platform_fee_amount');
-      setPlatformFeeAmount(feeAmount?.setting_value || '390');
+
+      const getValue = (key: string) => data?.find(s => s.setting_key === key)?.setting_value || '';
+
+      const featuresFr = getValue('student_fee_features_fr');
+      const featuresEn = getValue('student_fee_features_en');
+
+      let parsedFr: string[] = [];
+      let parsedEn: string[] = [];
+      try { parsedFr = featuresFr ? JSON.parse(featuresFr) : []; } catch { parsedFr = []; }
+      try { parsedEn = featuresEn ? JSON.parse(featuresEn) : []; } catch { parsedEn = []; }
+
+      const config: StudentFeeConfig = {
+        amount: getValue('platform_fee_amount') || '390',
+        stripe_price_id: getValue('student_fee_stripe_price_id'),
+        stripe_product_id: getValue('student_fee_stripe_product_id'),
+        features_fr: parsedFr,
+        features_en: parsedEn,
+      };
+
+      setStudentFee(config);
+      setEditingStudentFeatures(parsedFr.join('\n'));
     } catch (err: any) {
-      console.error('Erreur lors du chargement des frais:', err);
-      setFeeError(err.message);
+      console.error('Erreur chargement frais etudiants:', err);
+      setStudentFeeError(err.message);
     } finally {
-      setFeeLoading(false);
+      setStudentFeeLoading(false);
     }
   }
 
-  async function savePlatformFee() {
+  async function saveStudentFee() {
     try {
-      setFeeSaving(true);
-      setFeeError('');
-      setFeeSuccess('');
+      setStudentFeeSaving(true);
+      setStudentFeeError('');
+      setStudentFeeSuccess('');
 
-      const feeAmountValue = parseFloat(platformFeeAmount);
-      if (isNaN(feeAmountValue) || feeAmountValue < 0) {
-        throw new Error('Les frais de plateforme doivent être un nombre positif');
+      const feeAmount = parseFloat(studentFee.amount);
+      if (isNaN(feeAmount) || feeAmount < 0) {
+        throw new Error('Le montant des frais doit etre un nombre positif');
       }
 
-      const { error } = await supabase
-        .from('platform_settings')
-        .update({ setting_value: platformFeeAmount })
-        .eq('setting_key', 'platform_fee_amount');
+      const featuresFr = editingStudentFeatures
+        .split('\n')
+        .map(f => f.trim())
+        .filter(f => f.length > 0);
 
-      if (error) throw error;
-      setFeeSuccess('Frais de plateforme sauvegardés');
-      setTimeout(() => setFeeSuccess(''), 3000);
+      let featuresEn: string[] = featuresFr;
+      try {
+        const translated = await translateToEnglish(featuresFr);
+        if (Array.isArray(translated)) featuresEn = translated;
+      } catch { /* keep FR as fallback */ }
+
+      const updates = [
+        { key: 'platform_fee_amount', value: studentFee.amount },
+        { key: 'student_fee_stripe_price_id', value: studentFee.stripe_price_id },
+        { key: 'student_fee_stripe_product_id', value: studentFee.stripe_product_id },
+        { key: 'student_fee_features_fr', value: JSON.stringify(featuresFr) },
+        { key: 'student_fee_features_en', value: JSON.stringify(featuresEn) },
+      ];
+
+      for (const { key, value } of updates) {
+        const { error } = await supabase
+          .from('platform_settings')
+          .update({ setting_value: value })
+          .eq('setting_key', key);
+        if (error) throw error;
+      }
+
+      setStudentFee(prev => ({
+        ...prev,
+        features_fr: featuresFr,
+        features_en: featuresEn,
+      }));
+
+      setStudentFeeSuccess('Frais de reservation etudiants sauvegardes');
+      setTimeout(() => setStudentFeeSuccess(''), 3000);
     } catch (err: any) {
-      console.error('Erreur lors de la sauvegarde:', err);
-      setFeeError(err.message);
+      console.error('Erreur sauvegarde:', err);
+      setStudentFeeError(err.message);
     } finally {
-      setFeeSaving(false);
+      setStudentFeeSaving(false);
     }
+  }
+
+  async function fetchStudentFeeStripeInfo() {
+    if (studentFeeSyncing) return;
+
+    const { stripe_price_id, stripe_product_id } = studentFee;
+    if (!stripe_price_id && !stripe_product_id) {
+      setStudentFeeSyncMessage({ type: 'error', text: 'Entrez un ID Produit ou ID Prix Stripe pour synchroniser.' });
+      return;
+    }
+
+    try {
+      setStudentFeeSyncing(true);
+      setStudentFeeSyncMessage(null);
+      setStudentFeeAvailablePrices([]);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setStudentFeeSyncMessage({ type: 'error', text: 'Session expiree. Reconnectez-vous.' });
+        return;
+      }
+
+      const body: Record<string, string> = {};
+      if (stripe_price_id) {
+        body.price_id = stripe_price_id;
+      } else if (stripe_product_id) {
+        body.product_id = stripe_product_id;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-get-price`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur Stripe');
+      }
+
+      const data = await response.json();
+
+      if (stripe_price_id) {
+        setStudentFee(prev => ({
+          ...prev,
+          amount: data.amount.toString(),
+          stripe_product_id: data.product_id || prev.stripe_product_id,
+        }));
+
+        setStudentFeeSyncMessage({
+          type: 'success',
+          text: `Synchronise : ${data.product_name} - ${data.amount} EUR`,
+        });
+      } else {
+        if (data.prices && data.prices.length > 0) {
+          setStudentFeeAvailablePrices(data.prices);
+
+          const firstPrice = data.prices[0];
+          setStudentFee(prev => ({
+            ...prev,
+            amount: firstPrice.amount.toString(),
+            stripe_price_id: firstPrice.price_id,
+          }));
+
+          setStudentFeeSyncMessage({
+            type: 'success',
+            text: `${data.product_name} - ${data.prices.length} prix disponible(s). Selectionnez ci-dessous.`,
+          });
+        } else {
+          setStudentFeeSyncMessage({ type: 'error', text: 'Aucun prix actif pour ce produit Stripe.' });
+        }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
+      setStudentFeeSyncMessage({ type: 'error', text: `Erreur : ${msg}` });
+    } finally {
+      setStudentFeeSyncing(false);
+    }
+  }
+
+  function selectStudentFeeStripePrice(price: StripePrice) {
+    setStudentFee(prev => ({
+      ...prev,
+      amount: price.amount.toString(),
+      stripe_price_id: price.price_id,
+    }));
   }
 
   function startEdit(plan: PricingPlan) {
@@ -201,7 +363,7 @@ export default function PricingPlansManager() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setSyncMessage({ type: 'error', text: 'Session expirée. Reconnectez-vous.' });
+        setSyncMessage({ type: 'error', text: 'Session expiree. Reconnectez-vous.' });
         return;
       }
 
@@ -373,7 +535,7 @@ export default function PricingPlansManager() {
   }
 
   async function deletePlan(id: string) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce plan ?')) return;
+    if (!confirm('Etes-vous sur de vouloir supprimer ce plan ?')) return;
 
     try {
       const { error } = await supabase
@@ -390,7 +552,6 @@ export default function PricingPlansManager() {
   }
 
   const landlordPlans = plans.filter(p => p.type === 'landlord');
-  const studentPlans = plans.filter(p => p.type === 'student');
 
   if (loading) {
     return (
@@ -416,135 +577,239 @@ export default function PricingPlansManager() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-5 border-b border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Euro className="w-5 h-5 text-rose-600" />
-            Frais de plateforme
-          </h3>
-          <p className="text-gray-500 text-sm mt-1">Montant fixe prélevé par la plateforme lors de chaque réservation</p>
-        </div>
-
-        <div className="p-5 space-y-4">
-          {feeError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700 text-sm">{feeError}</p>
-            </div>
-          )}
-
-          {feeSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-              <p className="text-green-700 text-sm">{feeSuccess}</p>
-            </div>
-          )}
-
-          {feeLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-600"></div>
-            </div>
-          ) : (
-            <div className="flex flex-col md:flex-row gap-5">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant fixe par réservation
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={platformFeeAmount}
-                    onChange={(e) => setPlatformFeeAmount(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent text-lg font-semibold"
-                    placeholder="390"
-                  />
-                  <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                    EUR
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-sm text-gray-600 font-medium mb-3">Apercu de la repartition (ex: 850 EUR)</p>
-                {(() => {
-                  const total = 850;
-                  const platformFee = parseFloat(platformFeeAmount || '390');
-                  const landlordAmount = total - platformFee;
-                  return (
-                    <div className="text-sm text-gray-700 space-y-1.5">
-                      <div className="flex justify-between">
-                        <span>Montant total</span>
-                        <span className="font-semibold">{total.toFixed(2)} EUR</span>
-                      </div>
-                      <div className="flex justify-between text-rose-700">
-                        <span>Frais plateforme</span>
-                        <span className="font-bold">{platformFee.toFixed(2)} EUR</span>
-                      </div>
-                      <div className="flex justify-between text-green-700 pt-1.5 border-t border-gray-200">
-                        <span>Proprietaire</span>
-                        <span className="font-bold">{landlordAmount.toFixed(2)} EUR</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={savePlatformFee}
-              disabled={feeSaving || feeLoading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {feeSaving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Sauvegarde...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Sauvegarder
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+      {renderStudentFeeSection()}
 
       {isCreating && (
         <div className="bg-blue-50 border-2 border-blue-500 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Créer un nouveau plan</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Creer un nouveau plan</h3>
           {renderEditForm()}
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-rose-600" />
-            Plans Propriétaires
-          </h3>
-          <div className="space-y-4">
-            {landlordPlans.map(plan => renderPlan(plan))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-rose-600" />
-            Plans Étudiants
-          </h3>
-          <div className="space-y-4">
-            {studentPlans.map(plan => renderPlan(plan))}
-          </div>
+      <div>
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-rose-600" />
+          Plans Proprietaires
+        </h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {landlordPlans.map(plan => renderPlan(plan))}
         </div>
       </div>
     </div>
   );
+
+  function renderStudentFeeSection() {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-5 border-b border-gray-200">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-rose-600" />
+            Frais de reservation etudiants
+          </h3>
+          <p className="text-gray-500 text-sm mt-1">
+            Montant unique facture aux etudiants lors de chaque reservation. Ce montant est utilise dans les paiements Stripe, la page tarifs et les analytics.
+          </p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {studentFeeError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{studentFeeError}</p>
+            </div>
+          )}
+
+          {studentFeeSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{studentFeeSuccess}</p>
+            </div>
+          )}
+
+          {studentFeeLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-600"></div>
+            </div>
+          ) : (
+            <>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-sm font-semibold text-gray-800">Configuration Stripe</h5>
+                  <button
+                    type="button"
+                    onClick={fetchStudentFeeStripeInfo}
+                    disabled={studentFeeSyncing}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {studentFeeSyncing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    {studentFeeSyncing ? 'Synchronisation...' : 'Synchroniser depuis Stripe'}
+                  </button>
+                </div>
+
+                {studentFeeSyncMessage && (
+                  <div className={`text-sm px-3 py-2 rounded-lg ${
+                    studentFeeSyncMessage.type === 'success'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {studentFeeSyncMessage.text}
+                  </div>
+                )}
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ID Produit Stripe
+                    </label>
+                    <input
+                      type="text"
+                      value={studentFee.stripe_product_id}
+                      onChange={e => setStudentFee(prev => ({ ...prev, stripe_product_id: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                      placeholder="prod_xxxxx"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ID Prix Stripe
+                    </label>
+                    <input
+                      type="text"
+                      value={studentFee.stripe_price_id}
+                      onChange={e => setStudentFee(prev => ({ ...prev, stripe_price_id: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                      placeholder="price_xxxxx"
+                    />
+                  </div>
+                </div>
+
+                {studentFeeAvailablePrices.length > 1 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Prix disponibles pour ce produit :
+                    </label>
+                    <div className="space-y-2">
+                      {studentFeeAvailablePrices.map((p) => (
+                        <button
+                          key={p.price_id}
+                          type="button"
+                          onClick={() => selectStudentFeeStripePrice(p)}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                            studentFee.stripe_price_id === p.price_id
+                              ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                              : 'border-gray-200 bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold text-gray-900">{p.amount}EUR</span>
+                              <span className="text-gray-500 text-sm ml-1">
+                                {p.interval === 'month' ? '/mois' : p.interval === 'year' ? '/an' : 'unique'}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400 font-mono">{p.price_id}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-5">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Montant des frais de reservation
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={studentFee.amount}
+                      onChange={(e) => setStudentFee(prev => ({ ...prev, amount: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent text-lg font-semibold bg-gray-50"
+                      readOnly={!!studentFee.stripe_price_id}
+                    />
+                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                      EUR
+                    </span>
+                  </div>
+                  {studentFee.stripe_price_id && (
+                    <p className="text-xs text-gray-400 mt-1">Rempli automatiquement depuis Stripe</p>
+                  )}
+                </div>
+
+                <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <p className="text-sm text-gray-600 font-medium mb-3">Apercu de la repartition (ex: 850 EUR)</p>
+                  {(() => {
+                    const total = 850;
+                    const fee = parseFloat(studentFee.amount || '390');
+                    const landlordAmount = total - fee;
+                    return (
+                      <div className="text-sm text-gray-700 space-y-1.5">
+                        <div className="flex justify-between">
+                          <span>Montant total</span>
+                          <span className="font-semibold">{total.toFixed(2)} EUR</span>
+                        </div>
+                        <div className="flex justify-between text-rose-700">
+                          <span>Frais reservation</span>
+                          <span className="font-bold">{fee.toFixed(2)} EUR</span>
+                        </div>
+                        <div className="flex justify-between text-green-700 pt-1.5 border-t border-gray-200">
+                          <span>Proprietaire</span>
+                          <span className="font-bold">{landlordAmount.toFixed(2)} EUR</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Avantages affiches sur la page tarifs (une par ligne)
+                </label>
+                <textarea
+                  value={editingStudentFeatures}
+                  onChange={e => setEditingStudentFeatures(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  placeholder={"Frais de mise en relation\nAssurance reservation\nSupport 24/7\nPaiement securise"}
+                />
+                <p className="text-xs text-gray-400 mt-1">Traduit automatiquement en anglais lors de la sauvegarde</p>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={saveStudentFee}
+                  disabled={studentFeeSaving || studentFeeLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {studentFeeSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Traduction et sauvegarde...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Sauvegarder
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   function renderPlan(plan: PricingPlan) {
     const isEditing = editingId === plan.id;
@@ -569,7 +834,7 @@ export default function PricingPlansManager() {
           <div>
             <h4 className="text-lg font-bold text-gray-900">{plan.name}</h4>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-3xl font-bold text-rose-600">{plan.price}€</span>
+              <span className="text-3xl font-bold text-rose-600">{plan.price}EUR</span>
               <span className="text-gray-500 text-sm">
                 {plan.billing_period === 'monthly' && '/mois'}
                 {plan.billing_period === 'yearly' && '/an'}
@@ -652,34 +917,7 @@ export default function PricingPlansManager() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type d'utilisateur
-            </label>
-            <select
-              value={editingData.type}
-              onChange={e => setEditingData({ ...editingData, type: e.target.value as 'landlord' | 'student' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-            >
-              <option value="landlord">Propriétaire</option>
-              <option value="student">Étudiant</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Catégorie
-            </label>
-            <select
-              value={editingData.plan_category}
-              onChange={e => setEditingData({ ...editingData, plan_category: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-            >
-              <option value="subscription">Abonnement</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prix (€)
+              Prix (EUR)
             </label>
             <input
               type="number"
@@ -694,7 +932,7 @@ export default function PricingPlansManager() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Période de facturation
+              Periode de facturation
             </label>
             <select
               value={editingData.billing_period}
@@ -800,7 +1038,7 @@ export default function PricingPlansManager() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-semibold text-gray-900">{p.amount}€</span>
+                        <span className="font-semibold text-gray-900">{p.amount}EUR</span>
                         <span className="text-gray-500 text-sm ml-1">
                           {p.interval === 'month' ? '/mois' : p.interval === 'year' ? '/an' : 'unique'}
                         </span>
@@ -816,14 +1054,14 @@ export default function PricingPlansManager() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Fonctionnalités (une par ligne)
+            Fonctionnalites (une par ligne)
           </label>
           <textarea
             value={editingData.features}
             onChange={e => setEditingData({ ...editingData, features: e.target.value })}
             rows={5}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-            placeholder="Annonces illimitées&#10;Calendrier de disponibilité&#10;Support prioritaire"
+            placeholder={"Annonces illimitees\nCalendrier de disponibilite\nSupport prioritaire"}
           />
         </div>
 

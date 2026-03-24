@@ -44,6 +44,10 @@ export default function Pricing() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [comparisonFeatures, setComparisonFeatures] = useState<ComparisonFeature[]>([]);
   const [platformFeeAmount, setPlatformFeeAmount] = useState(390);
+  const [studentFeatures, setStudentFeatures] = useState<{ fr: string[]; en: string[] }>({
+    fr: ['Frais de mise en relation', 'Assurance réservation', 'Support 24/7', 'Paiement sécurisé'],
+    en: ['Connection fee', 'Booking insurance', '24/7 Support', 'Secure payment'],
+  });
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
@@ -59,7 +63,7 @@ export default function Pricing() {
 
   async function loadData() {
     try {
-      const [plansResult, featuresResult, feeResult] = await Promise.all([
+      const [plansResult, featuresResult, settingsResult] = await Promise.all([
         supabase
           .from('pricing_plans')
           .select('*')
@@ -73,9 +77,8 @@ export default function Pricing() {
           .order('order_index', { ascending: true }),
         supabase
           .from('platform_settings')
-          .select('setting_value')
-          .eq('setting_key', 'platform_fee_amount')
-          .maybeSingle()
+          .select('setting_key, setting_value')
+          .in('setting_key', ['platform_fee_amount', 'student_fee_features_fr', 'student_fee_features_en'])
       ]);
 
       if (plansResult.error) throw plansResult.error;
@@ -83,8 +86,22 @@ export default function Pricing() {
 
       setPlans(plansResult.data || []);
       setComparisonFeatures(featuresResult.data || []);
-      if (feeResult.data?.setting_value) {
-        setPlatformFeeAmount(parseFloat(feeResult.data.setting_value));
+
+      if (settingsResult.data) {
+        const getValue = (key: string) => settingsResult.data.find(s => s.setting_key === key)?.setting_value || '';
+
+        const feeAmount = getValue('platform_fee_amount');
+        if (feeAmount) setPlatformFeeAmount(parseFloat(feeAmount));
+
+        const frFeatures = getValue('student_fee_features_fr');
+        const enFeatures = getValue('student_fee_features_en');
+
+        const newFeatures = { ...studentFeatures };
+        try { if (frFeatures) newFeatures.fr = JSON.parse(frFeatures); } catch { /* keep default */ }
+        try { if (enFeatures) newFeatures.en = JSON.parse(enFeatures); } catch { /* keep default */ }
+        if (newFeatures.fr.length > 0 || newFeatures.en.length > 0) {
+          setStudentFeatures(newFeatures);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -329,7 +346,7 @@ export default function Pricing() {
                   {isFrench ? 'Étudiants' : 'Students'}
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  {isFrench ? 'Frais de plateforme' : 'Platform Fee'}
+                  {isFrench ? 'Frais de réservation' : 'Reservation Fee'}
                 </h2>
                 <div className="flex items-baseline mb-6">
                   <span className="text-5xl font-bold text-gray-900">{platformFeeAmount}€</span>
@@ -340,12 +357,7 @@ export default function Pricing() {
               </div>
 
               <div className="space-y-4 mb-8">
-                {[
-                  isFrench ? 'Frais de mise en relation' : 'Connection fee',
-                  isFrench ? 'Assurance réservation' : 'Booking insurance',
-                  isFrench ? 'Support 24/7' : '24/7 Support',
-                  isFrench ? 'Paiement sécurisé' : 'Secure payment',
-                ].map((feature, idx) => (
+                {(isFrench ? studentFeatures.fr : studentFeatures.en).map((feature, idx) => (
                   <div key={idx} className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
                       <Check className="h-4 w-4 text-gray-700" />
