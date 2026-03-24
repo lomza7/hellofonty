@@ -6,7 +6,7 @@ interface PricingPlan {
   id: string;
   name: string;
   type: 'landlord' | 'student';
-  plan_category: 'subscription' | 'booking_fee';
+  plan_category: string;
   price: number;
   currency: string;
   billing_period: 'monthly' | 'yearly' | 'one_time';
@@ -22,7 +22,7 @@ interface PricingPlan {
 interface EditingPlan {
   name: string;
   type: 'landlord' | 'student';
-  plan_category: 'subscription' | 'booking_fee';
+  plan_category: string;
   price: string;
   billing_period: 'monthly' | 'yearly' | 'one_time';
   stripe_price_id: string;
@@ -670,11 +670,10 @@ export default function PricingPlansManager() {
             </label>
             <select
               value={editingData.plan_category}
-              onChange={e => setEditingData({ ...editingData, plan_category: e.target.value as 'subscription' | 'booking_fee' })}
+              onChange={e => setEditingData({ ...editingData, plan_category: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
             >
               <option value="subscription">Abonnement</option>
-              <option value="booking_fee">Frais de réservation</option>
             </select>
           </div>
 

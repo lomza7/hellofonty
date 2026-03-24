@@ -12,7 +12,7 @@ interface PricingPlan {
   name: string;
   name_en?: string;
   type: 'landlord' | 'student';
-  plan_category: 'subscription' | 'booking_fee';
+  plan_category: string;
   price: number;
   billing_period: 'monthly' | 'yearly' | 'one_time';
   features: string[];
@@ -43,6 +43,7 @@ export default function Pricing() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [comparisonFeatures, setComparisonFeatures] = useState<ComparisonFeature[]>([]);
+  const [platformFeeAmount, setPlatformFeeAmount] = useState(390);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const { createCheckoutSession, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
@@ -58,7 +59,7 @@ export default function Pricing() {
 
   async function loadData() {
     try {
-      const [plansResult, featuresResult] = await Promise.all([
+      const [plansResult, featuresResult, feeResult] = await Promise.all([
         supabase
           .from('pricing_plans')
           .select('*')
@@ -69,7 +70,12 @@ export default function Pricing() {
           .from('agency_comparison_features')
           .select('*')
           .eq('is_active', true)
-          .order('order_index', { ascending: true })
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('platform_settings')
+          .select('setting_value')
+          .eq('setting_key', 'platform_fee_amount')
+          .maybeSingle()
       ]);
 
       if (plansResult.error) throw plansResult.error;
@@ -77,6 +83,9 @@ export default function Pricing() {
 
       setPlans(plansResult.data || []);
       setComparisonFeatures(featuresResult.data || []);
+      if (feeResult.data?.setting_value) {
+        setPlatformFeeAmount(parseFloat(feeResult.data.setting_value));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -116,7 +125,6 @@ export default function Pricing() {
   };
 
   const landlordPlans = plans.filter(p => p.type === 'landlord');
-  const studentPlans = plans.filter(p => p.type === 'student');
 
   useEffect(() => {
     if (successParam) {
@@ -315,50 +323,45 @@ export default function Pricing() {
           </div>
 
           <div className="max-w-2xl mx-auto">
-            {studentPlans.map((plan) => {
-              const billingText = plan.billing_period === 'monthly'
-                ? (isFrench ? '/ mois' : '/ month')
-                : plan.billing_period === 'yearly'
-                ? (isFrench ? '/ an' : '/ year')
-                : (isFrench ? 'unique' : 'one-time');
-
-              return (
-                <div key={plan.id} className="bg-white border-2 border-gray-200 rounded-3xl p-8 hover:shadow-2xl transition-all hover:scale-105">
-                  <div className="mb-6">
-                    <div className="inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold mb-4">
-                      {isFrench ? 'Étudiants' : 'Students'}
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      {isFrench ? plan.name : (plan.name_en || plan.name)}
-                    </h2>
-                    <div className="flex items-baseline mb-6">
-                      <span className="text-5xl font-bold text-gray-900">{plan.price}€</span>
-                      <span className="text-gray-600 ml-2">
-                        {billingText}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 mb-8">
-                    {(isFrench ? plan.features : (plan.features_en || plan.features)).map((feature, idx) => (
-                      <div key={idx} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
-                          <Check className="h-4 w-4 text-gray-700" />
-                        </div>
-                        <span className="text-gray-700">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => navigate(user ? '/recherche' : '/inscription')}
-                    className="w-full py-4 bg-gray-900 text-white rounded-full font-semibold hover:bg-gray-800 transition"
-                  >
-                    {isFrench ? 'Commencer la recherche' : 'Start searching'}
-                  </button>
+            <div className="bg-white border-2 border-gray-200 rounded-3xl p-8 hover:shadow-2xl transition-all hover:scale-105">
+              <div className="mb-6">
+                <div className="inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold mb-4">
+                  {isFrench ? 'Étudiants' : 'Students'}
                 </div>
-              );
-            })}
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  {isFrench ? 'Frais de plateforme' : 'Platform Fee'}
+                </h2>
+                <div className="flex items-baseline mb-6">
+                  <span className="text-5xl font-bold text-gray-900">{platformFeeAmount}€</span>
+                  <span className="text-gray-600 ml-2">
+                    {isFrench ? 'unique' : 'one-time'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                {[
+                  isFrench ? 'Frais de mise en relation' : 'Connection fee',
+                  isFrench ? 'Assurance réservation' : 'Booking insurance',
+                  isFrench ? 'Support 24/7' : '24/7 Support',
+                  isFrench ? 'Paiement sécurisé' : 'Secure payment',
+                ].map((feature, idx) => (
+                  <div key={idx} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
+                      <Check className="h-4 w-4 text-gray-700" />
+                    </div>
+                    <span className="text-gray-700">{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => navigate(user ? '/recherche' : '/inscription')}
+                className="w-full py-4 bg-gray-900 text-white rounded-full font-semibold hover:bg-gray-800 transition"
+              >
+                {isFrench ? 'Commencer la recherche' : 'Start searching'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -489,13 +492,13 @@ export default function Pricing() {
                       {isFrench ? 'Étudiant' : 'Student'}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-base sm:text-lg font-semibold text-green-600">390€</span>
+                      <span className="text-base sm:text-lg font-semibold text-green-600">{platformFeeAmount}€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                       <span className="text-base sm:text-lg font-semibold text-gray-700">600€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-base sm:text-lg font-semibold text-rose-500">+210€</span>
+                      <span className="text-base sm:text-lg font-semibold text-rose-500">+{600 - platformFeeAmount}€</span>
                     </td>
                   </tr>
                   <tr className="bg-gradient-to-r from-rose-50 to-pink-50">
@@ -503,13 +506,13 @@ export default function Pricing() {
                       {isFrench ? 'Total' : 'Total'}
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
-                      <span className="text-lg sm:text-xl font-bold text-green-600">390€</span>
+                      <span className="text-lg sm:text-xl font-bold text-green-600">{platformFeeAmount}€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
                       <span className="text-lg sm:text-xl font-bold text-gray-700">1 400€</span>
                     </td>
                     <td className="px-3 sm:px-6 py-4 sm:py-5 text-center">
-                      <span className="text-lg sm:text-xl font-bold text-rose-500">+1 010€</span>
+                      <span className="text-lg sm:text-xl font-bold text-rose-500">+{1400 - platformFeeAmount}€</span>
                     </td>
                   </tr>
                 </tbody>

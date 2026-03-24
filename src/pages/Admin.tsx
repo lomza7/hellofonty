@@ -390,10 +390,17 @@ export default function Admin() {
           )
         `);
 
-      const { data: pricingPlans } = await supabase
-        .from('pricing_plans')
-        .select('*')
-        .eq('is_active', true);
+      const [{ data: pricingPlans }, { data: platformSettings }] = await Promise.all([
+        supabase
+          .from('pricing_plans')
+          .select('*')
+          .eq('is_active', true),
+        supabase
+          .from('platform_settings')
+          .select('setting_value')
+          .eq('setting_key', 'platform_fee_amount')
+          .maybeSingle()
+      ]);
 
       const confirmedBookings = bookings?.filter(b => b.status === 'confirmed') || [];
       const paidBookings = confirmedBookings.filter(b => b.payment_status === 'paid');
@@ -401,8 +408,7 @@ export default function Admin() {
       const pendingBookings = bookings?.filter(b => b.status === 'pending') || [];
       const cancelledBookings = bookings?.filter(b => b.status === 'cancelled') || [];
 
-      const studentBookingPlan = pricingPlans?.find(p => p.type === 'student' && p.plan_category === 'booking_fee');
-      const bookingFeePrice = studentBookingPlan?.price || 500;
+      const bookingFeePrice = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 390;
       const bookingRevenue = paidBookings.length * bookingFeePrice;
 
       const activeSubscriptions = subscriptions?.filter(s => s.status === 'active') || [];
@@ -1754,7 +1760,7 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Frais de Réservation</p>
+                      <p className="text-sm font-medium text-gray-600">Frais de Plateforme</p>
                       <p className="text-xs text-gray-500 mt-1">{financeStats.confirmedBookings} réservations × {financeStats.bookingFeePrice}€</p>
                     </div>
                     <p className="text-xl font-bold text-emerald-600">{financeStats.bookingRevenue.toFixed(2)}€</p>
