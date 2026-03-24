@@ -10,6 +10,7 @@ import {
   Headphones,
   Clock,
   CheckCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -211,14 +212,6 @@ export default function SupportChat() {
     }
   };
 
-  const handleStartChat = () => {
-    if (user) {
-      setCurrentView('chat');
-    } else {
-      setCurrentView('type_selection');
-    }
-  };
-
   const handleTypeSelection = (type: 'student' | 'landlord') => {
     setUserType(type);
     setCurrentView('email_input');
@@ -369,16 +362,11 @@ export default function SupportChat() {
           {currentView === 'home' && (
             <HomeView
               fr={fr}
-              onStartChat={handleStartChat}
               onCallback={() => {
                 if (user) setCurrentView('callback');
                 else setCurrentView('type_selection');
               }}
-              onVisio={() => {
-                if (user) setCurrentView('visio');
-                else setCurrentView('type_selection');
-              }}
-              hasExistingChat={!!conversationId}
+              onVisio={() => setCurrentView('visio')}
             />
           )}
 
@@ -442,16 +430,12 @@ export default function SupportChat() {
 
 function HomeView({
   fr,
-  onStartChat,
   onCallback,
   onVisio,
-  hasExistingChat,
 }: {
   fr: boolean;
-  onStartChat: () => void;
   onCallback: () => void;
   onVisio: () => void;
-  hasExistingChat: boolean;
 }) {
   return (
     <div className="flex-1 flex flex-col p-5 overflow-y-auto">
@@ -468,25 +452,25 @@ function HomeView({
       </div>
 
       <div className="space-y-3 flex-1">
-        <button
-          onClick={onStartChat}
-          className="w-full flex items-center gap-4 p-4 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all group text-left"
+        <a
+          href="https://wa.me/33778327915"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center gap-4 p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl transition-all group text-left"
         >
-          <div className="w-11 h-11 bg-teal-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-11 h-11 bg-[#25D366] rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
             <p className="font-semibold text-gray-900 text-sm">
-              {hasExistingChat
-                ? (fr ? 'Reprendre la conversation' : 'Resume conversation')
-                : (fr ? 'Discuter avec nous' : 'Chat with us')
-              }
+              {fr ? 'Parler par WhatsApp' : 'Chat on WhatsApp'}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
-              {fr ? 'Reponse rapide par ecrit' : 'Quick written response'}
+              {fr ? 'Reponse rapide sur WhatsApp' : 'Quick response on WhatsApp'}
             </p>
           </div>
-        </button>
+          <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        </a>
 
         <button
           onClick={onVisio}
@@ -817,9 +801,6 @@ function CallbackView({
 
 function VisioView({
   fr,
-  onSubmit,
-  submitted,
-  loading,
   onBack,
 }: {
   fr: boolean;
@@ -828,75 +809,24 @@ function VisioView({
   loading: boolean;
   onBack: () => void;
 }) {
-  if (submitted) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-          <CheckCircle className="w-8 h-8 text-green-600" />
-        </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">
-          {fr ? 'Demande envoyee !' : 'Request sent!'}
-        </h3>
-        <p className="text-sm text-gray-500 mb-6">
-          {fr
-            ? 'Notre equipe vous contactera pour planifier votre rendez-vous en visio.'
-            : 'Our team will contact you to schedule your video appointment.'}
-        </p>
-        <button
-          onClick={onBack}
-          className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition text-sm font-medium"
-        >
-          {fr ? 'Retour' : 'Back'}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 flex flex-col p-5">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
-        <ChevronLeft className="w-4 h-4" />
-        {fr ? 'Retour' : 'Back'}
-      </button>
-
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
-          <Video className="w-7 h-7 text-blue-600" />
-        </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">
-          {fr ? 'Rendez-vous en visio' : 'Video call appointment'}
-        </h3>
-        <p className="text-sm text-gray-500 mb-6 px-2">
-          {fr
-            ? 'Prenez rendez-vous avec notre equipe pour un echange en visio. Nous vous enverrons un lien de connexion par email.'
-            : 'Book an appointment with our team for a video call. We\'ll send you a connection link by email.'}
-        </p>
-
-        <div className="w-full space-y-3 mb-6">
-          <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-            <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
-            <span>{fr ? 'Duree : 15-30 minutes' : 'Duration: 15-30 minutes'}</span>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-            <Video className="w-4 h-4 text-blue-500 flex-shrink-0" />
-            <span>{fr ? 'Via Google Meet ou Zoom' : 'Via Google Meet or Zoom'}</span>
-          </div>
-        </div>
-
-        <button
-          onClick={onSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition text-sm disabled:opacity-50"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              {fr ? 'Envoi...' : 'Sending...'}
-            </span>
-          ) : (
-            fr ? 'Demander un rendez-vous' : 'Request appointment'
-          )}
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+        <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-lg transition">
+          <ChevronLeft className="w-4 h-4 text-gray-500" />
         </button>
+        <Video className="w-4 h-4 text-blue-500" />
+        <span className="text-xs font-medium text-gray-700">
+          {fr ? 'Prendre un RDV en visio' : 'Book a video call'}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        <iframe
+          src="https://calendly.com/ivan-sweeps/appel-decouverte-hellofonty"
+          className="w-full h-full border-0"
+          title={fr ? 'Prendre rendez-vous' : 'Book appointment'}
+        />
       </div>
     </div>
   );
