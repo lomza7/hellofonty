@@ -14,7 +14,8 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
-  FileText
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -60,7 +61,7 @@ interface PaymentStats {
 
 export default function LandlordRentPayments() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<RentPayment[]>([]);
   const [pendingBookings, setPendingBookings] = useState<PendingBooking[]>([]);
@@ -78,6 +79,37 @@ export default function LandlordRentPayments() {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'property'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [stripeLoginLoading, setStripeLoginLoading] = useState(false);
+
+  const openStripeDashboard = async () => {
+    if (!profile?.stripe_account_id) return;
+
+    try {
+      setStripeLoginLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-express-login`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Erreur ouverture Stripe:', err);
+    } finally {
+      setStripeLoginLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -423,6 +455,20 @@ export default function LandlordRentPayments() {
               <p className="text-gray-600">Suivi complet des paiements mensuels de vos locataires</p>
             </div>
             <div className="flex gap-3">
+              {profile?.stripe_account_id && (
+                <button
+                  onClick={openStripeDashboard}
+                  disabled={stripeLoginLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {stripeLoginLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4" />
+                  )}
+                  Mon interface Stripe
+                </button>
+              )}
               <button
                 onClick={exportToCSV}
                 disabled={filteredPayments.length === 0}
