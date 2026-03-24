@@ -40,6 +40,7 @@ export default function Payment() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState('');
+  const [studentFeeAmount, setStudentFeeAmount] = useState(0);
 
   useEffect(() => {
     loadBooking();
@@ -82,23 +83,35 @@ export default function Payment() {
         return;
       }
 
-      const { data, error: bookingError } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          listing:listings(
-            title,
-            address,
-            price_per_month,
-            security_deposit,
-            images:listing_images(image_url),
-            landlord:profiles!landlord_id(avatar_url)
-          )
-        `)
-        .eq('id', bookingId)
-        .maybeSingle();
+      const [bookingResult, feeResult] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select(`
+            *,
+            listing:listings(
+              title,
+              address,
+              price_per_month,
+              security_deposit,
+              images:listing_images(image_url),
+              landlord:profiles!landlord_id(avatar_url)
+            )
+          `)
+          .eq('id', bookingId)
+          .maybeSingle(),
+        supabase
+          .from('platform_settings')
+          .select('setting_value')
+          .eq('setting_key', 'platform_fee_amount')
+          .maybeSingle(),
+      ]);
 
-      if (bookingError) throw bookingError;
+      if (bookingResult.error) throw bookingResult.error;
+      const data = bookingResult.data;
+
+      if (feeResult.data?.setting_value) {
+        setStudentFeeAmount(parseFloat(feeResult.data.setting_value));
+      }
 
       if (!data) {
         setError('Réservation introuvable');
@@ -294,8 +307,8 @@ export default function Payment() {
                   <span className="font-semibold">{booking.deposit_amount.toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>Frais de plateforme Hellofonty</span>
-                  <span className="font-semibold">{booking.platform_fee.toFixed(2)} €</span>
+                  <span>Frais de réservation Hellofonty</span>
+                  <span className="font-semibold">{studentFeeAmount.toFixed(2)} €</span>
                 </div>
               </div>
 
