@@ -338,7 +338,7 @@ async function syncCustomerFromStripe(customerId: string) {
       .maybeSingle();
 
     let planType: 'free' | 'premium' = 'free';
-    if (pricingPlan && pricingPlan.price >= 29) {
+    if (pricingPlan && pricingPlan.price > 0) {
       planType = 'premium';
     }
 

@@ -154,18 +154,23 @@ export default function MySubscription() {
 
   const getCurrentPlanData = () => {
     if (!subscription) return null;
-    return pricingPlans.find(plan => {
-      if (subscription.plan_type === 'free') {
-        return plan.price === 0;
-      } else if (subscription.plan_type === 'premium') {
-        return plan.price > 0;
-      }
-      return false;
-    });
+    if (isPremium()) {
+      return pricingPlans.find(plan => plan.price > 0);
+    }
+    return pricingPlans.find(plan => plan.price === 0);
   };
 
   const getPremiumPlan = () => {
     return pricingPlans.find(plan => plan.price > 0);
+  };
+
+  const hasActiveStripeSubscription = () => {
+    if (!subscription) return false;
+    return !!subscription.stripe_subscription_id && subscription.status !== 'canceled';
+  };
+
+  const isPremium = () => {
+    return subscription?.plan_type === 'premium' || hasActiveStripeSubscription();
   };
 
   const getPlanName = (planData: PricingPlan | null | undefined) => {
@@ -567,7 +572,7 @@ export default function MySubscription() {
                       </span>
                     </div>
                   </div>
-                  {subscription.plan_type !== 'free' && subscription.current_period_end && (
+                  {isPremium() && subscription.current_period_end && (
                     <div className="text-right">
                       <div className="text-sm text-gray-500">
                         {language === 'fr' ? 'Renouvellement' : 'Renewal'}
@@ -599,7 +604,7 @@ export default function MySubscription() {
                   ))}
                 </div>
 
-                {subscription.plan_type === 'premium' && !subscription.cancel_at_period_end && (
+                {isPremium() && !subscription.cancel_at_period_end && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <button
                       type="button"
@@ -631,7 +636,7 @@ export default function MySubscription() {
               </h2>
               <div className="max-w-md mx-auto">
                 {/* Premium Plan */}
-                {subscription?.plan_type === 'free' && getPremiumPlan() && (
+                {!isPremium() && getPremiumPlan() && (
                   <div className="bg-rose-500 text-white rounded-xl shadow-lg p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-gray-900 text-white px-3 py-1 text-xs font-semibold">
                       {language === 'fr' ? 'POPULAIRE' : 'POPULAR'}
@@ -687,7 +692,7 @@ export default function MySubscription() {
                     ? 'Vos factures apparaîtront ici une fois que vous aurez souscrit à un abonnement payant.'
                     : 'Your invoices will appear here once you subscribe to a paid plan.'}
                 </p>
-                {subscription?.plan_type === 'premium' && (
+                {isPremium() && (
                   <button
                     onClick={handleSyncInvoices}
                     disabled={syncingInvoices}
