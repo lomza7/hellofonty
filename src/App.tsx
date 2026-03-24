@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import LazyErrorBoundary from './components/LazyErrorBoundary';
+import SupportChat from './components/SupportChat';
 
 function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
   importFn: () => Promise<T>,
@@ -401,6 +402,7 @@ function AppContent() {
       </section>
 
       <Footer />
+      <SupportChat />
     </div>
   );
 }
