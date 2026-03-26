@@ -18,13 +18,20 @@ export default function SchemaMarkup({ type, data }: SchemaMarkupProps) {
         schemaData = {
           '@context': 'https://schema.org',
           '@type': 'Organization',
-          name: 'HELLOFONTY',
-          url: 'https://hellofonty.com',
-          logo: 'https://hellofonty.com/logo.png',
+          name: 'Hellofonty',
+          alternateName: 'HELLOFONTY',
+          url: 'https://www.hellofonty.fr',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://www.hellofonty.fr/Flatinbleau-Logo.png',
+            width: 200,
+            height: 200,
+          },
           description: data.description || 'Plateforme de location de logements étudiants à Fontainebleau pour les étudiants INSEAD',
           address: {
             '@type': 'PostalAddress',
             addressLocality: 'Fontainebleau',
+            postalCode: '77300',
             addressCountry: 'FR',
           },
           contactPoint: {
@@ -51,10 +58,10 @@ export default function SchemaMarkup({ type, data }: SchemaMarkupProps) {
           },
           publisher: {
             '@type': 'Organization',
-            name: 'HELLOFONTY',
+            name: 'Hellofonty',
             logo: {
               '@type': 'ImageObject',
-              url: 'https://hellofonty.com/logo.png',
+              url: 'https://www.hellofonty.fr/Flatinbleau-Logo.png',
             },
           },
           mainEntityOfPage: {
@@ -68,9 +75,9 @@ export default function SchemaMarkup({ type, data }: SchemaMarkupProps) {
         schemaData = {
           '@context': 'https://schema.org',
           '@type': 'LocalBusiness',
-          name: 'HELLOFONTY',
+          name: 'Hellofonty',
           description: 'Location de logements étudiants à Fontainebleau',
-          url: 'https://hellofonty.com',
+          url: 'https://www.hellofonty.fr',
           telephone: data.telephone || '',
           address: {
             '@type': 'PostalAddress',
@@ -105,13 +112,16 @@ export default function SchemaMarkup({ type, data }: SchemaMarkupProps) {
         schemaData = {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
-          name: 'HELLOFONTY',
-          url: 'https://hellofonty.com',
+          name: 'Hellofonty',
+          alternateName: 'HELLOFONTY',
+          url: 'https://www.hellofonty.fr',
+          description: 'Plateforme de logement étudiant à Fontainebleau pour les étudiants INSEAD.',
+          inLanguage: 'fr-FR',
           potentialAction: {
             '@type': 'SearchAction',
             target: {
               '@type': 'EntryPoint',
-              urlTemplate: 'https://hellofonty.com/recherche?q={search_term_string}',
+              urlTemplate: 'https://www.hellofonty.fr/recherche?q={search_term_string}',
             },
             'query-input': 'required name=search_term_string',
           },

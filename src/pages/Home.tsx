@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Heart, MessageCircle, Lock, Home as HomeIcon, Calendar, FileText, Key, CheckCircle, Search, Star, Users, CreditCard, BarChart3, FileSignature, Banknote, ClipboardCheck } from 'lucide-react';
+import { Shield, Heart, MessageCircle, Lock, Home as HomeIcon, Calendar, FileText, Key, CheckCircle, Search, Star, Users, CreditCard, BarChart3, Ligature as FileSignature, Banknote, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -10,6 +10,8 @@ import FeaturedListings from '../components/FeaturedListings';
 import PlatformStats from '../components/PlatformStats';
 import FeaturesCarousel from '../components/FeaturesCarousel';
 import FAQ from '../components/FAQ';
+import SEO from '../components/SEO';
+import SchemaMarkup from '../components/SchemaMarkup';
 
 interface FeatureImage {
   feature_key: string;
@@ -136,6 +138,22 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Logement étudiant INSEAD Fontainebleau"
+        description="Hellofonty - La plateforme de référence pour trouver votre logement étudiant à Fontainebleau. Appartements meublés proches de l'INSEAD, réservation sécurisée."
+        url="https://www.hellofonty.fr"
+        image="https://www.hellofonty.fr/Flatinbleau-Logo.png"
+      />
+      <SchemaMarkup
+        type="WebSite"
+        data={{}}
+      />
+      <SchemaMarkup
+        type="Organization"
+        data={{
+          description: "Plateforme de location de logements étudiants à Fontainebleau pour les étudiants INSEAD. Appartements meublés, réservation sécurisée.",
+        }}
+      />
       <div
         className="relative min-h-[700px] sm:min-h-[650px] bg-cover bg-center"
         style={{
