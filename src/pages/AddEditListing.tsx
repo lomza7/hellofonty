@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, X, Home, MapPin, Sparkles, Camera, ArrowRight, ArrowLeft, Check, Euro, Plus, Trash2, ChevronLeft, ChevronRight, RotateCw, Info, Shield } from 'lucide-react';
+import { Upload, X, Home, MapPin, Sparkles, Camera, ArrowRight, ArrowLeft, Check, Euro, Plus, Trash2, RotateCw, Info, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import BackButton from '../components/BackButton';
+import DraggableImageGrid from '../components/DraggableImageGrid';
 
 const commonAmenities = [
   'WiFi',
@@ -77,6 +78,7 @@ export default function AddEditListing() {
   const [existingImages, setExistingImages] = useState<{ id: string; url: string; order: number }[]>([]);
   const [imageInputKey, setImageInputKey] = useState(Date.now());
   const [imageRotations, setImageRotations] = useState<{ [key: string]: number }>({});
+  const [isDropzoneActive, setIsDropzoneActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -294,9 +296,20 @@ export default function AddEditListing() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const imageFiles = files.filter((f) => f.type.startsWith('image/'));
-    setImageFiles((prev) => [...prev, ...imageFiles]);
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    setImageFiles((prev) => [...prev, ...images]);
     setImageInputKey(Date.now());
+  };
+
+  const handleDropzoneFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropzoneActive(false);
+    const files = Array.from(e.dataTransfer.files);
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (images.length > 0) {
+      setImageFiles((prev) => [...prev, ...images]);
+    }
   };
 
   const removeNewImage = (index: number) => {
@@ -317,48 +330,63 @@ export default function AddEditListing() {
     );
   };
 
-  const moveExistingImageLeft = (index: number) => {
-    if (index === 0) return;
-    const newImages = [...existingImages];
-    [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
-    newImages.forEach((img, idx) => {
-      img.order = idx;
+  const newImageUrls = useMemo(() => {
+    const map = new Map<string, string>();
+    imageFiles.forEach((file, index) => {
+      map.set(`new-${index}`, URL.createObjectURL(file));
     });
-    setExistingImages(newImages);
-    updateImageOrder(newImages);
-  };
+    return map;
+  }, [imageFiles]);
 
-  const moveExistingImageRight = (index: number) => {
-    if (index === existingImages.length - 1) return;
-    const newImages = [...existingImages];
-    [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
-    newImages.forEach((img, idx) => {
-      img.order = idx;
+  const allDraggableImages = useMemo(() => {
+    const existing = existingImages.map((img) => ({
+      id: `existing-${img.id}`,
+      url: img.url,
+      isNew: false,
+    }));
+    const newImgs = imageFiles.map((file, index) => ({
+      id: `new-${index}`,
+      url: newImageUrls.get(`new-${index}`) || URL.createObjectURL(file),
+      isNew: true,
+      file,
+    }));
+    return [...existing, ...newImgs];
+  }, [existingImages, imageFiles, newImageUrls]);
+
+  const handleDragReorder = useCallback((reordered: { id: string; url: string; isNew?: boolean; file?: File }[]) => {
+    const newExisting: { id: string; url: string; order: number }[] = [];
+    const newFiles: File[] = [];
+
+    reordered.forEach((img, idx) => {
+      if (img.id.startsWith('existing-')) {
+        const realId = img.id.replace('existing-', '');
+        newExisting.push({ id: realId, url: img.url, order: idx });
+      } else if (img.file) {
+        newFiles.push(img.file);
+      }
     });
-    setExistingImages(newImages);
-    updateImageOrder(newImages);
-  };
 
-  const moveNewImageLeft = (index: number) => {
-    if (index === 0) return;
-    const newFiles = [...imageFiles];
-    [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
+    setExistingImages(newExisting);
     setImageFiles(newFiles);
-  };
+    updateImageOrder(newExisting);
+  }, []);
 
-  const moveNewImageRight = (index: number) => {
-    if (index === imageFiles.length - 1) return;
-    const newFiles = [...imageFiles];
-    [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
-    setImageFiles(newFiles);
-  };
+  const handleDragRemove = useCallback((id: string) => {
+    if (id.startsWith('existing-')) {
+      const realId = id.replace('existing-', '');
+      removeExistingImage(realId);
+    } else if (id.startsWith('new-')) {
+      const index = parseInt(id.replace('new-', ''), 10);
+      removeNewImage(index);
+    }
+  }, [existingImages, imageFiles]);
 
-  const rotateImage = (key: string) => {
+  const handleDragRotate = useCallback((id: string) => {
     setImageRotations(prev => ({
       ...prev,
-      [key]: ((prev[key] || 0) + 90) % 360
+      [id]: ((prev[id] || 0) + 90) % 360
     }));
-  };
+  }, []);
 
   const updateImageOrder = async (images: { id: string; order: number }[]) => {
     try {
@@ -1556,149 +1584,39 @@ export default function AddEditListing() {
               </div>
             )}
 
-            {existingImages.length > 0 && (
+            {allDraggableImages.length > 0 && (
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Camera className="w-5 h-5 text-gray-600" />
                   <h3 className="text-sm font-semibold text-gray-900">
                     {language === 'fr' ? 'Photos actuelles' : 'Current photos'}
                   </h3>
-                  <span className="text-xs text-gray-500">
-                    ({language === 'fr' ? 'Glissez pour réorganiser' : 'Drag to reorder'})
+                  <span className="text-xs text-gray-500 italic">
+                    ({language === 'fr' ? 'Glissez pour reorganiser' : 'Drag to reorder'})
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                  {existingImages.map((img, index) => (
-                    <div key={img.id} className="relative group">
-                      <img
-                        src={img.url}
-                        alt="Listing"
-                        style={{ transform: `rotate(${imageRotations[`existing-${img.id}`] || 0}deg)` }}
-                        className="w-full h-32 sm:h-40 object-cover rounded-lg sm:rounded-xl transition-transform"
-                      />
-
-                      {/* Contrôles overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg sm:rounded-xl">
-                        {/* Numéro d'ordre */}
-                        <div className="absolute top-2 left-2 bg-white text-gray-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                          {index + 1}
-                        </div>
-
-                        {/* Bouton supprimer */}
-                        <button
-                          type="button"
-                          onClick={() => removeExistingImage(img.id)}
-                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all transform active:scale-90 sm:hover:scale-110 shadow-lg"
-                        >
-                          <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </button>
-
-                        {/* Contrôles en bas */}
-                        <div className="absolute bottom-2 left-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => moveExistingImageLeft(index)}
-                            disabled={index === 0}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <ChevronLeft className="h-4 w-4 mx-auto" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => rotateImage(`existing-${img.id}`)}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <RotateCw className="h-4 w-4 mx-auto" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveExistingImageRight(index)}
-                            disabled={index === existingImages.length - 1}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <ChevronRight className="h-4 w-4 mx-auto" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <DraggableImageGrid
+                  images={allDraggableImages}
+                  onReorder={handleDragReorder}
+                  onRemove={handleDragRemove}
+                  onRotate={handleDragRotate}
+                  rotations={imageRotations}
+                  language={language}
+                />
               </div>
             )}
 
-            {imageFiles.length > 0 && (
-              <div className="mb-4 sm:mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Camera className="w-5 h-5 text-green-600" />
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    {language === 'fr' ? 'Nouvelles photos à ajouter' : 'New photos to add'}
-                  </h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                  {imageFiles.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index}`}
-                        style={{ transform: `rotate(${imageRotations[`new-${index}`] || 0}deg)` }}
-                        className="w-full h-32 sm:h-40 object-cover rounded-lg sm:rounded-xl transition-transform"
-                      />
-
-                      {/* Contrôles overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg sm:rounded-xl">
-                        {/* Badge nouveau + numéro */}
-                        <div className="absolute top-2 left-2 flex gap-1">
-                          <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                            {language === 'fr' ? 'Nouveau' : 'New'}
-                          </div>
-                          <div className="bg-white text-gray-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                            {existingImages.length + index + 1}
-                          </div>
-                        </div>
-
-                        {/* Bouton supprimer */}
-                        <button
-                          type="button"
-                          onClick={() => removeNewImage(index)}
-                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all transform active:scale-90 sm:hover:scale-110 shadow-lg"
-                        >
-                          <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </button>
-
-                        {/* Contrôles en bas */}
-                        <div className="absolute bottom-2 left-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => moveNewImageLeft(index)}
-                            disabled={index === 0}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <ChevronLeft className="h-4 w-4 mx-auto" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => rotateImage(`new-${index}`)}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <RotateCw className="h-4 w-4 mx-auto" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveNewImageRight(index)}
-                            disabled={index === imageFiles.length - 1}
-                            className="flex-1 p-1.5 bg-white text-gray-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition shadow-lg"
-                          >
-                            <ChevronRight className="h-4 w-4 mx-auto" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="border-2 border-dashed border-gray-300 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center hover:border-rose-400 hover:bg-rose-50 transition-all cursor-pointer">
+            <div
+              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDropzoneActive(true); }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDropzoneActive(false); }}
+              onDrop={handleDropzoneFileDrop}
+              className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
+                isDropzoneActive
+                  ? 'border-rose-400 bg-rose-50 scale-[1.01]'
+                  : 'border-gray-300 hover:border-rose-400 hover:bg-rose-50'
+              }`}
+            >
               <input
                 key={imageInputKey}
                 type="file"
@@ -1709,9 +1627,11 @@ export default function AddEditListing() {
                 id="image-upload"
               />
               <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
-                <Upload className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mb-3 sm:mb-4" />
+                <Upload className={`h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4 transition-colors ${isDropzoneActive ? 'text-rose-400' : 'text-gray-400'}`} />
                 <span className="text-base sm:text-lg font-semibold text-gray-700 mb-1 sm:mb-2">
-                  {t('addListing.uploadPhotos')}
+                  {isDropzoneActive
+                    ? (language === 'fr' ? 'Deposez vos photos ici' : 'Drop your photos here')
+                    : (language === 'fr' ? 'Telecharger des photos' : 'Upload photos')}
                 </span>
                 <span className="text-xs sm:text-sm text-gray-500">
                   {language === 'fr' ? 'JPG, PNG ou WEBP' : 'JPG, PNG or WEBP'}
