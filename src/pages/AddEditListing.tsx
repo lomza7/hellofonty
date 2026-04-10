@@ -111,7 +111,7 @@ export default function AddEditListing() {
   const [quietHoursStart, setQuietHoursStart] = useState('22:00');
   const [quietHoursEnd, setQuietHoursEnd] = useState('08:00');
   const [additionalRules, setAdditionalRules] = useState('');
-  const [minimumStay, setMinimumStay] = useState('1');
+  const [minimumStay, setMinimumStay] = useState('0.5');
 
   useEffect(() => {
     if (listingId) {
@@ -467,7 +467,7 @@ export default function AddEditListing() {
         quiet_hours_start: quietHoursStart,
         quiet_hours_end: quietHoursEnd,
         additional_rules: additionalRules || null,
-        minimum_stay: minimumStay ? parseInt(minimumStay) : 1,
+        minimum_stay: minimumStay ? parseFloat(minimumStay) : 0.5,
       };
 
       if (listingId) {
@@ -1253,19 +1253,21 @@ export default function AddEditListing() {
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 {language === 'fr' ? 'Durée de séjour minimum' : 'Minimum stay duration'}
               </h3>
-              <div className="flex items-center gap-4">
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={minimumStay}
-                  onChange={(e) => setMinimumStay(e.target.value)}
-                  className="w-24 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent transition text-center text-lg font-semibold"
-                />
-                <span className="text-gray-700 font-medium">
-                  {language === 'fr' ? 'mois minimum' : 'month(s) minimum'}
-                </span>
-              </div>
+              <select
+                value={minimumStay}
+                onChange={(e) => setMinimumStay(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent transition text-lg font-semibold bg-white"
+              >
+                <option value="0.5">{language === 'fr' ? '2 semaines' : '2 weeks'}</option>
+                <option value="1">1 {language === 'fr' ? 'mois' : 'month'}</option>
+                <option value="2">2 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="3">3 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="4">4 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="5">5 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="6">6 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="9">9 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="12">12 {language === 'fr' ? 'mois' : 'months'}</option>
+              </select>
               <p className="text-sm text-gray-600 mt-3">
                 {language === 'fr'
                   ? 'Définissez la durée minimale de location pour votre logement'

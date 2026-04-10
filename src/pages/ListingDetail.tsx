@@ -468,7 +468,7 @@ En attente de votre confirmation.`;
               <BookingCalendar
                 pricePerMonth={listing.price_per_month}
                 charges={listing.charges || 0}
-                minimumStayMonths={listing.minimum_stay || 1}
+                minimumStayMonths={listing.minimum_stay || 0.5}
                 existingBookings={existingBookings}
                 blockedDates={blockedDates}
                 chargeDetails={{
@@ -806,10 +806,16 @@ En attente de votre confirmation.`;
                     {language === 'fr' ? 'Séjour minimum' : 'Minimum stay'}
                   </h3>
                   <p className="text-sm text-gray-700">
-                    <span className="text-lg font-bold text-rose-700">{listing.minimum_stay || 1}</span>{' '}
-                    {language === 'fr'
-                      ? (listing.minimum_stay && listing.minimum_stay > 1 ? 'mois' : 'mois')
-                      : (listing.minimum_stay && listing.minimum_stay > 1 ? 'months' : 'month')}
+                    {(listing.minimum_stay || 0.5) < 1 ? (
+                      <span className="text-lg font-bold text-rose-700">
+                        {language === 'fr' ? '2 semaines' : '2 weeks'}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-lg font-bold text-rose-700">{listing.minimum_stay || 1}</span>{' '}
+                        {language === 'fr' ? 'mois' : (listing.minimum_stay && listing.minimum_stay > 1 ? 'months' : 'month')}
+                      </>
+                    )}
                   </p>
                 </div>
 

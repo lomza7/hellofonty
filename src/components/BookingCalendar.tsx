@@ -46,7 +46,7 @@ export default function BookingCalendar({
   })();
   const monthlyTotal = pricePerMonth + computedCharges;
   const dailyRate = monthlyTotal / 30;
-  const minimumStayDays = minimumStayMonths * 30;
+  const minimumStayDays = minimumStayMonths < 1 ? 14 : minimumStayMonths * 30;
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -109,7 +109,14 @@ export default function BookingCalendar({
           setMinimumStayError(null);
         } else {
           const nightsNeeded = minimumStayDays - daysDiff;
-          setMinimumStayError(`Séjour minimum de ${minimumStayDays} nuits. Sélectionnez ${nightsNeeded} ${nightsNeeded > 1 ? 'nuits' : 'nuit'} supplémentaire${nightsNeeded > 1 ? 's' : ''}.`);
+          const minLabel = minimumStayMonths < 1
+            ? (language === 'fr' ? '2 semaines (14 jours)' : '2 weeks (14 days)')
+            : `${minimumStayDays} ${language === 'fr' ? 'jours' : 'days'}`;
+          setMinimumStayError(
+            language === 'fr'
+              ? `Séjour minimum de ${minLabel}. Sélectionnez ${nightsNeeded} ${nightsNeeded > 1 ? 'jours' : 'jour'} supplémentaire${nightsNeeded > 1 ? 's' : ''}.`
+              : `Minimum stay of ${minLabel}. Select ${nightsNeeded} more day${nightsNeeded > 1 ? 's' : ''}.`
+          );
         }
       } else {
         setSelectedStartDate(clickedDate);
@@ -324,7 +331,10 @@ export default function BookingCalendar({
               </div>
             ) : (
               <p className="mt-3 text-gray-500">
-                <strong>Séjour minimum :</strong> {minimumStayMonths} mois ({minimumStayDays} {minimumStayDays > 1 ? 'jours' : 'jour'})
+                <strong>{language === 'fr' ? 'Séjour minimum' : 'Minimum stay'} :</strong>{' '}
+                {minimumStayMonths < 1
+                  ? (language === 'fr' ? '2 semaines (14 jours)' : '2 weeks (14 days)')
+                  : `${minimumStayMonths} ${language === 'fr' ? 'mois' : (minimumStayMonths > 1 ? 'months' : 'month')} (${minimumStayDays} ${language === 'fr' ? 'jours' : 'days'})`}
               </p>
             )}
           </div>
