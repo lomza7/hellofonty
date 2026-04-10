@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import BackButton from '../components/BackButton';
 import DraggableImageGrid from '../components/DraggableImageGrid';
+import PhotoUploadModal from '../components/PhotoUploadModal';
 
 const commonAmenities = [
   'WiFi',
@@ -79,6 +80,7 @@ export default function AddEditListing() {
   const [imageInputKey, setImageInputKey] = useState(Date.now());
   const [imageRotations, setImageRotations] = useState<{ [key: string]: number }>({});
   const [isDropzoneActive, setIsDropzoneActive] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -311,6 +313,10 @@ export default function AddEditListing() {
       setImageFiles((prev) => [...prev, ...images]);
     }
   };
+
+  const handleModalImport = useCallback((files: File[]) => {
+    setImageFiles((prev) => [...prev, ...files]);
+  }, []);
 
   const removeNewImage = (index: number) => {
     setImageFiles(imageFiles.filter((_, i) => i !== index));
@@ -1607,6 +1613,7 @@ export default function AddEditListing() {
             )}
 
             <div
+              onClick={() => setIsPhotoModalOpen(true)}
               onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDropzoneActive(true); }}
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
               onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDropzoneActive(false); }}
@@ -1617,16 +1624,7 @@ export default function AddEditListing() {
                   : 'border-gray-300 hover:border-rose-400 hover:bg-rose-50'
               }`}
             >
-              <input
-                key={imageInputKey}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="hidden"
-                id="image-upload"
-              />
-              <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+              <div className="flex flex-col items-center">
                 <Upload className={`h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-4 transition-colors ${isDropzoneActive ? 'text-rose-400' : 'text-gray-400'}`} />
                 <span className="text-base sm:text-lg font-semibold text-gray-700 mb-1 sm:mb-2">
                   {isDropzoneActive
@@ -1636,8 +1634,15 @@ export default function AddEditListing() {
                 <span className="text-xs sm:text-sm text-gray-500">
                   {language === 'fr' ? 'JPG, PNG ou WEBP' : 'JPG, PNG or WEBP'}
                 </span>
-              </label>
+              </div>
             </div>
+
+            <PhotoUploadModal
+              isOpen={isPhotoModalOpen}
+              onClose={() => setIsPhotoModalOpen(false)}
+              onImport={handleModalImport}
+              language={language}
+            />
 
             <div className="mt-6 p-5 bg-white border border-gray-300 rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-2 mb-3">
