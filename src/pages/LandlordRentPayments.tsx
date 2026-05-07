@@ -695,9 +695,6 @@ export default function LandlordRentPayments() {
                       Caution
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Frais plateforme
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -760,14 +757,8 @@ export default function LandlordRentPayments() {
                           )}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="text-sm font-medium text-gray-900">
-                            {(booking.platform_fee + booking.service_fee).toFixed(2)} €
-                          </div>
-                          <div className="text-xs text-gray-500">Hellofonty</div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-right">
                           <div className="text-base font-semibold text-gray-900">
-                            {booking.payment_amount.toFixed(2)} €
+                            {(booking.rent_amount + booking.deposit_amount).toFixed(2)} €
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
