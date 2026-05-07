@@ -394,15 +394,9 @@ export default function MyBookingRequests() {
                               <p className="font-semibold">{booking.deposit_amount.toFixed(2)} EUR</p>
                             </div>
                           )}
-                          {booking.platform_fee != null && booking.platform_fee > 0 && (
-                            <div>
-                              <p className="text-xs opacity-75">{language === 'fr' ? 'Frais plateforme' : 'Platform fees'}</p>
-                              <p className="font-semibold">{booking.platform_fee.toFixed(2)} EUR</p>
-                            </div>
-                          )}
                           <div>
                             <p className="text-xs opacity-75">{language === 'fr' ? 'Total' : 'Total'}</p>
-                            <p className="font-bold text-base">{booking.payment_amount.toFixed(2)} EUR</p>
+                            <p className="font-bold text-base">{((booking.rent_amount || 0) + (booking.deposit_amount || 0)).toFixed(2)} EUR</p>
                           </div>
                         </div>
                       </div>
@@ -414,7 +408,7 @@ export default function MyBookingRequests() {
                         <span className="text-gray-700 font-semibold">{language === 'fr' ? 'Montant total' : 'Total amount'}</span>
                       </div>
                       <span className="text-3xl font-bold text-blue-600">
-                        {(booking.payment_amount || booking.total_price).toFixed(2)}€
+                        {(((booking.rent_amount || 0) + (booking.deposit_amount || 0)) || booking.total_price).toFixed(2)}€
                       </span>
                     </div>
 
