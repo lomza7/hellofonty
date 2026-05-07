@@ -42,6 +42,12 @@ interface PendingBooking {
   end_date: string;
   total_months: number;
   total_price: number;
+  rent_amount: number;
+  deposit_amount: number;
+  platform_fee: number;
+  service_fee: number;
+  payment_amount: number;
+  is_first_month_partial: boolean;
   payment_status: string;
   payment_deadline: string;
   student_name: string;
@@ -251,6 +257,12 @@ export default function LandlordRentPayments() {
             end_date,
             total_months,
             total_price,
+            rent_amount,
+            deposit_amount,
+            platform_fee,
+            service_fee,
+            payment_amount,
+            is_first_month_partial,
             payment_status,
             payment_deadline,
             status,
@@ -294,6 +306,12 @@ export default function LandlordRentPayments() {
         end_date: booking.end_date,
         total_months: booking.total_months,
         total_price: booking.total_price,
+        rent_amount: parseFloat(booking.rent_amount || 0),
+        deposit_amount: parseFloat(booking.deposit_amount || 0),
+        platform_fee: parseFloat(booking.platform_fee || 0),
+        service_fee: parseFloat(booking.service_fee || 0),
+        payment_amount: parseFloat(booking.payment_amount || 0),
+        is_first_month_partial: !!booking.is_first_month_partial,
         payment_status: booking.payment_status,
         payment_deadline: booking.payment_deadline,
         student_name: `${booking.student.first_name} ${booking.student.last_name}`,
@@ -349,11 +367,11 @@ export default function LandlordRentPayments() {
 
       formattedBookings.forEach((booking: any) => {
         const deadline = new Date(booking.payment_deadline);
-        const totalPrice = parseFloat(booking.total_price);
+        const amount = booking.payment_amount || booking.total_price || 0;
         if (deadline < now) {
-          totalOverdue += totalPrice;
+          totalOverdue += amount;
         } else {
-          totalPending += totalPrice;
+          totalPending += amount;
         }
       });
 
@@ -670,10 +688,16 @@ export default function LandlordRentPayments() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Période
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Loyer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Caution
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Frais plateforme
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -715,15 +739,35 @@ export default function LandlordRentPayments() {
                             {booking.total_months} mois
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.listing.monthly_price.toFixed(2)} €
+                            {booking.rent_amount.toFixed(2)} €
                           </div>
-                          <div className="text-xs text-gray-500">par mois</div>
+                          <div className="text-xs text-gray-500">
+                            {booking.is_first_month_partial ? 'prorata 1er mois' : '1er mois'}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          {booking.deposit_amount > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-gray-900">
+                                {booking.deposit_amount.toFixed(2)} €
+                              </div>
+                              <div className="text-xs text-gray-500">remboursable</div>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Aucune</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {(booking.platform_fee + booking.service_fee).toFixed(2)} €
+                          </div>
+                          <div className="text-xs text-gray-500">Hellofonty</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
                           <div className="text-base font-semibold text-gray-900">
-                            {booking.total_price.toFixed(2)} €
+                            {booking.payment_amount.toFixed(2)} €
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
