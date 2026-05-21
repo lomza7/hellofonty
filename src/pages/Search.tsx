@@ -47,7 +47,8 @@ export default function Search() {
         images:listing_images(*)
       `)
       .eq('is_active', true)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
       setListings(data);

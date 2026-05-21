@@ -602,7 +602,8 @@ export default function Admin() {
             display_order
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
       if (error) throw error;
 

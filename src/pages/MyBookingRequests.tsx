@@ -133,11 +133,12 @@ export default function MyBookingRequests() {
           title,
           address,
           price_per_month,
-          images:listing_images(image_url)
+          images:listing_images(image_url, display_order)
         )
       `)
       .in('listing_id', listingIds)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
       setBookings(data as any);

@@ -87,6 +87,7 @@ export default function ListingDetail() {
         images:listing_images(*)
       `)
       .eq('id', listingId)
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' })
       .maybeSingle();
 
     if (!error && data) {

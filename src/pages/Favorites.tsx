@@ -33,7 +33,8 @@ export default function Favorites() {
         )
       `)
       .eq('student_id', profile.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
       setFavorites(data);

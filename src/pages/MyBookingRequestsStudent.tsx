@@ -151,11 +151,12 @@ export default function MyBookingRequestsStudent() {
           city,
           price_per_month,
           landlord_id,
-          images:listing_images(image_url)
+          images:listing_images(image_url, display_order)
         )
       `)
       .eq('student_id', profile.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
       setBookings(data as any);

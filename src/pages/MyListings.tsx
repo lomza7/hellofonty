@@ -30,7 +30,8 @@ export default function MyListings() {
       .from('listings')
       .select('*, images:listing_images(*)')
       .eq('landlord_id', profile.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
       setListings(data);
@@ -72,6 +73,7 @@ export default function MyListings() {
         .from('listings')
         .select('*, images:listing_images(*)')
         .eq('id', listingId)
+        .order('display_order', { ascending: true, referencedTable: 'listing_images' })
         .single();
 
       if (fetchError || !originalListing) {

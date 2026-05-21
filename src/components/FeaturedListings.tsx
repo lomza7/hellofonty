@@ -78,10 +78,11 @@ export default function FeaturedListings() {
           bonus_features,
           latitude,
           longitude,
-          listing_images(image_url)
+          listing_images(image_url, display_order)
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
+        .order('display_order', { ascending: true, referencedTable: 'listing_images' })
         .limit(6);
 
       if (listingsError) throw listingsError;

@@ -551,12 +551,13 @@ export default function MyMonthlyRents() {
             title,
             address,
             price_per_month,
-            images:listing_images(image_url)
+            images:listing_images(image_url, display_order)
           )
         `)
         .eq('student_id', user!.id)
         .eq('status', 'confirmed')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
       if (error) throw error;
 

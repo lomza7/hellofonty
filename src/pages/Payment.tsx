@@ -93,11 +93,12 @@ export default function Payment() {
               address,
               price_per_month,
               security_deposit,
-              images:listing_images(image_url),
+              images:listing_images(image_url, display_order),
               landlord:profiles!landlord_id(avatar_url)
             )
           `)
           .eq('id', bookingId)
+          .order('display_order', { ascending: true, referencedTable: 'listing_images' })
           .maybeSingle(),
         supabase
           .from('platform_settings')

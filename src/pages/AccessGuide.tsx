@@ -76,10 +76,11 @@ export default function AccessGuide() {
           id,
           title,
           address,
-          listing_images(image_url)
+          listing_images(image_url, display_order)
         `)
         .eq('landlord_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
       if (listingsError) throw listingsError;
 
