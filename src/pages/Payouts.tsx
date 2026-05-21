@@ -24,8 +24,38 @@ export default function Payouts() {
 
     if (profile) {
       setStripeStatus(profile.stripe_onboarding_status || 'not_connected');
+
+      if (profile.stripe_account_id && profile.stripe_onboarding_status !== 'complete') {
+        syncStripeStatus();
+      }
     }
   }, [profile, navigate]);
+
+  const syncStripeStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-get-account-status`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.status) {
+        setStripeStatus(data.status.onboarding_status);
+        await refreshProfile();
+      }
+    } catch (err) {
+      console.error('Error syncing Stripe status:', err);
+    }
+  };
 
   const handleActivatePayments = async () => {
     setLoading(true);

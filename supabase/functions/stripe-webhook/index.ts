@@ -60,6 +60,57 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  // Handle Stripe Connect account updates (onboarding completion)
+  if (event.type === 'account.updated') {
+    const account = stripeData as Stripe.Account;
+    console.info(`Processing account.updated for: ${account.id}`);
+
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, stripe_onboarding_status')
+        .eq('stripe_account_id', account.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        console.error('No profile found for Stripe account:', account.id);
+        return;
+      }
+
+      const detailsSubmitted = account.details_submitted || false;
+      const chargesEnabled = account.charges_enabled || false;
+      const payoutsEnabled = account.payouts_enabled || false;
+
+      let onboardingStatus = 'pending';
+      if (payoutsEnabled) {
+        onboardingStatus = 'complete';
+      } else if (!detailsSubmitted) {
+        onboardingStatus = 'not_connected';
+      }
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          stripe_details_submitted: detailsSubmitted,
+          stripe_charges_enabled: chargesEnabled,
+          stripe_payouts_enabled: payoutsEnabled,
+          stripe_onboarding_status: onboardingStatus,
+          stripe_onboarding_updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        console.error('Error updating Stripe Connect status:', updateError);
+      } else {
+        console.info(`Updated Stripe Connect status for user ${profile.id}: ${onboardingStatus}`);
+      }
+    } catch (error) {
+      console.error('Error processing account.updated:', error);
+    }
+
+    return;
+  }
+
   // Handle invoice payment succeeded
   if (event.type === 'invoice.payment_succeeded') {
     const invoice = stripeData as Stripe.Invoice;
