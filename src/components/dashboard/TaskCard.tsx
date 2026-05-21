@@ -228,6 +228,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
         await updateProfile({ avatar_url: avatarUrl });
       } else if (verificationAction.actionType === 'upload_document') {
         const documentUrl = await uploadDocument(selectedFile, verificationAction.documentType!);
+        const storagePath = documentUrl?.split('/documents/')[1] || '';
 
         if (verificationAction.documentType === 'insead_attestation') {
           await updateProfile({
@@ -235,8 +236,6 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             verification_status: 'pending',
             verification_submitted_at: new Date().toISOString()
           });
-
-          const storagePath = documentUrl?.split('/documents/')[1] || '';
 
           const existingDoc = await supabase
             .from('student_documents')
@@ -246,7 +245,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             .maybeSingle();
 
           if (existingDoc.data) {
-            await supabase
+            const { error: updateErr } = await supabase
               .from('student_documents')
               .update({
                 file_url: storagePath,
@@ -255,32 +254,53 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
                 uploaded_at: new Date().toISOString(),
               })
               .eq('id', existingDoc.data.id);
+            if (updateErr) throw updateErr;
           } else {
-            await supabase.from('student_documents').insert({
+            const { error: insertErr } = await supabase.from('student_documents').insert({
               student_id: profile.id,
               document_type: 'insead_attestation',
               file_url: storagePath,
               file_name: selectedFile.name,
               status: 'pending',
             });
+            if (insertErr) throw insertErr;
           }
         } else {
-          const tableMap = {
-            'id_document': 'landlord_documents',
-            'property_tax': 'landlord_documents'
-          };
-          const documentTypeMap = {
-            'id_document': 'identity_document',
+          const documentTypeMap: Record<string, string> = {
+            'id_document': 'id_card',
             'property_tax': 'property_tax'
           };
+          const dbDocType = documentTypeMap[verificationAction.documentType!];
 
-          await supabase.from(tableMap[verificationAction.documentType!]).insert({
-            landlord_id: profile.id,
-            document_type: documentTypeMap[verificationAction.documentType!],
-            document_url: documentUrl,
-            verification_status: 'pending',
-            submitted_at: new Date().toISOString()
-          });
+          const existingDoc = await supabase
+            .from('landlord_documents')
+            .select('id')
+            .eq('landlord_id', profile.id)
+            .eq('document_type', dbDocType)
+            .is('listing_id', null)
+            .maybeSingle();
+
+          if (existingDoc.data) {
+            const { error: updateErr } = await supabase
+              .from('landlord_documents')
+              .update({
+                file_url: storagePath,
+                file_name: selectedFile.name,
+                status: 'pending',
+                uploaded_at: new Date().toISOString(),
+              })
+              .eq('id', existingDoc.data.id);
+            if (updateErr) throw updateErr;
+          } else {
+            const { error: insertErr } = await supabase.from('landlord_documents').insert({
+              landlord_id: profile.id,
+              document_type: dbDocType,
+              file_url: storagePath,
+              file_name: selectedFile.name,
+              status: 'pending',
+            });
+            if (insertErr) throw insertErr;
+          }
         }
       }
 
