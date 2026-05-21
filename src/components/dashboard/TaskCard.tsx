@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CheckCircle2, Circle, Clock, AlertCircle, Upload, User as UserIcon, Phone, ArrowRight, X, Camera, FileText } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, AlertCircle, Upload, User as UserIcon, Phone, ArrowRight, X, Camera, FileText, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -63,6 +63,12 @@ const verificationTaskActions: Record<string, VerificationTaskAction> = {
     icon: Upload,
     actionType: 'upload_document',
     documentType: 'insead_attestation'
+  },
+  'Configurer votre compte de paiement Stripe': {
+    label: 'Configurer Stripe',
+    route: '/proprietaire/paiements',
+    icon: CreditCard,
+    actionType: 'navigate'
   }
 };
 
