@@ -41,7 +41,11 @@ export default function MyListings() {
   const deleteListing = async (listingId: string) => {
     if (!confirm(t('myListings.confirmDelete') || 'Are you sure?')) return;
 
-    await supabase.from('listings').delete().eq('id', listingId);
+    const { error } = await supabase.from('listings').delete().eq('id', listingId);
+    if (error) {
+      alert(language === 'fr' ? 'Erreur lors de la suppression de l\'annonce' : 'Error deleting listing');
+      return;
+    }
     setListings((prev) => prev.filter((l) => l.id !== listingId));
   };
 
