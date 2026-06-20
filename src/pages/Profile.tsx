@@ -135,11 +135,7 @@ export default function Profile() {
 
     if (uploadError) throw uploadError;
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('documents').getPublicUrl(filePath);
-
-    return publicUrl;
+    return filePath;
   };
 
   const uploadAvatar = async (file: File) => {
@@ -186,7 +182,7 @@ export default function Profile() {
         updates.verification_status = 'pending';
         updates.verification_submitted_at = new Date().toISOString();
 
-        const storagePath = documentUrl?.split('/documents/')[1] || '';
+        const storagePath = documentUrl || '';
 
         const existingDoc = await supabase
           .from('student_documents')

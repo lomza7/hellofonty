@@ -75,35 +75,70 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
   }, [selectedDocument]);
 
   function extractFilePath(fileUrl: string, bucketName: string): string {
-    // Si c'est déjà un chemin (pas d'URL complète), le retourner tel quel
     if (!fileUrl.includes('http')) {
       return fileUrl;
     }
 
-    // Extraire le chemin depuis une URL Supabase
-    // Format: https://.../storage/v1/object/public/bucket-name/path/to/file
     const parts = fileUrl.split(`/${bucketName}/`);
     if (parts.length > 1) {
       return parts[1];
     }
 
-    // Si ça ne correspond pas au format attendu, retourner l'URL telle quelle
     return fileUrl;
+  }
+
+  function determineBucketAndPath(document: Document): { bucket: string; path: string } {
+    const fileUrl = document.file_url;
+
+    // If the file_url contains 'verification-documents/' it was uploaded to the 'documents' bucket
+    if (fileUrl.startsWith('verification-documents/') || fileUrl.includes('/documents/verification-documents/')) {
+      const path = fileUrl.includes('http')
+        ? fileUrl.split('/documents/')[1] || fileUrl
+        : fileUrl;
+      return { bucket: 'documents', path };
+    }
+
+    // If it's a full URL containing /documents/ (from Profile.tsx getPublicUrl)
+    if (fileUrl.includes('http') && fileUrl.includes('/documents/')) {
+      const path = fileUrl.split('/documents/')[1] || fileUrl;
+      return { bucket: 'documents', path };
+    }
+
+    // Default: use the type-specific bucket
+    const defaultBucket = document.type === 'student' ? 'student-documents' : 'landlord-documents';
+    const path = extractFilePath(fileUrl, defaultBucket);
+    return { bucket: defaultBucket, path };
   }
 
   async function loadSignedUrl(document: Document) {
     try {
-      const bucketName = document.type === 'student' ? 'student-documents' : 'landlord-documents';
-      const filePath = extractFilePath(document.file_url, bucketName);
+      const { bucket, path } = determineBucketAndPath(document);
 
       const { data, error } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(filePath, 3600);
+        .from(bucket)
+        .createSignedUrl(path, 3600);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback: try the other bucket if first attempt fails
+        const fallbackBucket = bucket === 'documents'
+          ? (document.type === 'student' ? 'student-documents' : 'landlord-documents')
+          : 'documents';
+        const fallbackPath = bucket === 'documents'
+          ? document.file_url
+          : (document.file_url.startsWith('verification-documents/') ? document.file_url : `verification-documents/${document.file_url}`);
+
+        const { data: fallbackData, error: fallbackError } = await supabase.storage
+          .from(fallbackBucket)
+          .createSignedUrl(fallbackPath, 3600);
+
+        if (fallbackError) throw error;
+        setSelectedDocumentUrl(fallbackData.signedUrl);
+        return;
+      }
+
       setSelectedDocumentUrl(data.signedUrl);
     } catch (error) {
-      console.error('Erreur lors de la génération de l\'URL signée:', error);
+      console.error('Erreur lors de la generation de l\'URL signee:', error);
       setSelectedDocumentUrl('');
     }
   }
@@ -603,7 +638,7 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
                   </div>
 
                   {selectedDocumentUrl ? (
-                    selectedDocument.file_url.toLowerCase().endsWith('.pdf') ? (
+                    (selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.file_name?.toLowerCase().endsWith('.pdf')) ? (
                       <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
                         <iframe
                           src={`${selectedDocumentUrl}#toolbar=0`}

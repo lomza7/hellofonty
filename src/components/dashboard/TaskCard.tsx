@@ -186,11 +186,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
 
     if (uploadError) throw uploadError;
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('documents').getPublicUrl(filePath);
-
-    return publicUrl;
+    return filePath;
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,7 +229,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
         await updateProfile({ avatar_url: avatarUrl || undefined });
       } else if (verificationAction.actionType === 'upload_document') {
         const documentUrl = await uploadDocument(selectedFile, verificationAction.documentType!);
-        const storagePath = documentUrl?.split('/documents/')[1] || '';
+        const storagePath = documentUrl || '';
 
         if (verificationAction.documentType === 'insead_attestation') {
           await updateProfile({
