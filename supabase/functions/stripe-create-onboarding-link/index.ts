@@ -66,8 +66,8 @@ Deno.serve(async (req: Request) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
-      refresh_url: `${origin}/proprietaire/paiements/reprendre`,
-      return_url: `${origin}/proprietaire/paiements/felicitations`,
+      refresh_url: `${origin}/versements/refresh`,
+      return_url: `${origin}/versements/felicitations`,
       type: 'account_onboarding',
     });
 
