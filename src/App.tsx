@@ -8,8 +8,8 @@ import CheckoutSuccess from './pages/CheckoutSuccess';
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <LanguageProvider>
         <Router>
           <Routes>
             <Route path="/admin" element={<Admin />} />
@@ -21,7 +21,7 @@ export default function App() {
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
           </Routes>
         </Router>
-      </AuthProvider>
-    </LanguageProvider>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
