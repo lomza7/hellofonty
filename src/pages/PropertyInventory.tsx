@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Home, FileText, Plus, Clock, CheckCircle, AlertCircle, Trash2, CreditCard as Edit, Eye, Download, Filter, Search } from 'lucide-react';
+import { Home, FileText, Plus, Clock, CheckCircle, AlertCircle, Trash2, CreditCard as Edit, Eye, Download, Search } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 

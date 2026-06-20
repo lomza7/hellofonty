@@ -78,7 +78,6 @@ export default function LandlordRentPayments() {
     payments_count: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'list' | 'table'>('table');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');

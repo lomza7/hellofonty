@@ -20,7 +20,6 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [dragAction, setDragAction] = useState<'block' | 'unblock' | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const initialBlockedDates = useRef<Set<string>>(new Set());
@@ -91,7 +90,6 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
   const handleMouseDown = (dateStr: string, isPast: boolean, isImported: boolean) => {
     if (isPast || isImported) return;
     setIsDragging(true);
-    setDragStartDate(dateStr);
 
     const isCurrentlyBlocked = selectedDates.has(dateStr);
     const action = isCurrentlyBlocked ? 'unblock' : 'block';
@@ -114,14 +112,12 @@ export default function CalendarManager({ listingId, listingTitle, onClose }: Ca
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    setDragStartDate(null);
     setDragAction(null);
   };
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       setIsDragging(false);
-      setDragStartDate(null);
       setDragAction(null);
     };
     window.addEventListener('mouseup', handleGlobalMouseUp);

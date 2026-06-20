@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2, Euro, AlertCircle, CheckCircle, GraduationCap } from 'lucide-react';
+import { DollarSign, Plus, CreditCard as Edit2, Trash2, Save, X, Check, RefreshCw, Loader2, AlertCircle, CheckCircle, GraduationCap } from 'lucide-react';
 
 interface PricingPlan {
   id: string;

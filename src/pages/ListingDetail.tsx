@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, Calendar, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, ArrowLeft, Star, Shield, Sheet, Fan, X, Grid2x2 as Grid, Maximize } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Users, Heart, MessageCircle, ChevronLeft, ChevronRight, Wifi, Home, Tv, Wind, Flame, TreePine, Flower2, ParkingCircle, WashingMachine, Monitor, Sparkles, Zap, Bike, Gamepad2, Dumbbell, Waves, Building, Euro, Receipt, Info, Star, Shield, Sheet, Fan, X, Grid2x2 as Grid, Maximize } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,8 +52,8 @@ export default function ListingDetail() {
   const handleGalleryKeyDown = useCallback((e: KeyboardEvent) => {
     if (!showFullscreenGallery || !listing?.images) return;
     if (e.key === 'Escape') setShowFullscreenGallery(false);
-    if (e.key === 'ArrowRight') setGalleryIndex(prev => (prev + 1) % listing.images.length);
-    if (e.key === 'ArrowLeft') setGalleryIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1);
+    if (e.key === 'ArrowRight') setGalleryIndex(prev => (prev + 1) % listing.images!.length);
+    if (e.key === 'ArrowLeft') setGalleryIndex(prev => prev === 0 ? listing.images!.length - 1 : prev - 1);
   }, [showFullscreenGallery, listing]);
 
   useEffect(() => {
@@ -290,14 +290,14 @@ En attente de votre confirmation.`;
 
   const nextImage = () => {
     if (listing?.images && listing.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % listing.images.length);
+      setCurrentImageIndex((prev) => (prev + 1) % listing.images!.length);
     }
   };
 
   const prevImage = () => {
     if (listing?.images && listing.images.length > 0) {
       setCurrentImageIndex((prev) =>
-        prev === 0 ? listing.images.length - 1 : prev - 1
+        prev === 0 ? listing.images!.length - 1 : prev - 1
       );
     }
   };
@@ -524,7 +524,7 @@ En attente de votre confirmation.`;
                 <div className="flex flex-col sm:flex-row items-center sm:space-x-2 text-center sm:text-left">
                   <Building className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mb-1 sm:mb-0" />
                   <span className="text-sm sm:text-base md:text-lg">
-                    {listing.floor === 0 ? (language === 'fr' ? 'RDC' : 'GF') : `${listing.floor}${language === 'fr' ? 'er ét.' : language === 'fr' ? 'er' : (listing.floor === 1 ? 'st' : listing.floor === 2 ? 'nd' : listing.floor === 3 ? 'rd' : 'th') + ' fl.'}`}
+                    {listing.floor === 0 ? (language === 'fr' ? 'RDC' : 'GF') : `${listing.floor}${language === 'fr' ? 'er et.' : (listing.floor === 1 ? 'st' : listing.floor === 2 ? 'nd' : listing.floor === 3 ? 'rd' : 'th') + ' fl.'}`}
                     {listing.total_floors ? `/${listing.total_floors}` : ''}
                   </span>
                 </div>
@@ -984,7 +984,7 @@ En attente de votre confirmation.`;
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => setGalleryIndex(galleryIndex === 0 ? listing.images.length - 1 : galleryIndex - 1)}
+              onClick={() => setGalleryIndex(galleryIndex === 0 ? listing.images!.length - 1 : galleryIndex - 1)}
               className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition z-10"
             >
               <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
@@ -997,7 +997,7 @@ En attente de votre confirmation.`;
             />
 
             <button
-              onClick={() => setGalleryIndex((galleryIndex + 1) % listing.images.length)}
+              onClick={() => setGalleryIndex((galleryIndex + 1) % listing.images!.length)}
               className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition z-10"
             >
               <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8 text-white" />

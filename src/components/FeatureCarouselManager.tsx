@@ -155,7 +155,7 @@ export default function FeatureCarouselManager() {
       setError(null);
       const maxOrder = features.length > 0 ? Math.max(...features.map(f => f.display_order)) : 0;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('feature_carousel_images')
         .insert([{
           feature_key: generatedKey,

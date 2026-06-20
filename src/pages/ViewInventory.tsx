@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Home, Calendar, User, FileText, Download, ChevronDown, ChevronUp, Eye, Mail, CreditCard as Edit2 } from 'lucide-react';
+import { Home, Calendar, User, FileText, Download, ChevronDown, ChevronUp, Eye, Mail, CreditCard as Edit2 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
 interface ViewInventoryData {

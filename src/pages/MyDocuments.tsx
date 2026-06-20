@@ -28,7 +28,7 @@ type DocumentType = {
 
 export default function MyDocuments() {
   const { profile, user } = useAuth();
-  const { t, language } = useLanguage();
+  const { language, t } = useLanguage();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);

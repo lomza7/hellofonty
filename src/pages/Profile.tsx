@@ -191,7 +191,7 @@ export default function Profile() {
         const existingDoc = await supabase
           .from('student_documents')
           .select('id')
-          .eq('student_id', profile.id)
+          .eq('student_id', profile!.id)
           .eq('document_type', 'insead_attestation')
           .maybeSingle();
 
@@ -207,7 +207,7 @@ export default function Profile() {
             .eq('id', existingDoc.data.id);
         } else {
           await supabase.from('student_documents').insert({
-            student_id: profile.id,
+            student_id: profile!.id,
             document_type: 'insead_attestation',
             file_url: storagePath,
             file_name: verificationFile.name,

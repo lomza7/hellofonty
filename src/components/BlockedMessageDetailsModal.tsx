@@ -29,7 +29,7 @@ export default function BlockedMessageDetailsModal({
   blockedMessage,
   userAttempts,
 }: BlockedMessageDetailsModalProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   if (!isOpen || !blockedMessage) return null;
 

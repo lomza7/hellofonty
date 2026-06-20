@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, X, Home, MapPin, Sparkles, Camera, ArrowRight, ArrowLeft, Check, Euro, Plus, Trash2, RotateCw, Info, Shield } from 'lucide-react';
+import { Upload, X, Home, MapPin, Sparkles, Camera, Check, Euro, Plus, Trash2, Info, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,8 +76,8 @@ export default function AddEditListing() {
   const [maxGuests, setMaxGuests] = useState('1');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imageInputKey, setImageInputKey] = useState(0);
   const [existingImages, setExistingImages] = useState<{ id: string; url: string; order: number }[]>([]);
-  const [imageInputKey, setImageInputKey] = useState(Date.now());
   const [imageRotations, setImageRotations] = useState<{ [key: string]: number }>({});
   const [isDropzoneActive, setIsDropzoneActive] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);

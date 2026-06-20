@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, User, CheckCircle, XCircle, Calendar, Shield, Key, ArrowLeft } from 'lucide-react';
+import { Send, User, CheckCircle, XCircle, Shield, Key, ArrowLeft } from 'lucide-react';
 import { supabase, Message } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';

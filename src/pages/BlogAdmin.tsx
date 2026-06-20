@@ -27,8 +27,8 @@ export default function BlogAdmin() {
   const { user, profile } = useAuth();
   const { language } = useLanguage();
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [showForm, setShowForm] = useState(false);
 

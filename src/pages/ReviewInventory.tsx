@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import {
-  ArrowLeft, FileText, CheckCircle, Send, Pen
+  FileText, CheckCircle, Pen
 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -18,6 +18,7 @@ interface InventoryData {
   general_notes: string;
   meter_readings: any;
   keys_info: any;
+  listing_id?: string;
   listing: {
     title: string;
     address: string;

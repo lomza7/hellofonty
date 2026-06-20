@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface VideoEmbedProps {
   url: string;
   title?: string;

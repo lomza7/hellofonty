@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, Eye, CheckCircle, XCircle, User, Home, Calendar, Filter, Search } from 'lucide-react';
+import { FileText, Eye, CheckCircle, XCircle, User, Home, Calendar, Search } from 'lucide-react';
 
 interface StudentDocument {
   id: string;

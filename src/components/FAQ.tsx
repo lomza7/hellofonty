@@ -14,7 +14,7 @@ interface FAQItem {
 }
 
 export default function FAQ() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [loading, setLoading] = useState(true);

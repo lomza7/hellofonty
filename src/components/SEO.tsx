@@ -103,7 +103,7 @@ export default function SEO({
         updateMetaTag('article:section', article.section, true);
       }
       if (article.tags) {
-        article.tags.forEach((tag, index) => {
+        article.tags.forEach((tag) => {
           const existingTag = document.querySelector(`meta[property="article:tag"][content="${tag}"]`);
           if (!existingTag) {
             const tagElement = document.createElement('meta');

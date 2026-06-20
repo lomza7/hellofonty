@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, Ligature as FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
+import { Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, Ligature as FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect, useRef } from 'react';

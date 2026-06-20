@@ -42,7 +42,7 @@ export default function Favorites() {
     setLoading(false);
   };
 
-  const removeFavorite = async (favoriteId: string, listingId: string) => {
+  const removeFavorite = async (favoriteId: string) => {
     await supabase.from('favorites').delete().eq('id', favoriteId);
     setFavorites((prev) => prev.filter((f) => f.id !== favoriteId));
   };
@@ -96,7 +96,7 @@ export default function Favorites() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeFavorite(favorite.id, listing.id);
+                        removeFavorite(favorite.id);
                       }}
                       className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
                     >

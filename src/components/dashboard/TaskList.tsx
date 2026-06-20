@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Filter, CheckCircle } from 'lucide-react';
+import { CheckCircle, Filter } from 'lucide-react';
 import TaskCard from './TaskCard';
 import { supabase } from '../../lib/supabase';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -12,6 +12,7 @@ interface Task {
   status: 'pending' | 'completed' | 'snoozed';
   task_type: 'system' | 'custom';
   due_date?: string;
+  completed_at?: string;
   related_entity_type?: string;
   related_entity_id?: string;
 }

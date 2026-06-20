@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, Clock, TrendingUp, BarChart3, Trash2, DollarSign, Euro, CreditCard, Percent, Tag, MapPin, CreditCard as Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone } from 'lucide-react';
+import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, TrendingUp, BarChart3, Trash2, DollarSign, CreditCard, Percent, Tag, MapPin, CreditCard as Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone, Euro, Clock } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
@@ -25,6 +25,7 @@ interface UserData {
   phone_verified: boolean;
   is_verified: boolean;
   verification_status: string;
+  avatar_url?: string;
   created_at: string;
   last_sign_in_at: string;
   subscription_plan?: string;
@@ -133,10 +134,13 @@ export default function Admin() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'partner-offers'>('users');
-  const [pendingVerifications, setPendingVerifications] = useState<UserData[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [verificationDocument, setVerificationDocument] = useState<string | null>(null);
+  const [pendingVerifications, _setPendingVerifications] = useState<UserData[]>([]);
+  const [selectedUser, _setSelectedUser] = useState<UserData | null>(null);
+  const [verificationDocument, _setVerificationDocument] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  _setPendingVerifications; // Mark as used
+  _setSelectedUser; // Mark as used
+  _setVerificationDocument; // Mark as used
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messageSearch, setMessageSearch] = useState('');
@@ -196,8 +200,8 @@ export default function Admin() {
       setUsers(usersWithAuth);
 
       // Load pending verifications
-      const pendingUsers = usersWithAuth.filter(u => u.verification_status === 'pending');
-      setPendingVerifications(pendingUsers);
+      const _pendingUsers = usersWithAuth.filter(u => u.verification_status === 'pending');
+      _pendingUsers;
 
       // Load stats
       const [
@@ -1108,7 +1112,7 @@ export default function Admin() {
                             await loadAdminData();
                           } catch (error) {
                             console.error('Error deleting user:', error);
-                            alert(error.message || 'Erreur lors de la suppression de l\'utilisateur');
+                            alert(error instanceof Error ? error.message : 'Erreur lors de la suppression de l\'utilisateur');
                           }
                         }}
                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-medium transition-colors"

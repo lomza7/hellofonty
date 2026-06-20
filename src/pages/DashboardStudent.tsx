@@ -12,7 +12,6 @@ import {
   FileText,
   User,
   HelpCircle,
-  TrendingUp,
   CheckCircle,
   AlertCircle
 } from 'lucide-react';

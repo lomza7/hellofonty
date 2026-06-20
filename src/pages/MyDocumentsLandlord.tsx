@@ -41,7 +41,7 @@ type DocumentType = {
 
 export default function MyDocumentsLandlord() {
   const { profile, user } = useAuth();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [tenantInsurances, setTenantInsurances] = useState<TenantInsurance[]>([]);

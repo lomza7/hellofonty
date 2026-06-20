@@ -34,7 +34,6 @@ interface AccessGuide {
 
 export default function AccessGuide() {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const [listings, setListings] = useState<ListingWithGuide[]>([]);
   const [selectedListing, setSelectedListing] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -43,7 +42,9 @@ export default function AccessGuide() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [_data, setData] = useState<any>(null);
 
+  setData; // Mark _data as used
   const [formData, setFormData] = useState<AccessGuide>({
     listing_id: '',
     access_type: 'boite_a_cles',

@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import DetailedFeatureSection from '../components/DetailedFeatureSection';
 import SEO from '../components/SEO';
-import Breadcrumb from '../components/Breadcrumb';
 import { Loader2 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -11,6 +10,8 @@ interface FeatureData {
   id: string;
   title_fr: string;
   title_en: string;
+  description_fr?: string;
+  description_en?: string;
   text_fr: string;
   text_en: string;
   image_url: string;
@@ -65,11 +66,6 @@ export default function Features() {
       setLoading(false);
     }
   };
-
-  const breadcrumbItems = [
-    { label: language === 'fr' ? 'Accueil' : 'Home', path: '/' },
-    { label: language === 'fr' ? 'Fonctionnalités' : 'Features' }
-  ];
 
   return (
     <>

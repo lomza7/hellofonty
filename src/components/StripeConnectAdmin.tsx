@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { RefreshCw, AlertCircle, CheckCircle, Clock, ExternalLink, Search } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle, ExternalLink, Search } from 'lucide-react';
 import StripeStatusBadge from './StripeStatusBadge';
 import type { Profile } from '../lib/supabase';
 import type { StripeOnboardingStatus } from '../types/stripe';
@@ -56,7 +56,7 @@ export default function StripeConnectAdmin() {
     }
   };
 
-  const handleRefreshStatus = async (landlordId: string, stripeAccountId: string) => {
+  const handleRefreshStatus = async (landlordId: string, _stripeAccountId: string) => {
     setRefreshingId(landlordId);
     try {
       const { data: { session } } = await supabase.auth.getSession();

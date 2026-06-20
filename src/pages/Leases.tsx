@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, Send, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -9,6 +9,11 @@ interface Listing {
   id: string;
   title: string;
   address: string;
+  price_per_month?: number;
+  electricity_cost?: number;
+  heating_cost?: number;
+  water_cost?: number;
+  security_deposit?: number;
 }
 
 interface Profile {

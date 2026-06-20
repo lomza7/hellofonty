@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Check, X, Zap, Flame, Droplets } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Zap, Flame, Droplets } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type ChargeDetail = {

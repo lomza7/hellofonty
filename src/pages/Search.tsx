@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, ArrowLeft, Car } from 'lucide-react';
+import { Heart, Car } from 'lucide-react';
 import { supabase, Listing } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';

@@ -75,7 +75,7 @@ export default function PartnerOffersCarousel({ targetAudience }: PartnerOffersC
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [offers.length, currentIndex]);
+  }, [offers.length, currentIndex, nextSlide]);
 
   if (loading) {
     return (
@@ -88,8 +88,6 @@ export default function PartnerOffersCarousel({ targetAudience }: PartnerOffersC
   if (offers.length === 0) {
     return null;
   }
-
-  const currentOffer = offers[currentIndex];
 
   return (
     <div className="bg-gradient-to-br from-rose-50 via-white to-blue-50 rounded-2xl shadow-lg overflow-hidden">

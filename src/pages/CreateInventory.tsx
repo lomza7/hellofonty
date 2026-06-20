@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import {
-  ArrowLeft, ArrowRight, Save, Home, Calendar,
-  User, Mail, FileText, Check
+  Home, Calendar,
+  User, Mail, FileText, Check, ArrowRight
 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -45,8 +45,8 @@ export default function CreateInventory() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [leases, setLeases] = useState<Lease[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [leases, setLeases] = useState<Lease[]>([]);
   const [checkInInventories, setCheckInInventories] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({

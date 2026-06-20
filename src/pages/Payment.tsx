@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CreditCard, Clock, Euro, Shield, ArrowLeft, CheckCircle, AlertCircle, Home } from 'lucide-react';
+import { CreditCard, Clock, Shield, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';

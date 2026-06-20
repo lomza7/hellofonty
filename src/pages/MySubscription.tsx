@@ -43,7 +43,7 @@ type PricingPlan = {
 
 export default function MySubscription() {
   const { user, profile } = useAuth();
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);

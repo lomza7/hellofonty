@@ -84,7 +84,6 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { profile, updateProfile, refreshProfile } = useAuth();
-  const { t } = useLanguage();
 
   const countries = [
     { code: '+33', flag: '🇫🇷', name: 'France' },
@@ -231,14 +230,14 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
     try {
       if (verificationAction.actionType === 'upload_avatar') {
         const avatarUrl = await uploadAvatar(selectedFile);
-        await updateProfile({ avatar_url: avatarUrl });
+        await updateProfile({ avatar_url: avatarUrl || undefined });
       } else if (verificationAction.actionType === 'upload_document') {
         const documentUrl = await uploadDocument(selectedFile, verificationAction.documentType!);
         const storagePath = documentUrl?.split('/documents/')[1] || '';
 
         if (verificationAction.documentType === 'insead_attestation') {
           await updateProfile({
-            verification_document_url: documentUrl,
+            verification_document_url: documentUrl || undefined,
             verification_status: 'pending',
             verification_submitted_at: new Date().toISOString()
           });

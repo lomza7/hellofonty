@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Mail, Check, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type EmailVerificationProps = {
@@ -9,7 +8,6 @@ type EmailVerificationProps = {
 };
 
 export default function EmailVerification({ email, onVerified }: EmailVerificationProps) {
-  const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);

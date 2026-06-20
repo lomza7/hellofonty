@@ -11,12 +11,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Profile = {
   id: string;
-  role: 'student' | 'landlord';
+  role: 'student' | 'landlord' | 'admin';
   first_name: string;
   last_name: string;
   phone?: string;
   avatar_url?: string;
   is_verified: boolean;
+  email_verified?: boolean;
+  user_type?: string;
   verification_document_url?: string;
   verification_status: 'not_submitted' | 'pending' | 'approved' | 'rejected';
   verification_submitted_at?: string | null;
@@ -109,6 +111,7 @@ export type Message = {
   booking_id?: string;
   content: string;
   is_read: boolean;
+  event?: string;
   created_at: string;
   sender?: Profile;
   recipient?: Profile;
@@ -124,6 +127,8 @@ export type Booking = {
   total_days: number;
   total_price: number;
   status: 'pending' | 'confirmed' | 'cancelled';
+  payment_status?: 'pending' | 'paid' | 'failed' | 'expired' | 'completed';
+  payment_deadline?: string;
   created_at: string;
   listing?: Listing;
   student?: Profile;
