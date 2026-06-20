@@ -14,7 +14,7 @@ export async function createCheckoutSession(options: CheckoutOptions): Promise<s
     throw new Error('Vous devez être connecté pour procéder au paiement.');
   }
 
-  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`;
+  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
 
   const response = await fetch(apiUrl, {
     method: 'POST',
