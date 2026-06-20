@@ -2,6 +2,11 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
+import SupportChat from './components/SupportChat';
+import GoogleAnalytics from './components/GoogleAnalytics';
 
 const Home = lazy(() => import('./pages/Home'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -62,6 +67,9 @@ export default function App() {
     <AuthProvider>
       <LanguageProvider>
         <Router>
+          <ScrollToTop />
+          <GoogleAnalytics />
+          <Navbar />
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -112,6 +120,8 @@ export default function App() {
               <Route path="/conditions-utilisation" element={<TermsOfUse />} />
             </Routes>
           </Suspense>
+          <Footer />
+          <SupportChat />
         </Router>
       </LanguageProvider>
     </AuthProvider>
