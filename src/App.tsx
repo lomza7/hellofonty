@@ -73,9 +73,9 @@ export default function App() {
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/connexion" element={<Auth />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/inscription" element={<Auth />} />
+              <Route path="/connexion" element={<Auth mode="signin" />} />
+              <Route path="/auth" element={<Auth mode="signin" />} />
+              <Route path="/inscription" element={<Auth mode="signup" />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/recherche" element={<Search />} />
               <Route path="/annonce/:id" element={<ListingDetail />} />
