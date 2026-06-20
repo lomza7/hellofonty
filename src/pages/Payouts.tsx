@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw } from 'lucide-react';
+import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw, X } from 'lucide-react';
 import StripeStatusBadge from '../components/StripeStatusBadge';
 import type { StripeOnboardingStatus } from '../types/stripe';
 import BackButton from '../components/BackButton';
@@ -15,6 +15,7 @@ export default function Payouts() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stripeStatus, setStripeStatus] = useState<StripeOnboardingStatus>('not_connected');
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
 
   useEffect(() => {
     if (profile?.role !== 'landlord') {
@@ -27,6 +28,10 @@ export default function Payouts() {
 
       if (profile.stripe_account_id && profile.stripe_onboarding_status !== 'complete') {
         syncStripeStatus();
+      }
+
+      if ((profile as any).stripe_migration_needed) {
+        setShowMigrationNotice(true);
       }
     }
   }, [profile, navigate]);
@@ -148,6 +153,35 @@ export default function Payouts() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <BackButton />
+
+        {showMigrationNotice && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-5 relative">
+            <button
+              onClick={async () => {
+                setShowMigrationNotice(false);
+                if (user) {
+                  await supabase.from('profiles').update({ stripe_migration_needed: false }).eq('id', user.id);
+                }
+              }}
+              className="absolute top-3 right-3 p-1 rounded-lg hover:bg-amber-100 transition-colors"
+            >
+              <X className="w-4 h-4 text-amber-700" />
+            </button>
+            <div className="flex items-start gap-3 pr-6">
+              <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-900 mb-1">
+                  {language === 'fr' ? 'Mise a jour du systeme de paiement' : 'Payment system update'}
+                </h3>
+                <p className="text-sm text-amber-800">
+                  {language === 'fr'
+                    ? "Suite a une mise a jour de notre systeme de paiement, vous devez reconfigurer votre compte Stripe. Cette operation prend moins de 5 minutes. Vos futures transactions seront traitees via notre nouvelle plateforme securisee."
+                    : "Due to a payment system update, you need to reconfigure your Stripe account. This takes less than 5 minutes. Your future transactions will be processed through our new secure platform."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{language === 'fr' ? 'Gestion des Paiements' : 'Payment Management'}</h1>
           <p className="text-gray-600">
