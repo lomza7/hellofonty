@@ -74,6 +74,8 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/connexion" element={<Auth />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/inscription" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/recherche" element={<Search />} />
               <Route path="/annonce/:id" element={<ListingDetail />} />
@@ -85,29 +87,42 @@ export default function App() {
               <Route path="/profil" element={<Profile />} />
               <Route path="/dashboard-proprietaire" element={<DashboardLandlord />} />
               <Route path="/dashboard-etudiant" element={<DashboardStudent />} />
+              <Route path="/dashboard" element={<DashboardStudent />} />
               <Route path="/mes-demandes" element={<MyBookingRequests />} />
               <Route path="/mes-demandes-etudiant" element={<MyBookingRequestsStudent />} />
+              <Route path="/mes-reservations" element={<MyBookingRequestsStudent />} />
+              <Route path="/my-booking-requests-student" element={<MyBookingRequestsStudent />} />
               <Route path="/mes-documents" element={<MyDocuments />} />
               <Route path="/mes-documents-proprietaire" element={<MyDocumentsLandlord />} />
+              <Route path="/documents-proprietaire" element={<MyDocumentsLandlord />} />
               <Route path="/mes-loyers" element={<MyMonthlyRents />} />
               <Route path="/loyers-proprietaire" element={<LandlordRentPayments />} />
+              <Route path="/proprietaire/loyers" element={<LandlordRentPayments />} />
               <Route path="/mon-abonnement" element={<MySubscription />} />
               <Route path="/baux" element={<Leases />} />
+              <Route path="/mes-baux" element={<Leases />} />
               <Route path="/versements" element={<Payouts />} />
               <Route path="/versements/felicitations" element={<PayoutsCongratulations />} />
               <Route path="/versements/refresh" element={<PayoutsRefresh />} />
               <Route path="/versements/return" element={<PayoutsReturn />} />
+              <Route path="/proprietaire/paiements" element={<Payouts />} />
               <Route path="/paiement/:bookingId" element={<Payment />} />
               <Route path="/paiement/succes" element={<PaymentSuccess />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/tarifs" element={<Pricing />} />
               <Route path="/checkout/success" element={<CheckoutSuccess />} />
               <Route path="/fonctionnalites" element={<Features />} />
               <Route path="/guide-acces/:listingId" element={<AccessGuide />} />
               <Route path="/guide-acces/preview/:token" element={<AccessGuidePreview />} />
               <Route path="/etats-des-lieux" element={<PropertyInventory />} />
+              <Route path="/etat-des-lieux" element={<PropertyInventory />} />
+              <Route path="/inventory" element={<PropertyInventory />} />
               <Route path="/etats-des-lieux/creer/:bookingId" element={<CreateInventory />} />
+              <Route path="/inventory/new/:bookingId" element={<CreateInventory />} />
               <Route path="/etats-des-lieux/modifier/:id" element={<EditInventory />} />
+              <Route path="/inventory/:id/edit" element={<EditInventory />} />
               <Route path="/etats-des-lieux/voir/:id" element={<ViewInventory />} />
+              <Route path="/inventory/:id" element={<ViewInventory />} />
               <Route path="/etats-des-lieux/revision/:id" element={<ReviewInventory />} />
               <Route path="/blog" element={<BlogList />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
@@ -116,8 +131,11 @@ export default function App() {
               <Route path="/admin/support" element={<SupportAdmin />} />
               <Route path="/mentions-legales" element={<LegalNotice />} />
               <Route path="/politique-confidentialite" element={<PrivacyPolicy />} />
+              <Route path="/rgpd" element={<PrivacyPolicy />} />
               <Route path="/conditions-vente" element={<TermsOfSale />} />
+              <Route path="/cgv" element={<TermsOfSale />} />
               <Route path="/conditions-utilisation" element={<TermsOfUse />} />
+              <Route path="/cgu" element={<TermsOfUse />} />
             </Routes>
           </Suspense>
           <Footer />
