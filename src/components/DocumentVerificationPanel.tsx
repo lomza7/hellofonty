@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { FileText, Eye, CheckCircle, XCircle, User, Home, Calendar, Search } from 'lucide-react';
 
@@ -59,10 +59,28 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
   const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState<string>('');
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+
+  const loadPreviewBlob = useCallback(async (url: string) => {
+    setPreviewLoading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Fetch failed');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewBlobUrl(blobUrl);
+    } catch (error) {
+      console.error('Error loading preview blob:', error);
+      setPreviewBlobUrl('');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadDocuments();
@@ -70,9 +88,21 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
 
   useEffect(() => {
     if (selectedDocument) {
+      setPreviewBlobUrl('');
       loadSignedUrl(selectedDocument);
     }
   }, [selectedDocument]);
+
+  useEffect(() => {
+    if (selectedDocumentUrl) {
+      loadPreviewBlob(selectedDocumentUrl);
+    }
+    return () => {
+      if (previewBlobUrl) {
+        URL.revokeObjectURL(previewBlobUrl);
+      }
+    };
+  }, [selectedDocumentUrl]);
 
   function extractFilePath(fileUrl: string, bucketName: string): string {
     if (!fileUrl.includes('http')) {
@@ -638,36 +668,51 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
                   </div>
 
                   {selectedDocumentUrl ? (
-                    (selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.file_name?.toLowerCase().endsWith('.pdf')) ? (
-                      <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
-                        <iframe
-                          src={`${selectedDocumentUrl}#toolbar=0`}
-                          className="w-full h-full"
-                          title="Aperçu du document"
-                        />
+                    previewLoading ? (
+                      <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500 mb-2"></div>
+                        <p className="text-gray-500 text-sm">Chargement de l'aperçu...</p>
                       </div>
+                    ) : previewBlobUrl ? (
+                      (selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.file_name?.toLowerCase().endsWith('.pdf')) ? (
+                        <div className="relative w-full h-96 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
+                          <iframe
+                            src={`${previewBlobUrl}#toolbar=0`}
+                            className="w-full h-full"
+                            title="Aperçu du document"
+                          />
+                        </div>
+                      ) : (
+                        <div className="relative group">
+                          <img
+                            src={previewBlobUrl}
+                            alt="Document"
+                            className="w-full rounded-lg border border-gray-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const parent = (e.target as HTMLImageElement).parentElement;
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div class="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                    <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <p class="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
+                                    <p class="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
+                                  </div>
+                                `;
+                              }
+                            }}
+                          />
+                        </div>
+                      )
                     ) : (
-                      <div className="relative group">
-                        <img
-                          src={selectedDocumentUrl}
-                          alt="Document"
-                          className="w-full rounded-lg border border-gray-200"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                            const parent = (e.target as HTMLImageElement).parentElement;
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                                  <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                  </svg>
-                                  <p class="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
-                                  <p class="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
-                                </div>
-                              `;
-                            }
-                          }}
-                        />
+                      <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <p className="text-gray-500 text-sm">Impossible d'afficher l'aperçu</p>
+                        <p className="text-gray-400 text-xs mt-1">Cliquez sur "Ouvrir" pour voir le document</p>
                       </div>
                     )
                   ) : (
