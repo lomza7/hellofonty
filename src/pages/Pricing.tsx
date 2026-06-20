@@ -64,8 +64,8 @@ export default function Pricing() {
 
         <p className="text-center text-sm text-gray-400">
           {fr
-            ? 'Abonnement mensuel · Résiliable à tout moment · Paiement sécurisé par Stripe'
-            : 'Monthly subscription · Cancel anytime · Secure payment by Stripe'}
+            ? 'Paiement sécurisé par Stripe · Résiliable à tout moment'
+            : 'Secure payment by Stripe · Cancel anytime'}
         </p>
       </div>
     </div>
@@ -132,7 +132,11 @@ function PricingCard({
         <span className="text-5xl font-black text-gray-900 leading-none">
           {product.currencySymbol}{product.price}
         </span>
-        <span className="text-gray-400 text-sm pb-1">{fr ? '/ mois' : '/ month'}</span>
+        <span className="text-gray-400 text-sm pb-1">
+          {product.mode === 'payment'
+            ? (fr ? '/ unique' : '/ one-time')
+            : (fr ? '/ mois' : '/ month')}
+        </span>
       </div>
 
       {/* Features */}

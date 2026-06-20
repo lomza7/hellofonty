@@ -9,7 +9,7 @@ export const STRIPE_PRODUCTS = {
     price: 299.00,
     currency: 'eur',
     currencySymbol: '€',
-    mode: 'subscription' as const,
+    mode: 'payment' as const,
     features: [
       'Accès aux logements vérifiés',
       'Messagerie sécurisée',
