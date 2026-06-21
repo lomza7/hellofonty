@@ -79,6 +79,7 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/recherche" element={<Search />} />
               <Route path="/annonce/:id" element={<ListingDetail />} />
+              <Route path="/logement/:id" element={<ListingDetail />} />
               <Route path="/ajouter-annonce" element={<AddEditListing />} />
               <Route path="/modifier-annonce/:id" element={<AddEditListing />} />
               <Route path="/mes-annonces" element={<MyListings />} />
