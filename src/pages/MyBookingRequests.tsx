@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, X, User, Home, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building } from 'lucide-react';
+import { Calendar, Check, X, User, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -340,24 +340,35 @@ export default function MyBookingRequests() {
               const paymentInfo = getPaymentStatusInfo(booking);
 
               return (
-                <div key={booking.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden hover:shadow-md transition">
+                <div key={booking.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
+                  <div className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+                    {booking.listing?.images && booking.listing.images.length > 0 && (
+                      <img
+                        src={booking.listing.images[0].image_url}
+                        alt={booking.listing?.title || ''}
+                        className="w-14 h-14 object-cover rounded-lg ring-2 ring-white/30 flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className="text-lg font-bold truncate cursor-pointer hover:text-blue-300 transition"
+                        onClick={() => navigate(`/logement/${booking.listing_id}`)}
+                      >
+                        {booking.listing?.title || (language === 'fr' ? 'Logement' : 'Listing')}
+                      </h3>
+                      {booking.listing?.address && (
+                        <p className="text-slate-300 text-sm truncate">{booking.listing.address}</p>
+                      )}
+                    </div>
+                    <div className={`inline-block px-4 py-2 rounded-full font-semibold text-sm ${getStatusColor(booking.status)}`}>
+                      {getStatusLabel(booking.status)}
+                    </div>
+                  </div>
+
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center mb-2">
-                          <Home className="w-5 h-5 text-blue-600 mr-2" />
-                          <h3
-                            className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600"
-                            onClick={() => navigate(`/logement/${booking.listing_id}`)}
-                          >
-                            {booking.listing?.title || (language === 'fr' ? 'Logement' : 'Listing')}
-                          </h3>
-                        </div>
-                        {booking.listing?.address && <p className="text-gray-600 mb-2">{booking.listing.address}</p>}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`inline-block px-4 py-2 rounded-full border-2 font-semibold text-sm ${getStatusColor(booking.status)}`}>
-                            {getStatusLabel(booking.status)}
-                          </div>
                           {paymentInfo && (
                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium ${paymentInfo.color}`}>
                               {paymentInfo.icon}
@@ -369,13 +380,6 @@ export default function MyBookingRequests() {
                           )}
                         </div>
                       </div>
-                      {booking.listing?.images && booking.listing.images.length > 0 && (
-                        <img
-                          src={booking.listing.images[0].image_url}
-                          alt={booking.listing.title}
-                          className="w-24 h-24 object-cover rounded-lg ml-4"
-                        />
-                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
