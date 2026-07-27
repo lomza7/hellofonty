@@ -141,7 +141,9 @@ export default function App() {
               <Route path="/etat-des-lieux" element={<PropertyInventory />} />
               <Route path="/inventory" element={<PropertyInventory />} />
               <Route path="/etats-des-lieux/creer/:bookingId" element={<CreateInventory />} />
+              <Route path="/etats-des-lieux/creer" element={<CreateInventory />} />
               <Route path="/inventory/new/:bookingId" element={<CreateInventory />} />
+              <Route path="/inventory/new" element={<CreateInventory />} />
               <Route path="/etats-des-lieux/modifier/:id" element={<EditInventory />} />
               <Route path="/inventory/:id/edit" element={<EditInventory />} />
               <Route path="/etats-des-lieux/voir/:id" element={<ViewInventory />} />
