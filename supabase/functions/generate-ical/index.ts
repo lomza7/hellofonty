@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
       .from('bookings')
       .select('id, start_date, end_date, status')
       .eq('listing_id', listingId)
-      .in('status', ['confirmed', 'pending']);
+      .in('status', ['confirmed']);
 
     const allBlockedDates = [
       ...(blockedDates || []).map((d: BlockedDate) => ({
