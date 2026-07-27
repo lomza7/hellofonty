@@ -155,8 +155,7 @@ export default function MyBookingRequestsStudent() {
         )
       `)
       .eq('student_id', profile.id)
-      .order('created_at', { ascending: false })
-      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
+      .order('created_at', { ascending: false });
 
     if (!error && data) {
       setBookings(data as any);
