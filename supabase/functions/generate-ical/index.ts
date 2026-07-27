@@ -12,14 +12,6 @@ interface BlockedDate {
   id: string;
 }
 
-interface ImportedBlockedDate {
-  start_date: string;
-  end_date: string;
-  event_uid: string;
-  summary: string | null;
-  description: string | null;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -77,11 +69,6 @@ Deno.serve(async (req: Request) => {
       .select('start_date, end_date, id')
       .eq('listing_id', listingId);
 
-    const { data: importedDates } = await supabase
-      .from('imported_blocked_dates')
-      .select('start_date, end_date, event_uid, summary, description')
-      .eq('listing_id', listingId);
-
     const { data: bookings } = await supabase
       .from('bookings')
       .select('id, start_date, end_date, status')
@@ -96,19 +83,12 @@ Deno.serve(async (req: Request) => {
         summary: 'Non disponible',
         description: 'Date bloquée',
       })),
-      ...(importedDates || []).map((d: ImportedBlockedDate) => ({
-        start: d.start_date,
-        end: d.end_date,
-        uid: d.event_uid,
-        summary: d.summary || 'Réservé',
-        description: d.description || 'Réservation externe',
-      })),
       ...(bookings || []).map((b: any) => ({
         start: b.start_date,
         end: b.end_date,
         uid: `booking-${b.id}@hellofonty.com`,
         summary: 'Réservé',
-        description: b.status === 'confirmed' ? 'Réservation confirmée' : 'Réservation en attente',
+        description: 'Réservation confirmée',
       })),
     ];
 
