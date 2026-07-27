@@ -74,7 +74,7 @@ export default function EditInventory() {
 
   useEffect(() => {
     loadData();
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     if (hasUnsavedChanges && rooms.length > 0 && !saving) {
@@ -90,12 +90,27 @@ export default function EditInventory() {
     if (!id || !user) return;
 
     try {
-      const [inventoryRes, roomsRes, roomTemplatesRes, elementTemplatesRes] = await Promise.all([
-        supabase
-          .from('property_inventories')
-          .select('*, listing:listings(title, address)')
-          .eq('id', id)
-          .single(),
+      const inventoryRes = await supabase
+        .from('property_inventories')
+        .select('*, listing:listings(title, address)')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (inventoryRes.error) throw inventoryRes.error;
+      if (!inventoryRes.data) {
+        alert(language === 'fr' ? 'État des lieux introuvable' : 'Inventory not found');
+        navigate('/inventory');
+        return;
+      }
+      if (inventoryRes.data.landlord_id !== user.id) {
+        alert('Unauthorized');
+        navigate('/inventory');
+        return;
+      }
+
+      setInventory(inventoryRes.data);
+
+      const [roomsRes, roomTemplatesRes, elementTemplatesRes] = await Promise.all([
         supabase
           .from('inventory_rooms')
           .select(`
@@ -116,15 +131,6 @@ export default function EditInventory() {
           .select('*')
           .order('order_index')
       ]);
-
-      if (inventoryRes.error) throw inventoryRes.error;
-      if (inventoryRes.data.landlord_id !== user.id) {
-        alert('Unauthorized');
-        navigate('/inventory');
-        return;
-      }
-
-      setInventory(inventoryRes.data);
 
       const loadedRooms = (roomsRes.data || []).map((room: any) => ({
         ...room,
