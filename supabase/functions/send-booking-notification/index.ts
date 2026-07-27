@@ -52,13 +52,13 @@ Deno.serve(async (req: Request) => {
 
     const { data: student } = await supabase
       .from('profiles')
-      .select('first_name, last_name, user_id')
+      .select('first_name, last_name')
       .eq('id', record.student_id)
       .maybeSingle();
 
     const { data: landlord } = await supabase
       .from('profiles')
-      .select('first_name, last_name, user_id')
+      .select('first_name, last_name')
       .eq('id', listing.landlord_id)
       .maybeSingle();
 
@@ -69,8 +69,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: studentAuth } = await supabase.auth.admin.getUserById(student.user_id);
-    const { data: landlordAuth } = await supabase.auth.admin.getUserById(landlord.user_id);
+    const { data: studentAuth } = await supabase.auth.admin.getUserById(record.student_id);
+    const { data: landlordAuth } = await supabase.auth.admin.getUserById(listing.landlord_id);
 
     const studentEmail = studentAuth?.user?.email;
     const landlordEmail = landlordAuth?.user?.email;
