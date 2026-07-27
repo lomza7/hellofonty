@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, X, User, Home, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer } from 'lucide-react';
+import { Calendar, Check, X, User, Home, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -27,11 +27,12 @@ type Booking = {
     last_name: string;
   };
   listing: {
+    id: string;
     title: string;
     address: string;
     price_per_month: number;
     images: Array<{ image_url: string }>;
-  };
+  } | null;
 };
 
 function PaymentCountdown({ deadline, language }: { deadline: string; language: string }) {
@@ -87,6 +88,7 @@ export default function MyBookingRequests() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
+  const [listingFilter, setListingFilter] = useState<string>('all');
 
   useEffect(() => {
     if (profile) {
@@ -130,6 +132,7 @@ export default function MyBookingRequests() {
         *,
         student:profiles!bookings_student_id_fkey(first_name, last_name),
         listing:listings!bookings_listing_id_fkey(
+          id,
           title,
           address,
           price_per_month,
@@ -141,7 +144,8 @@ export default function MyBookingRequests() {
       .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
-      setBookings(data as any);
+      const validBookings = data.filter((b: any) => b.listing !== null);
+      setBookings(validBookings as any);
     }
 
     setLoading(false);
@@ -159,9 +163,19 @@ export default function MyBookingRequests() {
     }
   };
 
-  const filteredBookings = filter === 'all'
-    ? bookings
-    : bookings.filter(b => b.status === filter);
+  const uniqueListings = useMemo(() => {
+    const map = new Map<string, string>();
+    bookings.forEach(b => {
+      if (b.listing) {
+        map.set(b.listing.id, b.listing.title);
+      }
+    });
+    return Array.from(map.entries());
+  }, [bookings]);
+
+  const filteredBookings = bookings
+    .filter(b => filter === 'all' || b.status === filter)
+    .filter(b => listingFilter === 'all' || b.listing_id === listingFilter);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -249,47 +263,65 @@ export default function MyBookingRequests() {
           <p className="text-gray-600">{language === 'fr' ? 'Gerez les demandes de location pour vos annonces' : 'Manage rental requests for your listings'}</p>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {language === 'fr' ? 'Toutes' : 'All'} ({bookings.length})
-          </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              filter === 'pending'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {language === 'fr' ? 'En attente' : 'Pending'} ({bookings.filter(b => b.status === 'pending').length})
-          </button>
-          <button
-            onClick={() => setFilter('confirmed')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              filter === 'confirmed'
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {language === 'fr' ? 'Confirmees' : 'Confirmed'} ({bookings.filter(b => b.status === 'confirmed').length})
-          </button>
-          <button
-            onClick={() => setFilter('cancelled')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              filter === 'cancelled'
-                ? 'bg-red-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {language === 'fr' ? 'Refusees' : 'Declined'} ({bookings.filter(b => b.status === 'cancelled').length})
-          </button>
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-6 py-3 rounded-lg font-semibold transition ${
+                filter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {language === 'fr' ? 'Toutes' : 'All'} ({bookings.length})
+            </button>
+            <button
+              onClick={() => setFilter('pending')}
+              className={`px-6 py-3 rounded-lg font-semibold transition ${
+                filter === 'pending'
+                  ? 'bg-yellow-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {language === 'fr' ? 'En attente' : 'Pending'} ({bookings.filter(b => b.status === 'pending').length})
+            </button>
+            <button
+              onClick={() => setFilter('confirmed')}
+              className={`px-6 py-3 rounded-lg font-semibold transition ${
+                filter === 'confirmed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {language === 'fr' ? 'Confirmees' : 'Confirmed'} ({bookings.filter(b => b.status === 'confirmed').length})
+            </button>
+            <button
+              onClick={() => setFilter('cancelled')}
+              className={`px-6 py-3 rounded-lg font-semibold transition ${
+                filter === 'cancelled'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {language === 'fr' ? 'Refusees' : 'Declined'} ({bookings.filter(b => b.status === 'cancelled').length})
+            </button>
+          </div>
+
+          {uniqueListings.length > 1 && (
+            <div className="flex items-center gap-3">
+              <Building className="w-5 h-5 text-gray-500" />
+              <select
+                value={listingFilter}
+                onChange={(e) => setListingFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{language === 'fr' ? 'Tous les logements' : 'All listings'}</option>
+                {uniqueListings.map(([id, title]) => (
+                  <option key={id} value={id}>{title}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {filteredBookings.length === 0 ? (
@@ -318,10 +350,10 @@ export default function MyBookingRequests() {
                             className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600"
                             onClick={() => navigate(`/logement/${booking.listing_id}`)}
                           >
-                            {booking.listing.title}
+                            {booking.listing?.title || (language === 'fr' ? 'Logement' : 'Listing')}
                           </h3>
                         </div>
-                        <p className="text-gray-600 mb-2">{booking.listing.address}</p>
+                        {booking.listing?.address && <p className="text-gray-600 mb-2">{booking.listing.address}</p>}
                         <div className="flex items-center gap-2 flex-wrap">
                           <div className={`inline-block px-4 py-2 rounded-full border-2 font-semibold text-sm ${getStatusColor(booking.status)}`}>
                             {getStatusLabel(booking.status)}
@@ -337,7 +369,7 @@ export default function MyBookingRequests() {
                           )}
                         </div>
                       </div>
-                      {booking.listing.images && booking.listing.images.length > 0 && (
+                      {booking.listing?.images && booking.listing.images.length > 0 && (
                         <img
                           src={booking.listing.images[0].image_url}
                           alt={booking.listing.title}
