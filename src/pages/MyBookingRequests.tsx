@@ -140,8 +140,7 @@ export default function MyBookingRequests() {
         )
       `)
       .in('listing_id', listingIds)
-      .order('created_at', { ascending: false })
-      .order('display_order', { ascending: true, referencedTable: 'listing_images' });
+      .order('created_at', { ascending: false });
 
     if (!error && data) {
       const validBookings = data.map((b: any) => {
