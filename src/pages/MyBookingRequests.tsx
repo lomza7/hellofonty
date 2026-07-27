@@ -144,7 +144,10 @@ export default function MyBookingRequests() {
       .order('display_order', { ascending: true, referencedTable: 'listing_images' });
 
     if (!error && data) {
-      const validBookings = data.filter((b: any) => b.listing !== null);
+      const validBookings = data.map((b: any) => {
+        const listing = Array.isArray(b.listing) ? b.listing[0] || null : b.listing;
+        return { ...b, listing };
+      }).filter((b: any) => b.listing !== null);
       setBookings(validBookings as any);
     }
 

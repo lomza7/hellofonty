@@ -13,6 +13,9 @@ type Conversation = {
   lastMessage: string;
   lastMessageDate: string;
   unreadCount: number;
+  listingId: string | null;
+  listingTitle: string | null;
+  conversationKey: string;
 };
 
 type MessagesProps = {
@@ -25,6 +28,11 @@ export default function Messages({ selectedUserId }: MessagesProps) {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+
+  const getSelectedConv = (): Conversation | null => {
+    if (!selectedConversation) return null;
+    return conversations.find(c => c.conversationKey === selectedConversation) || null;
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -63,7 +71,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
       if (selectedUserId) {
         const existingConv = conversations.find(c => c.otherUserId === selectedUserId);
         if (existingConv) {
-          setSelectedConversation(selectedUserId);
+          setSelectedConversation(existingConv.conversationKey);
         } else {
           const { data: userData, error } = await supabase
             .from('profiles')
@@ -72,15 +80,19 @@ export default function Messages({ selectedUserId }: MessagesProps) {
             .maybeSingle();
 
           if (!error && userData) {
+            const convKey = `${selectedUserId}_none`;
             const newConv: Conversation = {
               otherUserId: selectedUserId,
               otherUserName: `${userData.first_name} ${userData.last_name}`,
               lastMessage: '',
               lastMessageDate: new Date().toISOString(),
               unreadCount: 0,
+              listingId: null,
+              listingTitle: null,
+              conversationKey: convKey,
             };
             setConversations(prev => [newConv, ...prev]);
-            setSelectedConversation(selectedUserId);
+            setSelectedConversation(convKey);
           }
         }
       }
@@ -93,32 +105,34 @@ export default function Messages({ selectedUserId }: MessagesProps) {
 
   useEffect(() => {
     if (selectedConversation) {
-      loadMessages(selectedConversation);
-      markAsRead(selectedConversation);
-      checkContactPermission(selectedConversation);
-      loadAttemptsCount();
+      const conv = getSelectedConv();
+      if (conv) {
+        loadMessages(conv.otherUserId, conv.listingId);
+        markAsRead(conv.otherUserId, conv.listingId);
+        checkContactPermission(conv.otherUserId);
+        loadAttemptsCount();
 
-      const bookingsUpdateChannel = supabase
-        .channel(`bookings-updates-${selectedConversation}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'bookings',
-          },
-          () => {
-            console.log('Booking mis à jour, rechargement des permissions de contact');
-            checkContactPermission(selectedConversation);
-          }
-        )
-        .subscribe();
+        const bookingsUpdateChannel = supabase
+          .channel(`bookings-updates-${selectedConversation}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'bookings',
+            },
+            () => {
+              checkContactPermission(conv.otherUserId);
+            }
+          )
+          .subscribe();
 
-      return () => {
-        supabase.removeChannel(bookingsUpdateChannel);
-      };
+        return () => {
+          supabase.removeChannel(bookingsUpdateChannel);
+        };
+      }
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, conversations]);
 
   const checkContactPermission = async (otherUserId: string) => {
     if (!profile || otherUserId === 'system') {
@@ -180,14 +194,14 @@ export default function Messages({ selectedUserId }: MessagesProps) {
 
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles!sender_id(*), recipient:profiles!recipient_id(*)')
+      .select('*, sender:profiles!sender_id(*), recipient:profiles!recipient_id(*), listing:listings!listing_id(id, title)')
       .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
       const convMap = new Map<string, Conversation>();
 
-      data.forEach((msg) => {
+      data.forEach((msg: any) => {
         const isSystemMessage = msg.sender_id === null;
 
         const otherUserId = isSystemMessage
@@ -198,8 +212,11 @@ export default function Messages({ selectedUserId }: MessagesProps) {
           ? null
           : msg.sender_id === profile.id ? msg.recipient : msg.sender;
 
-        if (!convMap.has(otherUserId)) {
-          convMap.set(otherUserId, {
+        const listingId = msg.listing?.id || null;
+        const convKey = `${otherUserId}_${listingId || 'none'}`;
+
+        if (!convMap.has(convKey)) {
+          convMap.set(convKey, {
             otherUserId,
             otherUserName: isSystemMessage
               ? 'HelloFonty'
@@ -208,9 +225,12 @@ export default function Messages({ selectedUserId }: MessagesProps) {
             lastMessageDate: msg.created_at,
             unreadCount:
               msg.recipient_id === profile.id && !msg.is_read ? 1 : 0,
+            listingId,
+            listingTitle: msg.listing?.title || null,
+            conversationKey: convKey,
           });
         } else {
-          const conv = convMap.get(otherUserId)!;
+          const conv = convMap.get(convKey)!;
           if (msg.recipient_id === profile.id && !msg.is_read) {
             conv.unreadCount++;
           }
@@ -220,15 +240,14 @@ export default function Messages({ selectedUserId }: MessagesProps) {
       const conversationsList = Array.from(convMap.values());
       setConversations(conversationsList);
 
-      // Sélectionner automatiquement la première conversation si aucune n'est sélectionnée
       if (!selectedUserId && !selectedConversation && conversationsList.length > 0) {
-        setSelectedConversation(conversationsList[0].otherUserId);
+        setSelectedConversation(conversationsList[0].conversationKey);
       }
     }
     setLoading(false);
   };
 
-  const loadMessages = async (otherUserId: string) => {
+  const loadMessages = async (otherUserId: string, listingId: string | null) => {
     if (!profile) return;
 
     let query;
@@ -245,6 +264,11 @@ export default function Messages({ selectedUserId }: MessagesProps) {
         .or(
           `and(sender_id.eq.${profile.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${profile.id})`
         );
+      if (listingId) {
+        query = query.eq('listing_id', listingId);
+      } else {
+        query = query.is('listing_id', null);
+      }
     }
 
     const { data, error } = await query.order('created_at', { ascending: true });
@@ -254,7 +278,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
     }
   };
 
-  const markAsRead = async (otherUserId: string) => {
+  const markAsRead = async (otherUserId: string, listingId: string | null) => {
     if (!profile) return;
 
     if (otherUserId === 'system') {
@@ -265,23 +289,30 @@ export default function Messages({ selectedUserId }: MessagesProps) {
         .eq('recipient_id', profile.id)
         .eq('is_read', false);
     } else {
-      await supabase
+      let query = supabase
         .from('messages')
         .update({ is_read: true })
         .eq('sender_id', otherUserId)
         .eq('recipient_id', profile.id)
         .eq('is_read', false);
+      if (listingId) {
+        query = query.eq('listing_id', listingId);
+      } else {
+        query = query.is('listing_id', null);
+      }
+      await query;
     }
 
     setConversations((prev) =>
       prev.map((conv) =>
-        conv.otherUserId === otherUserId ? { ...conv, unreadCount: 0 } : conv
+        conv.conversationKey === selectedConversation ? { ...conv, unreadCount: 0 } : conv
       )
     );
   };
 
   const sendMessage = async () => {
-    if (!profile || !selectedConversation || !newMessage.trim()) return;
+    const conv = getSelectedConv();
+    if (!profile || !conv || !newMessage.trim()) return;
 
     if (!contactAllowed) {
       const detection = detectProhibitedContent(newMessage.trim());
@@ -291,7 +322,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
 
         await supabase.from('blocked_messages').insert({
           user_id: profile.id,
-          recipient_id: selectedConversation,
+          recipient_id: conv.otherUserId,
           blocked_content: newMessage.trim(),
           detection_type: detection.detectionType,
           detected_patterns: detection.detectedPatterns,
@@ -304,15 +335,19 @@ export default function Messages({ selectedUserId }: MessagesProps) {
     }
 
     setSending(true);
-    const { error } = await supabase.from('messages').insert({
+    const insertData: any = {
       sender_id: profile.id,
-      recipient_id: selectedConversation,
+      recipient_id: conv.otherUserId,
       content: newMessage.trim(),
-    });
+    };
+    if (conv.listingId) {
+      insertData.listing_id = conv.listingId;
+    }
+    const { error } = await supabase.from('messages').insert(insertData);
 
     if (!error) {
       setNewMessage('');
-      await loadMessages(selectedConversation);
+      await loadMessages(conv.otherUserId, conv.listingId);
       await loadConversations();
     }
     setSending(false);
@@ -349,7 +384,10 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
       });
 
       if (selectedConversation) {
-        await loadMessages(selectedConversation);
+        const conv = getSelectedConv();
+        if (conv) {
+          await loadMessages(conv.otherUserId, conv.listingId);
+        }
       }
       alert(`Demande de réservation ${statusText} avec succès!`);
     } else {
@@ -379,9 +417,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               {conversations.map((conv) => (
                 <div
                   key={conv.otherUserId}
-                  onClick={() => setSelectedConversation(conv.otherUserId)}
+                  onClick={() => setSelectedConversation(conv.conversationKey)}
                   className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${
-                    selectedConversation === conv.otherUserId ? 'bg-blue-50' : ''
+                    selectedConversation === conv.conversationKey ? 'bg-blue-50' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -391,6 +429,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900">{conv.otherUserName}</h3>
+                        {conv.listingTitle && (
+                          <p className="text-xs text-blue-600 font-medium truncate max-w-[200px]">{conv.listingTitle}</p>
+                        )}
                         <p className="text-sm text-gray-600 truncate max-w-[200px]">
                           {conv.lastMessage}
                         </p>
@@ -418,12 +459,20 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                 >
                   <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
                 </button>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                  {selectedConversation === 'system'
-                    ? 'HelloFonty'
-                    : conversations.find((c) => c.otherUserId === selectedConversation)
-                      ?.otherUserName}
-                </h3>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                    {(() => {
+                      const conv = getSelectedConv();
+                      return conv?.otherUserId === 'system' ? 'HelloFonty' : conv?.otherUserName || '';
+                    })()}
+                  </h3>
+                  {(() => {
+                    const conv = getSelectedConv();
+                    return conv?.listingTitle ? (
+                      <p className="text-sm text-blue-600 font-medium truncate max-w-[300px]">{conv.listingTitle}</p>
+                    ) : null;
+                  })()}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
@@ -548,7 +597,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               </div>
 
               <div className="p-3 sm:p-6 border-t">
-                {selectedConversation === 'system' ? (
+                {getSelectedConv()?.otherUserId === 'system' ? (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4 text-center">
                     <p className="text-sm text-orange-800 font-medium">
                       💬 Ceci est une conversation système. Vous ne pouvez pas répondre aux messages automatiques.
