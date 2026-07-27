@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const ADMIN_EMAIL = 'admin@hellofonty.com';
+const ADMIN_EMAIL = 'conciergerie@sweeps.fr';
 const SITE_URL = 'https://hellofonty.fr';
 
 interface BookingNotificationPayload {
