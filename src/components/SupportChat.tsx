@@ -175,12 +175,12 @@ export default function SupportChat() {
         if (!activeConvId) return;
       }
 
-      const { error } = await supabase.from('support_messages').insert({
+      const { data: msgData, error } = await supabase.from('support_messages').insert({
         conversation_id: activeConvId,
         sender_id: user?.id || null,
         sender_type: 'user',
         message: newMessage.trim(),
-      });
+      }).select().single();
 
       if (error) throw error;
 
@@ -188,6 +188,30 @@ export default function SupportChat() {
         .from('support_conversations')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', activeConvId);
+
+      // Notify admin by email
+      if (msgData) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        fetch(`${supabaseUrl}/functions/v1/send-support-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            type: 'new_message',
+            record: {
+              id: msgData.id,
+              conversation_id: activeConvId,
+              sender_id: user?.id || 'guest',
+              sender_type: 'user',
+              message: newMessage.trim(),
+              created_at: msgData.created_at,
+            },
+          }),
+        }).catch(console.error);
+      }
 
       setNewMessage('');
       await loadMessages();
