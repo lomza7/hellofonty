@@ -116,7 +116,9 @@ Deno.serve(async (req: Request) => {
     const icalResponse = await fetch(feed.feed_url, {
       headers: {
         'User-Agent': 'HelloFonty-Calendar-Sync/1.0',
+        'Accept': 'text/calendar, text/plain, */*',
       },
+      redirect: 'follow',
     });
 
     if (!icalResponse.ok) {
@@ -130,10 +132,10 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          error: `Failed to fetch calendar: ${icalResponse.status}`,
+          error: `Failed to fetch calendar: ${icalResponse.status} ${icalResponse.statusText}`,
         }),
         {
-          status: 500,
+          status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
@@ -141,6 +143,24 @@ Deno.serve(async (req: Request) => {
 
     const icalContent = await icalResponse.text();
     console.log('iCal content length:', icalContent.length);
+
+    if (!icalContent.includes('BEGIN:VCALENDAR')) {
+      await supabase
+        .from('external_ical_feeds')
+        .update({
+          sync_status: 'error',
+          error_message: 'Invalid iCal format: missing VCALENDAR',
+        })
+        .eq('id', feed.id);
+
+      return new Response(
+        JSON.stringify({ error: 'The URL does not return a valid iCal calendar' }),
+        {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     const events = parseICalendar(icalContent);
     console.log(`Parsed ${events.length} events`);
@@ -216,82 +236,63 @@ Deno.serve(async (req: Request) => {
 
 function parseICalendar(icalContent: string): ICalEvent[] {
   const events: ICalEvent[] = [];
-  const lines = icalContent.split(/\r?\n/);
+
+  const unfoldedContent = icalContent.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+  const lines = unfoldedContent.split(/\r?\n/);
+
   let currentEvent: Partial<ICalEvent> | null = null;
-  let currentProperty = '';
-  let currentValue = '';
 
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-
-    if (line.startsWith(' ') || line.startsWith('\t')) {
-      currentValue += line.substring(1);
-      continue;
-    }
-
-    if (currentProperty && currentValue) {
-      processProperty(currentEvent, currentProperty, currentValue);
-    }
-
+  for (const line of lines) {
     if (line === 'BEGIN:VEVENT') {
-      currentEvent = {};
-    } else if (line === 'END:VEVENT' && currentEvent) {
-      if (currentEvent.uid && currentEvent.startDate && currentEvent.endDate) {
+      currentEvent = { summary: '', description: '' };
+    } else if (line === 'END:VEVENT') {
+      if (currentEvent && currentEvent.uid && currentEvent.startDate) {
+        if (!currentEvent.endDate) {
+          currentEvent.endDate = currentEvent.startDate;
+        }
         events.push(currentEvent as ICalEvent);
       }
       currentEvent = null;
     } else if (currentEvent && line.includes(':')) {
       const colonIndex = line.indexOf(':');
-      currentProperty = line.substring(0, colonIndex);
-      currentValue = line.substring(colonIndex + 1);
-    } else {
-      currentProperty = '';
-      currentValue = '';
+      const propertyPart = line.substring(0, colonIndex);
+      const value = line.substring(colonIndex + 1);
+      const propName = propertyPart.split(';')[0].toUpperCase();
+
+      switch (propName) {
+        case 'UID':
+          currentEvent.uid = value.trim();
+          break;
+        case 'DTSTART':
+          currentEvent.startDate = parseICalDate(value);
+          break;
+        case 'DTEND':
+          currentEvent.endDate = parseICalDate(value);
+          break;
+        case 'SUMMARY':
+          currentEvent.summary = unescapeICalText(value);
+          break;
+        case 'DESCRIPTION':
+          currentEvent.description = unescapeICalText(value);
+          break;
+      }
     }
   }
 
   return events;
 }
 
-function processProperty(
-  event: Partial<ICalEvent> | null,
-  property: string,
-  value: string
-): void {
-  if (!event) return;
-
-  const [propName] = property.split(';');
-
-  switch (propName) {
-    case 'UID':
-      event.uid = value;
-      break;
-    case 'DTSTART':
-      event.startDate = parseICalDate(value);
-      break;
-    case 'DTEND':
-      event.endDate = parseICalDate(value);
-      break;
-    case 'SUMMARY':
-      event.summary = unescapeICalText(value);
-      break;
-    case 'DESCRIPTION':
-      event.description = unescapeICalText(value);
-      break;
-  }
-}
-
 function parseICalDate(dateStr: string): string {
-  dateStr = dateStr.replace(/[^0-9]/g, '');
+  const cleaned = dateStr.replace(/[^0-9T]/g, '');
 
-  if (dateStr.length >= 8) {
-    const year = dateStr.substring(0, 4);
-    const month = dateStr.substring(4, 6);
-    const day = dateStr.substring(6, 8);
+  if (cleaned.length >= 8) {
+    const year = cleaned.substring(0, 4);
+    const month = cleaned.substring(4, 6);
+    const day = cleaned.substring(6, 8);
     return `${year}-${month}-${day}`;
   }
 
-  return dateStr;
+  return dateStr.trim();
 }
 
 function unescapeICalText(text: string): string {

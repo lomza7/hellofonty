@@ -4,7 +4,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
-  'Cache-Control': 'public, max-age=900',
 };
 
 interface BlockedDate {
@@ -83,6 +82,12 @@ Deno.serve(async (req: Request) => {
       .select('start_date, end_date, event_uid, summary, description')
       .eq('listing_id', listingId);
 
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('id, start_date, end_date, status')
+      .eq('listing_id', listingId)
+      .in('status', ['confirmed', 'pending']);
+
     const allBlockedDates = [
       ...(blockedDates || []).map((d: BlockedDate) => ({
         start: d.start_date,
@@ -98,13 +103,19 @@ Deno.serve(async (req: Request) => {
         summary: d.summary || 'Réservé',
         description: d.description || 'Réservation externe',
       })),
+      ...(bookings || []).map((b: any) => ({
+        start: b.start_date,
+        end: b.end_date,
+        uid: `booking-${b.id}@hellofonty.com`,
+        summary: 'Réservé',
+        description: b.status === 'confirmed' ? 'Réservation confirmée' : 'Réservation en attente',
+      })),
     ];
 
     await supabase
       .from('ical_sync_tokens')
       .update({
         last_accessed_at: new Date().toISOString(),
-        access_count: supabase.rpc('increment', { x: 1, row_id: token }),
       })
       .eq('token', token);
 
@@ -115,7 +126,7 @@ Deno.serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${listing.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
   } catch (error) {
@@ -140,23 +151,23 @@ function generateICalendar(
   const now = new Date();
   const timestamp = formatDateTime(now);
 
-  let ical = [
+  const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//HelloFonty//iCal Sync//FR',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${listing.title}`,
-    `X-WR-CALDESC:Calendrier de disponibilité pour ${listing.title}`,
+    `X-WR-CALNAME:${escapeICalText(listing.title)}`,
+    `X-WR-CALDESC:Calendrier de disponibilite pour ${escapeICalText(listing.title)}`,
     'X-WR-TIMEZONE:Europe/Paris',
-  ].join('\r\n');
+  ];
 
   for (const date of blockedDates) {
-    const startDate = new Date(date.start);
-    const endDate = new Date(date.end);
-    endDate.setDate(endDate.getDate() + 1);
+    const startDate = new Date(date.start + 'T00:00:00Z');
+    const endDate = new Date(date.end + 'T00:00:00Z');
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
 
-    ical += '\r\n' + [
+    lines.push(
       'BEGIN:VEVENT',
       `UID:${date.uid}`,
       `DTSTAMP:${timestamp}`,
@@ -168,17 +179,17 @@ function generateICalendar(
       'STATUS:CONFIRMED',
       'TRANSP:OPAQUE',
       'END:VEVENT',
-    ].join('\r\n');
+    );
   }
 
-  ical += '\r\nEND:VCALENDAR';
-  return ical;
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }
 
 function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}${month}${day}`;
 }
 
