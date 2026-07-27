@@ -1,12 +1,13 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import SupportChat from './components/SupportChat';
 import GoogleAnalytics from './components/GoogleAnalytics';
+import CompleteProfileModal from './components/CompleteProfileModal';
 
 const Home = lazy(() => import('./pages/Home'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -62,6 +63,26 @@ function LoadingFallback() {
   );
 }
 
+function ProfileGate({ children }: { children: React.ReactNode }) {
+  const { user, profile, refreshProfile } = useAuth();
+
+  const needsCompletion = user && profile && !profile.phone;
+
+  if (!needsCompletion) return <>{children}</>;
+
+  return (
+    <>
+      {children}
+      <CompleteProfileModal
+        userId={user.id}
+        userEmail={user.email || ''}
+        currentPhone={profile.phone || null}
+        onComplete={refreshProfile}
+      />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -69,9 +90,10 @@ export default function App() {
         <Router>
           <ScrollToTop />
           <GoogleAnalytics />
-          <Navbar />
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
+          <ProfileGate>
+            <Navbar />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/connexion" element={<Auth mode="signin" />} />
               <Route path="/auth" element={<Auth mode="signin" />} />
@@ -141,6 +163,7 @@ export default function App() {
           </Suspense>
           <Footer />
           <SupportChat />
+          </ProfileGate>
         </Router>
       </LanguageProvider>
     </AuthProvider>
