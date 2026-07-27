@@ -156,9 +156,11 @@ export default function EditInventory() {
       if (loadedRooms.length > 0) {
         setStep('inspection');
       }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      alert('Error loading inventory');
+    } catch (error: any) {
+      console.error('Error loading inventory data:', error?.message || error?.code || error);
+      alert(language === 'fr'
+        ? `Erreur chargement état des lieux: ${error?.message || 'Erreur inconnue'}`
+        : `Error loading inventory: ${error?.message || 'Unknown error'}`);
       navigate('/inventory');
     } finally {
       setLoading(false);
