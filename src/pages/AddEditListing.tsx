@@ -4,6 +4,7 @@ import { Upload, X, Home, MapPin, Sparkles, Camera, Check, Euro, Plus, Trash2, I
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { detectProhibitedContent } from '../utils/messageDetection';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import BackButton from '../components/BackButton';
 import DraggableImageGrid from '../components/DraggableImageGrid';
@@ -448,6 +449,23 @@ export default function AddEditListing() {
 
     try {
       if (!profile) throw new Error('Not logged in');
+
+      // Vérifier que le titre et la description ne contiennent pas de coordonnées
+      const titleCheck = detectProhibitedContent(title);
+      const descriptionCheck = detectProhibitedContent(description);
+
+      if (titleCheck.isBlocked || descriptionCheck.isBlocked) {
+        const field = titleCheck.isBlocked
+          ? (language === 'fr' ? 'le titre' : 'the title')
+          : (language === 'fr' ? 'la description' : 'the description');
+        setError(
+          language === 'fr'
+            ? `Votre annonce ne peut pas contenir de coordonnées personnelles (numéro de téléphone, email, réseaux sociaux) dans ${field}. Les échanges doivent se faire via la messagerie de la plateforme.`
+            : `Your listing cannot contain personal contact information (phone number, email, social media) in ${field}. Communications must go through the platform messaging system.`
+        );
+        setLoading(false);
+        return;
+      }
 
       // Calculer le prix total
       const calculateTotalRent = () => {
