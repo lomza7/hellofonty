@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -61,6 +61,7 @@ interface Lease {
 export default function Leases() {
   const { user, profile } = useAuth();
   const { language } = useLanguage();
+  const isLandlord = profile?.role === 'landlord' || profile?.role === 'admin';
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -102,21 +103,29 @@ export default function Leases() {
   useEffect(() => {
     if (user?.id) {
       loadLeases();
-      loadAvailableBookings();
+      if (isLandlord) loadAvailableBookings();
     }
   }, [user?.id]);
 
   const loadLeases = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leases')
         .select(`
           *,
           listing:listings(id, title, address),
-          tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name)
+          tenant:profiles!leases_tenant_id_fkey(id, first_name, last_name),
+          landlord:profiles!leases_landlord_id_fkey(id, first_name, last_name)
         `)
-        .eq('landlord_id', profile?.id)
         .order('created_at', { ascending: false });
+
+      if (isLandlord) {
+        query = query.eq('landlord_id', profile?.id);
+      } else {
+        query = query.eq('tenant_id', profile?.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setLeases(data || []);
@@ -271,6 +280,87 @@ export default function Leases() {
     } catch (error) {
       console.error('Erreur suppression bail:', error);
       alert('Erreur lors de la suppression du bail');
+    }
+  };
+
+  const handleSendForSignature = async (lease: any) => {
+    if (!confirm(language === 'fr'
+      ? 'Envoyer ce contrat au locataire pour signature ? Le bail ne pourra plus être modifié.'
+      : 'Send this contract to the tenant for signature? The lease will no longer be editable.'
+    )) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from('leases')
+        .update({ status: 'pending_signature' })
+        .eq('id', lease.id);
+
+      if (updateError) throw updateError;
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: lease.tenant_id,
+          type: 'lease_signature_request',
+          title: language === 'fr' ? 'Contrat à signer' : 'Contract to sign',
+          message: language === 'fr'
+            ? `Votre propriétaire vous a envoyé un contrat de location à signer pour le logement situé au ${lease.listing?.address || 'votre logement'}.`
+            : `Your landlord sent you a lease contract to sign for the property at ${lease.listing?.address || 'your property'}.`,
+          data: { lease_id: lease.id, listing_id: lease.listing_id },
+        });
+
+      if (notifError) console.error('Notification error:', notifError);
+
+      alert(language === 'fr' ? 'Contrat envoyé pour signature !' : 'Contract sent for signature!');
+      loadLeases();
+    } catch (error) {
+      console.error('Erreur envoi pour signature:', error);
+      alert(language === 'fr' ? 'Erreur lors de l\'envoi' : 'Error sending');
+    }
+  };
+
+  const handleSignLease = async (lease: any) => {
+    if (!confirm(language === 'fr'
+      ? 'En signant ce contrat, vous acceptez toutes les conditions qui y sont mentionnées. Confirmer votre signature ?'
+      : 'By signing this contract, you accept all the terms mentioned. Confirm your signature?'
+    )) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from('leases')
+        .update({
+          status: 'signed',
+          tenant_signature: {
+            signed_by: profile?.id,
+            signed_at: new Date().toISOString(),
+            name: `${profile?.first_name} ${profile?.last_name}`,
+          },
+          signed_at: new Date().toISOString(),
+        })
+        .eq('id', lease.id)
+        .eq('tenant_id', profile?.id);
+
+      if (updateError) throw updateError;
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: lease.landlord_id,
+          type: 'lease_signed',
+          title: language === 'fr' ? 'Contrat signé' : 'Contract signed',
+          message: language === 'fr'
+            ? `${profile?.first_name} ${profile?.last_name} a signé le contrat de location pour ${lease.listing?.address || 'votre logement'}.`
+            : `${profile?.first_name} ${profile?.last_name} signed the lease for ${lease.listing?.address || 'your property'}.`,
+          data: { lease_id: lease.id, listing_id: lease.listing_id },
+        });
+
+      if (notifError) console.error('Notification error:', notifError);
+
+      alert(language === 'fr' ? 'Contrat signé avec succès !' : 'Contract signed successfully!');
+      loadLeases();
+    } catch (error) {
+      console.error('Erreur signature:', error);
+      alert(language === 'fr' ? 'Erreur lors de la signature' : 'Error signing');
     }
   };
 
@@ -456,8 +546,9 @@ export default function Leases() {
               <FileText className="w-8 h-8 mr-3 text-blue-600" />
               {language === 'fr' ? 'Mes Baux' : 'My Leases'}
             </h1>
-            <p className="text-gray-600 mt-1">{language === 'fr' ? 'Gérez vos contrats de location' : 'Manage your rental contracts'}</p>
+            <p className="text-gray-600 mt-1">{language === 'fr' ? (isLandlord ? 'Gérez vos contrats de location' : 'Vos contrats de location') : (isLandlord ? 'Manage your rental contracts' : 'Your rental contracts')}</p>
           </div>
+          {isLandlord && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg"
@@ -465,13 +556,18 @@ export default function Leases() {
             <Plus className="w-5 h-5 mr-2" />
             {language === 'fr' ? 'Créer un bail' : 'Create a lease'}
           </button>
+          )}
         </div>
 
         {leases.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">{language === 'fr' ? 'Aucun bail' : 'No leases'}</h3>
-            <p className="text-gray-600 mb-6">{language === 'fr' ? "Commencez par créer votre premier bail à partir d'une réservation acceptée" : 'Start by creating your first lease from an accepted booking'}</p>
+            <p className="text-gray-600 mb-6">{language === 'fr'
+              ? (isLandlord ? "Commencez par créer votre premier bail à partir d'une réservation acceptée" : "Vous n'avez pas encore de contrat de location")
+              : (isLandlord ? 'Start by creating your first lease from an accepted booking' : "You don't have any rental contracts yet")
+            }</p>
+            {isLandlord && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
@@ -479,6 +575,7 @@ export default function Leases() {
               <Plus className="w-5 h-5 mr-2" />
               {language === 'fr' ? 'Créer un bail' : 'Create a lease'}
             </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
@@ -499,8 +596,11 @@ export default function Leases() {
                           <span className="font-medium">{language === 'fr' ? 'Adresse :' : 'Address:'}</span> {lease.listing?.address}
                         </p>
                         <p className="text-gray-600 mb-1">
-                          <span className="font-medium">{language === 'fr' ? 'Locataire :' : 'Tenant:'}</span>{' '}
-                          {lease.tenant ? `${lease.tenant.first_name} ${lease.tenant.last_name}` : (language === 'fr' ? 'Non assigné' : 'Not assigned')}
+                          <span className="font-medium">{isLandlord ? (language === 'fr' ? 'Locataire :' : 'Tenant:') : (language === 'fr' ? 'Propriétaire :' : 'Landlord:')}</span>{' '}
+                          {isLandlord
+                            ? (lease.tenant ? `${lease.tenant.first_name} ${lease.tenant.last_name}` : (language === 'fr' ? 'Non assigné' : 'Not assigned'))
+                            : (lease.landlord ? `${lease.landlord.first_name} ${lease.landlord.last_name}` : '-')
+                          }
                         </p>
                         <p className="text-gray-600">
                           <span className="font-medium">{language === 'fr' ? 'Type :' : 'Type:'}</span>{' '}
@@ -531,7 +631,7 @@ export default function Leases() {
                       <Eye className="w-5 h-5" />
                     </button>
 
-                    {lease.status === 'draft' && (
+                    {isLandlord && lease.status === 'draft' && (
                       <button
                         onClick={() => handleEditLease(lease)}
                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
@@ -549,7 +649,28 @@ export default function Leases() {
                       <Download className="w-5 h-5" />
                     </button>
 
-                    {lease.status === 'draft' && (
+                    {isLandlord && lease.status === 'draft' && (
+                      <button
+                        onClick={() => handleSendForSignature(lease)}
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title={language === 'fr' ? 'Envoyer pour signature' : 'Send for signature'}
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    )}
+
+                    {!isLandlord && lease.status === 'pending_signature' && (
+                      <button
+                        onClick={() => handleSignLease(lease)}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center space-x-2"
+                        title={language === 'fr' ? 'Signer le contrat' : 'Sign contract'}
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        <span>{language === 'fr' ? 'Signer' : 'Sign'}</span>
+                      </button>
+                    )}
+
+                    {isLandlord && lease.status === 'draft' && (
                       <button
                         onClick={() => handleDelete(lease.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
