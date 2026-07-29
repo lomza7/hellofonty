@@ -105,13 +105,15 @@ export function detectProhibitedContent(message: string): DetectionResult {
 
   const socialMediaPatterns = [
     /(?:whatsapp|whats\s*app|wa\.me)/gi,
-    /(?:instagram|insta|ig)\s*:?\s*@?[a-z0-9._]+/gi,
-    /(?:facebook|fb)(?:\.com)?(?:\/)?[a-z0-9._]+/gi,
-    /(?:telegram|tg)\s*:?\s*@?[a-z0-9._]+/gi,
-    /(?:snapchat|snap)\s*:?\s*@?[a-z0-9._]+/gi,
-    /(?:twitter|x\.com)\s*:?\s*@?[a-z0-9._]+/gi,
-    /(?:tiktok|tik\s*tok)\s*:?\s*@?[a-z0-9._]+/gi,
-    /@[a-z0-9._]{3,}/gi,
+    /\binstagram\s*:?\s*@?[a-z0-9._]+/gi,
+    /\binsta\s*[:@]\s*[a-z0-9._]+/gi,
+    /\big\s*:\s*@?[a-z0-9._]+/gi,
+    /\b(?:facebook|fb)\s*(?:\.com)?(?:[\/:]\s*)?@?[a-z0-9._]+/gi,
+    /\b(?:telegram|tg)\s*:\s*@?[a-z0-9._]+/gi,
+    /\b(?:snapchat|snap)\s*:\s*@?[a-z0-9._]+/gi,
+    /\b(?:twitter|x\.com)\s*:?\s*@?[a-z0-9._]+/gi,
+    /\b(?:tiktok|tik\s*tok)\s*:?\s*@?[a-z0-9._]+/gi,
+    /(?:^|\s)@[a-z0-9._]{3,}/gi,
   ];
 
   for (const pattern of socialMediaPatterns) {
