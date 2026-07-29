@@ -4,7 +4,7 @@ import { Upload, X, Home, MapPin, Sparkles, Camera, Check, Euro, Plus, Trash2, I
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { detectProhibitedContent } from '../utils/messageDetection';
+import { detectListingContactInfo } from '../utils/messageDetection';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import BackButton from '../components/BackButton';
 import DraggableImageGrid from '../components/DraggableImageGrid';
@@ -451,8 +451,8 @@ export default function AddEditListing() {
       if (!profile) throw new Error('Not logged in');
 
       // Vérifier que le titre et la description ne contiennent pas de coordonnées
-      const titleCheck = detectProhibitedContent(title);
-      const descriptionCheck = detectProhibitedContent(description);
+      const titleCheck = detectListingContactInfo(title);
+      const descriptionCheck = detectListingContactInfo(description);
 
       if (titleCheck.isBlocked || descriptionCheck.isBlocked) {
         const field = titleCheck.isBlocked

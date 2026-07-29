@@ -7,23 +7,43 @@ export interface DetectionResult {
 }
 
 export function detectProhibitedContent(message: string): DetectionResult {
+  return detectContactInfo(message, 'message');
+}
+
+export function detectListingContactInfo(text: string): DetectionResult {
+  return detectContactInfo(text, 'listing');
+}
+
+function detectContactInfo(message: string, context: 'message' | 'listing'): DetectionResult {
   const detectedPatterns: string[] = [];
   let detectionType: DetectionType = 'none';
 
   const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ');
 
-  const phonePatterns = [
+  // Phone: real 10-digit French numbers or international format
+  const phonePatterns: RegExp[] = [
     /(?:^|\s)(?:\+33|0033|0)\s*[67]\s*(?:\d\s*){8}(?:\s|$)/gi,
     /(?:^|\s)(?:\+33|0033|0)\s*[1-9]\s*(?:\d\s*){8}(?:\s|$)/gi,
     /(?:^|\s)\d{2}[\s.-]\d{2}[\s.-]\d{2}[\s.-]\d{2}[\s.-]\d{2}(?:\s|$)/gi,
-    /(?:^|\s)(?:\+\d{1,3})?\s*\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,4}[\s.-]?\d{1,9}(?:\s|$)/gi,
   ];
+
+  if (context === 'message') {
+    phonePatterns.push(
+      /(?:^|\s)(?:\+\d{1,3})?\s*\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,4}[\s.-]?\d{1,9}(?:\s|$)/gi
+    );
+  }
 
   for (const pattern of phonePatterns) {
     const matches = message.match(pattern);
     if (matches) {
-      detectedPatterns.push(...matches.map(m => m.trim()));
-      detectionType = 'phone';
+      const filtered = matches.map(m => m.trim()).filter(m => {
+        const digits = m.replace(/\D/g, '');
+        return digits.length >= 10;
+      });
+      if (filtered.length > 0) {
+        detectedPatterns.push(...filtered);
+        detectionType = 'phone';
+      }
     }
   }
 
@@ -32,9 +52,6 @@ export function detectProhibitedContent(message: string): DetectionResult {
     /appel(?:le|ler|lez)?\s*(?:moi|me)/gi,
     /(?:mon|le|un|ton|votre|your|my)\s*(?:num[ée]ro|tel|t[ée]l[ée]phone|portable|mobile|number|phone)/gi,
     /(?:contact|joindre|appeler)\s*(?:moi|me)\s*(?:au|sur)/gi,
-    /(?:give|send|share|envoie|envoy[ée]|donne|partage|prends?)\s*(?:me|moi|ton|votre|your|my)?\s*(?:num[ée]ro|tel|t[ée]l[ée]phone|portable|mobile|number|phone)/gi,
-    /(?:take|get|grab|prends?|r[ée]cup[èe]re)\s*(?:my|mon|le)\s*(?:num[ée]ro|tel|t[ée]l[ée]phone|portable|mobile|number|phone)/gi,
-    /(?:what|quel|c'est quoi)\s*(?:is|est)?\s*(?:your|ton|votre)\s*(?:num[ée]ro|tel|t[ée]l[ée]phone|portable|mobile|number|phone)/gi,
   ];
 
   for (const pattern of phoneWordPatterns) {
@@ -45,10 +62,10 @@ export function detectProhibitedContent(message: string): DetectionResult {
     }
   }
 
+  // Email: real email addresses
   const emailPatterns = [
-    /[a-z0-9][-a-z0-9._+]*@[-a-z0-9]+(?:\.[-a-z0-9]+)*\.[a-z]{2,6}/gi,
-    /[a-z0-9]+\s*(?:at|@|arobase|\[at\])\s*[a-z0-9]+\s*(?:dot|\.|point|\[dot\])\s*(?:com|fr|net|org|io|co)/gi,
-    /[a-z0-9]+\s*(?:\(at\)|\[arobase\])\s*[a-z0-9]+/gi,
+    /[a-z0-9][-a-z0-9._+]*@[a-z0-9][-a-z0-9]*(?:\.[a-z0-9][-a-z0-9]*)*\.[a-z]{2,6}/gi,
+    /[a-z0-9]+\s*(?:at|arobase|\[at\]|\(at\))\s*[a-z0-9]+\s*(?:dot|point|\[dot\]|\(dot\))\s*(?:com|fr|net|org|io|co)/gi,
   ];
 
   for (const pattern of emailPatterns) {
@@ -59,27 +76,33 @@ export function detectProhibitedContent(message: string): DetectionResult {
     }
   }
 
-  const emailWordPatterns = [
-    /(?:mon|ma|ton|ta|votre|your|my)\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
-    /(?:envoie|envoy[ée]|donne|partage|give|send|share)\s*(?:moi|me|ton|ta|votre|your|my)?\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
-    /(?:contact|[ée]cri[st]|[ée]crire|write)\s*(?:moi|me)\s*(?:par|via|sur|at|on)?\s*(?:e-?mail|mail|courriel)?/gi,
-    /(?:take|get|grab|prends?|r[ée]cup[èe]re)\s*(?:my|mon|ma)\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
-    /(?:what|quel|c'est quoi)\s*(?:is|est)?\s*(?:your|ton|ta|votre)\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
-  ];
+  if (context === 'message') {
+    const emailWordPatterns = [
+      /(?:mon|ma|ton|ta|votre|your|my)\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
+      /(?:envoie|envoy[ée]|donne|partage|give|send|share)\s*(?:moi|me|ton|ta|votre|your|my)?\s*(?:adresse\s*)?(?:e-?mail|mail|courriel)/gi,
+      /(?:contact|[ée]cri[st]|[ée]crire|write)\s*(?:moi|me)\s*(?:par|via|sur|at|on)?\s*(?:e-?mail|mail|courriel)?/gi,
+    ];
 
-  for (const pattern of emailWordPatterns) {
-    const matches = normalizedMessage.match(pattern);
-    if (matches && detectionType === 'none') {
-      detectedPatterns.push(...matches);
-      detectionType = 'email';
+    for (const pattern of emailWordPatterns) {
+      const matches = normalizedMessage.match(pattern);
+      if (matches && detectionType === 'none') {
+        detectedPatterns.push(...matches);
+        detectionType = 'email';
+      }
     }
   }
 
+  // URL: explicit links only (with protocol or www prefix)
   const urlPatterns = [
-    /(?:https?:\/\/)?(?:www\.)?[-a-z0-9@:%._+~#=]{1,256}\.[a-z]{2,6}\b(?:[-a-z0-9@:%_+.~#?&/=]*)/gi,
-    /(?:www\.)[a-z0-9]+\.[a-z]{2,}/gi,
-    /[a-z0-9][-a-z0-9]*\.[a-z0-9][-a-z0-9]*\.[a-z]{2,6}\b/gi,
+    /https?:\/\/[-a-z0-9@:%._+~#=]{1,256}\.[a-z]{2,6}\b[-a-z0-9@:%_+.~#?&/=]*/gi,
+    /(?:www\.)[a-z0-9][-a-z0-9]*\.[a-z]{2,6}\b/gi,
   ];
+
+  if (context === 'message') {
+    urlPatterns.push(
+      /[a-z0-9][-a-z0-9]*\.[a-z0-9][-a-z0-9]*\.[a-z]{2,6}\b/gi
+    );
+  }
 
   for (const pattern of urlPatterns) {
     const matches = message.match(pattern);
@@ -89,37 +112,42 @@ export function detectProhibitedContent(message: string): DetectionResult {
     }
   }
 
-  const addressPatterns = [
-    /\d+\s+(?:rue|avenue|boulevard|place|chemin|impasse|all[ée]e)\s+[a-z\s]+/gi,
-    /(?:rue|avenue|boulevard|place|chemin|impasse|all[ée]e)\s+[a-z\s]+\s*,?\s*\d{5}/gi,
-    /\d{5}\s+[a-z]+/gi,
-  ];
+  // Address: only for messages (too many false positives in listing descriptions)
+  if (context === 'message') {
+    const addressPatterns = [
+      /\d+\s+(?:rue|avenue|boulevard|place|chemin|impasse|all[ée]e)\s+[a-z\s]+/gi,
+      /(?:rue|avenue|boulevard|place|chemin|impasse|all[ée]e)\s+[a-z\s]+\s*,?\s*\d{5}/gi,
+      /\d{5}\s+[a-z]+/gi,
+    ];
 
-  for (const pattern of addressPatterns) {
-    const matches = message.match(pattern);
-    if (matches && detectionType === 'none') {
-      detectedPatterns.push(...matches.map(m => m.trim()));
-      detectionType = 'address';
+    for (const pattern of addressPatterns) {
+      const matches = message.match(pattern);
+      if (matches && detectionType === 'none') {
+        detectedPatterns.push(...matches.map(m => m.trim()));
+        detectionType = 'address';
+      }
     }
   }
 
+  // Social media: require explicit platform keyword as standalone word
   const socialMediaPatterns = [
-    /(?:whatsapp|whats\s*app|wa\.me)/gi,
-    /\binstagram\s*:?\s*@?[a-z0-9._]+/gi,
+    /\b(?:whatsapp|whats\s*app)\b/gi,
+    /\bwa\.me\/[a-z0-9]+/gi,
+    /\binstagram\b\s*:?\s*@[a-z0-9._]+/gi,
     /\binsta\s*[:@]\s*[a-z0-9._]+/gi,
-    /\big\s*:\s*@?[a-z0-9._]+/gi,
-    /\b(?:facebook|fb)\s*(?:\.com)?(?:[\/:]\s*)?@?[a-z0-9._]+/gi,
+    /\bfacebook\.com\/[a-z0-9._]+/gi,
     /\b(?:telegram|tg)\s*:\s*@?[a-z0-9._]+/gi,
     /\b(?:snapchat|snap)\s*:\s*@?[a-z0-9._]+/gi,
-    /\b(?:twitter|x\.com)\s*:?\s*@?[a-z0-9._]+/gi,
-    /\b(?:tiktok|tik\s*tok)\s*:?\s*@?[a-z0-9._]+/gi,
-    /(?:^|\s)@[a-z0-9._]{3,}/gi,
+    /\btwitter\.com\/[a-z0-9._]+/gi,
+    /\bx\.com\/[a-z0-9._]+/gi,
+    /\b(?:tiktok|tik\s*tok)\b\s*:?\s*@[a-z0-9._]+/gi,
+    /(?:^|\s)@[a-z0-9._]{3,}\b/gi,
   ];
 
   for (const pattern of socialMediaPatterns) {
     const matches = normalizedMessage.match(pattern);
     if (matches && detectionType === 'none') {
-      detectedPatterns.push(...matches);
+      detectedPatterns.push(...matches.map(m => m.trim()));
       detectionType = 'social_media';
     }
   }
