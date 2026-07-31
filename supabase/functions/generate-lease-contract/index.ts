@@ -29,24 +29,14 @@ function formatSignatureDate(isoDate: string | null | undefined): string {
   }
 }
 
-function buildSignatureBox(title: string, sig: SignatureData | null, fallbackName: string): string {
-  if (sig && sig.name) {
-    const dateStr = formatSignatureDate(sig.signed_at);
-    return `
-  <div class="signature-box">
-    <div class="signature-title">${title}</div>
-    <div class="signature-stamp">Signe electroniquement</div>
-    <div class="signature-line">&nbsp;</div>
-    <div class="signature-name">${sig.name}</div>
-    <div class="signature-date">Le ${dateStr}</div>
-  </div>`;
-  }
+function buildSignedColumn(sig: SignatureData, roleLabel: string): string {
+  const dateStr = formatSignatureDate(sig.signed_at);
   return `
-  <div class="signature-box">
-    <div class="signature-title">${title}</div>
-    <div class="signature-line">Signature precedee de la mention<br>"Lu et approuve"</div>
-    <div class="signature-name">${fallbackName}</div>
-    <div class="signature-date" style="color:#94a3b8;">Non signe</div>
+  <div class="sig-column">
+    <div class="sig-name">${sig.name}</div>
+    <div class="sig-line"></div>
+    <div class="sig-role">${roleLabel}</div>
+    <div class="sig-date">Fait le ${dateStr}</div>
   </div>`;
 }
 
@@ -60,8 +50,14 @@ function buildContractHTML(
     .map(s => `<div class="section">${replaceVariables(s.content, vars)}</div>`)
     .join('\n');
 
-  const landlordBox = buildSignatureBox('Le Bailleur', landlordSig, vars['{{landlord_name}}']);
-  const tenantBox = buildSignatureBox('Le Locataire', tenantSig, vars['{{tenant_name}}']);
+  const bothSigned = landlordSig && landlordSig.name && tenantSig && tenantSig.name;
+  const signatureBlock = bothSigned
+    ? `<div class="page-break"></div>
+<div class="signature-grid">
+${buildSignedColumn(landlordSig, 'Le BAILLEUR ou son MANDATAIRE')}
+${buildSignedColumn(tenantSig, 'Le(s) LOCATAIRE(S)')}
+</div>`
+    : '';
 
   return `
 <!DOCTYPE html>
@@ -85,24 +81,19 @@ function buildContractHTML(
     strong { color: #1e3a8a; }
     p { margin-bottom: 8px; }
     .page-break { page-break-before: always; }
-    .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
-    .signature-box { border: 2px solid #cbd5e1; border-radius: 8px; padding: 20px; min-height: 180px; }
-    .signature-title { font-weight: 700; color: #1e3a8a; margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
-    .signature-stamp { display: inline-block; background: #dcfce7; color: #166534; font-size: 8pt; font-weight: 700; padding: 4px 12px; border-radius: 4px; margin-bottom: 15px; }
-    .signature-line { margin-top: 30px; border-bottom: 2px solid #1e3a8a; text-align: center; padding-bottom: 2px; }
-    .signature-name { margin-top: 10px; font-size: 10pt; color: #475569; text-align: center; }
-    .signature-date { margin-top: 5px; font-size: 9pt; color: #64748b; font-style: italic; text-align: center; }
+    .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; }
+    .sig-column { text-align: left; }
+    .sig-name { font-weight: 700; font-size: 11pt; color: #1a1a1a; margin-bottom: 8px; }
+    .sig-line { border-bottom: 1.5px solid #1a1a1a; margin-bottom: 8px; }
+    .sig-role { font-size: 10pt; color: #0d9488; font-weight: 600; margin-bottom: 6px; }
+    .sig-date { font-size: 9pt; color: #64748b; font-style: italic; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 9pt; }
   </style>
 </head>
 <body>
 ${bodyContent}
 
-<div class="page-break"></div>
-<div class="signature-grid">
-${landlordBox}
-${tenantBox}
-</div>
+${signatureBlock}
 
 <div class="footer">
   <p><strong>HelloFonty - Plateforme de Gestion Locative</strong></p>
