@@ -306,7 +306,8 @@ export default function Leases() {
           message: language === 'fr'
             ? `Votre propriétaire vous a envoyé un contrat de location à signer pour le logement situé au ${lease.listing?.address || 'votre logement'}.`
             : `Your landlord sent you a lease contract to sign for the property at ${lease.listing?.address || 'your property'}.`,
-          data: { lease_id: lease.id, listing_id: lease.listing_id },
+          link: '/mes-baux',
+          related_id: lease.id,
         });
 
       if (notifError) console.error('Notification error:', notifError);

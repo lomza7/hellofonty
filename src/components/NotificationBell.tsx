@@ -182,6 +182,8 @@ export default function NotificationBell() {
         } else {
           navigate('/mes-reservations');
         }
+      } else if (notification.link.startsWith('/')) {
+        navigate(notification.link);
       }
     }
 
