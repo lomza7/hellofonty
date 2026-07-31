@@ -447,7 +447,7 @@ export default function Admin() {
       ]);
 
       const confirmedBookings = bookings?.filter(b => b.status === 'confirmed') || [];
-      const paidBookings = confirmedBookings.filter(b => b.payment_status === 'paid');
+      const paidBookings = confirmedBookings.filter(b => b.payment_status === 'completed');
       const pendingPaymentBookings = confirmedBookings.filter(b => b.payment_status === 'pending');
       const pendingBookings = bookings?.filter(b => b.status === 'pending') || [];
       const cancelledBookings = bookings?.filter(b => b.status === 'cancelled') || [];
@@ -626,7 +626,7 @@ export default function Admin() {
         student_id: b.student_id,
         listing_title: (b as any).listings?.title || 'N/A',
         fee_amount: parseFloat(b.platform_fee || '0'),
-        payment_status: b.platform_fee_refunded ? 'refunded' : (b.payment_status === 'paid' ? 'paid' : 'pending'),
+        payment_status: b.platform_fee_refunded ? 'refunded' : (b.payment_status === 'completed' ? 'paid' : 'pending'),
         platform_fee_refunded: b.platform_fee_refunded || false,
         stripe_payment_intent_id: b.stripe_payment_intent_id,
         booking_status: b.status,
