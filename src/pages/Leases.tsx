@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -281,6 +281,28 @@ export default function Leases() {
     } catch (error) {
       console.error('Erreur suppression bail:', error);
       alert('Erreur lors de la suppression du bail');
+    }
+  };
+
+  const handleCancelSignature = async (lease: any) => {
+    if (!confirm(language === 'fr'
+      ? 'Annuler l\'envoi pour signature ? Le bail repassera en brouillon et pourra être modifié ou supprimé.'
+      : 'Cancel signature request? The lease will return to draft and can be edited or deleted.'
+    )) return;
+
+    try {
+      const { error } = await supabase
+        .from('leases')
+        .update({ status: 'draft' })
+        .eq('id', lease.id);
+
+      if (error) throw error;
+
+      alert(language === 'fr' ? 'Signature annulée. Le bail est de nouveau en brouillon.' : 'Signature cancelled. Lease is back in draft.');
+      loadLeases();
+    } catch (error) {
+      console.error('Erreur annulation signature:', error);
+      alert(language === 'fr' ? 'Erreur lors de l\'annulation' : 'Error cancelling');
     }
   };
 
@@ -681,7 +703,17 @@ export default function Leases() {
                       </button>
                     )}
 
-                    {isLandlord && lease.status === 'draft' && (
+                    {isLandlord && lease.status === 'pending_signature' && (
+                      <button
+                        onClick={() => handleCancelSignature(lease)}
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title={language === 'fr' ? 'Annuler la signature' : 'Cancel signature'}
+                      >
+                        <RotateCcw className="w-5 h-5" />
+                      </button>
+                    )}
+
+                    {isLandlord && (lease.status === 'draft' || lease.status === 'pending_signature') && (
                       <button
                         onClick={() => handleDelete(lease.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
