@@ -312,6 +312,15 @@ export default function Leases() {
 
       if (notifError) console.error('Notification error:', notifError);
 
+      fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lease-notification`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lease_id: lease.id, type: 'signature_request' }),
+        }
+      ).catch(err => console.error('Email send error:', err));
+
       alert(language === 'fr' ? 'Contrat envoyé pour signature !' : 'Contract sent for signature!');
       loadLeases();
     } catch (error) {
