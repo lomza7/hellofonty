@@ -208,11 +208,12 @@ export default function Leases() {
 
     setSelectedBooking(booking);
 
-    const monthlyRent = booking.listing?.price_per_month || 0;
+    const totalPrice = booking.listing?.price_per_month || 0;
     const electricityCost = booking.listing?.electricity_cost || 0;
     const heatingCost = booking.listing?.heating_cost || 0;
     const waterCost = booking.listing?.water_cost || 0;
     const charges = electricityCost + heatingCost + waterCost;
+    const monthlyRent = totalPrice - charges;
     const securityDeposit = booking.listing?.security_deposit || monthlyRent;
 
     setFormData({
