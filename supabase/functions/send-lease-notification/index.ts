@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: lease, error: leaseError } = await supabase
       .from('leases')
-      .select('id, tenant_id, landlord_id, start_date, end_date, monthly_rent, listing_id')
+      .select('id, tenant_id, landlord_id, start_date, end_date, monthly_rent, charges, listing_id')
       .eq('id', lease_id)
       .maybeSingle();
 
@@ -60,9 +60,8 @@ Deno.serve(async (req: Request) => {
     const { data: tenantAuth } = await supabase.auth.admin.getUserById(lease.tenant_id);
     const tenantEmail = tenantAuth?.user?.email;
 
-    if (!tenantEmail) {
-      throw new Error('Tenant email not found');
-    }
+    const { data: landlordAuth } = await supabase.auth.admin.getUserById(lease.landlord_id);
+    const landlordEmail = landlordAuth?.user?.email;
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
@@ -76,55 +75,96 @@ Deno.serve(async (req: Request) => {
       ? new Date(lease.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
       : '';
 
-    let subject = '';
-    let html = '';
+    const totalMonthly = (parseFloat(lease.monthly_rent) + parseFloat(lease.charges)).toFixed(2);
+
+    const leaseDetailsTable = `
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <tr><td style="padding:8px 0;color:#6b7280;">Logement</td><td style="padding:8px 0;font-weight:600;">${listing?.title || ''}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Adresse</td><td style="padding:8px 0;font-weight:600;">${listing?.address || ''}</td></tr>
+        ${startDate ? `<tr><td style="padding:8px 0;color:#6b7280;">Periode</td><td style="padding:8px 0;font-weight:600;">${startDate} — ${endDate}</td></tr>` : ''}
+        <tr><td style="padding:8px 0;color:#6b7280;">Loyer hors charges</td><td style="padding:8px 0;font-weight:600;">${lease.monthly_rent} EUR</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Charges</td><td style="padding:8px 0;font-weight:600;">${lease.charges} EUR</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;border-top:1px solid #e5e7eb;">Total mensuel</td><td style="padding:8px 0;font-weight:700;border-top:1px solid #e5e7eb;">${totalMonthly} EUR</td></tr>
+      </table>
+    `;
+
+    const emailsSent: string[] = [];
 
     if (type === 'signature_request') {
-      subject = `Contrat de location à signer - ${listing?.title || 'Votre logement'}`;
-      html = buildEmail({
-        title: 'Contrat de location à signer',
-        greeting: `Bonjour ${tenant.first_name},`,
-        body: `
-          <p><strong>${landlord.first_name} ${landlord.last_name}</strong> vous a envoyé un contrat de location pour signature.</p>
-          <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-            <tr><td style="padding:8px 0;color:#6b7280;">Logement</td><td style="padding:8px 0;font-weight:600;">${listing?.title || ''}</td></tr>
-            <tr><td style="padding:8px 0;color:#6b7280;">Adresse</td><td style="padding:8px 0;font-weight:600;">${listing?.address || ''}</td></tr>
-            ${startDate ? `<tr><td style="padding:8px 0;color:#6b7280;">Période</td><td style="padding:8px 0;font-weight:600;">${startDate} — ${endDate}</td></tr>` : ''}
-            ${lease.monthly_rent ? `<tr><td style="padding:8px 0;color:#6b7280;">Loyer mensuel</td><td style="padding:8px 0;font-weight:600;">${lease.monthly_rent} EUR</td></tr>` : ''}
-          </table>
-          <p>Veuillez vous connecter à votre espace pour consulter et signer le contrat.</p>
-        `,
-        ctaUrl: `${SITE_URL}/mes-baux`,
-        ctaText: 'Voir et signer mon contrat',
-        headerColor: '#0d9488',
-      });
+      // Email to tenant
+      if (tenantEmail) {
+        const tenantHtml = buildEmail({
+          title: 'Contrat de location a signer',
+          greeting: `Bonjour ${tenant.first_name},`,
+          body: `
+            <p><strong>${landlord.first_name} ${landlord.last_name}</strong> vous a envoye un contrat de location pour signature.</p>
+            ${leaseDetailsTable}
+            <p>Veuillez vous connecter a votre espace pour consulter et signer le contrat.</p>
+          `,
+          ctaUrl: `${SITE_URL}/mes-baux`,
+          ctaText: 'Voir et signer mon contrat',
+          headerColor: '#0d9488',
+        });
+
+        await sendEmail(resendApiKey, {
+          to: tenantEmail,
+          subject: `Contrat de location a signer - ${listing?.title || 'Votre logement'}`,
+          html: tenantHtml,
+        });
+        emailsSent.push(tenantEmail);
+      }
+
+      // Email to landlord (confirmation + copy)
+      if (landlordEmail) {
+        const landlordHtml = buildEmail({
+          title: 'Confirmation d\'envoi de votre contrat',
+          greeting: `Bonjour ${landlord.first_name},`,
+          body: `
+            <p>Votre contrat de location a bien ete signe de votre cote et envoye a <strong>${tenant.first_name} ${tenant.last_name}</strong> pour signature.</p>
+            ${leaseDetailsTable}
+            <p>Vous recevrez une notification lorsque le locataire aura signe le contrat. Vous pouvez aussi suivre l'avancement depuis votre espace.</p>
+          `,
+          ctaUrl: `${SITE_URL}/mes-baux`,
+          ctaText: 'Voir mes contrats',
+          headerColor: '#1e40af',
+        });
+
+        await sendEmail(resendApiKey, {
+          to: landlordEmail,
+          subject: `Contrat envoye pour signature - ${listing?.title || 'Votre logement'}`,
+          html: landlordHtml,
+        });
+        emailsSent.push(landlordEmail);
+      }
+    } else if (type === 'tenant_signed') {
+      // Email to landlord when tenant signs
+      if (landlordEmail) {
+        const landlordHtml = buildEmail({
+          title: 'Contrat signe par le locataire',
+          greeting: `Bonjour ${landlord.first_name},`,
+          body: `
+            <p><strong>${tenant.first_name} ${tenant.last_name}</strong> a signe votre contrat de location.</p>
+            ${leaseDetailsTable}
+            <p>Le contrat est maintenant effectif. Les deux parties ont signe. Vous pouvez telecharger le contrat signe depuis votre espace.</p>
+          `,
+          ctaUrl: `${SITE_URL}/mes-baux`,
+          ctaText: 'Voir le contrat signe',
+          headerColor: '#059669',
+        });
+
+        await sendEmail(resendApiKey, {
+          to: landlordEmail,
+          subject: `Contrat signe - ${listing?.title || 'Votre logement'}`,
+          html: landlordHtml,
+        });
+        emailsSent.push(landlordEmail);
+      }
     } else {
       throw new Error(`Unknown notification type: ${type}`);
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'HelloFonty <noreply@hellofonty.fr>',
-        to: tenantEmail,
-        subject,
-        html,
-      }),
-    });
-
-    const result = await res.json();
-
-    if (!res.ok) {
-      console.error('Resend API error:', result);
-      throw new Error('Failed to send email');
-    }
-
     return new Response(
-      JSON.stringify({ success: true, to: tenantEmail }),
+      JSON.stringify({ success: true, emails_sent: emailsSent }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
@@ -135,6 +175,28 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+async function sendEmail(apiKey: string, params: { to: string; subject: string; html: string }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: 'HelloFonty <noreply@hellofonty.fr>',
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    console.error('Resend API error:', error);
+  }
+  return res;
+}
 
 interface EmailTemplate {
   title: string;
@@ -165,8 +227,8 @@ function buildEmail(params: EmailTemplate): string {
       </div>
     </div>
     <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-      <p style="margin: 0;">HelloFonty — Votre partenaire logement à Fontainebleau</p>
-      <p style="margin: 4px 0 0 0;">Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+      <p style="margin: 0;">HelloFonty — Votre partenaire logement a Fontainebleau</p>
+      <p style="margin: 4px 0 0 0;">Cet email a ete envoye automatiquement, merci de ne pas y repondre.</p>
     </div>
   </div>
 </body>

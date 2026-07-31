@@ -293,7 +293,7 @@ export default function Leases() {
     try {
       const { error } = await supabase
         .from('leases')
-        .update({ status: 'draft' })
+        .update({ status: 'draft', landlord_signature: null })
         .eq('id', lease.id);
 
       if (error) throw error;
@@ -308,14 +308,21 @@ export default function Leases() {
 
   const handleSendForSignature = async (lease: any) => {
     if (!confirm(language === 'fr'
-      ? 'Envoyer ce contrat au locataire pour signature ? Le bail ne pourra plus être modifié.'
-      : 'Send this contract to the tenant for signature? The lease will no longer be editable.'
+      ? 'En envoyant ce contrat, vous le signez en tant que bailleur et il sera transmis au locataire pour signature. Confirmer ?'
+      : 'By sending this contract, you sign it as landlord and it will be sent to the tenant for signature. Confirm?'
     )) return;
 
     try {
       const { error: updateError } = await supabase
         .from('leases')
-        .update({ status: 'pending_signature' })
+        .update({
+          status: 'pending_signature',
+          landlord_signature: {
+            signed_by: profile?.id,
+            signed_at: new Date().toISOString(),
+            name: `${profile?.first_name} ${profile?.last_name}`,
+          },
+        })
         .eq('id', lease.id);
 
       if (updateError) throw updateError;
@@ -388,6 +395,15 @@ export default function Leases() {
         });
 
       if (notifError) console.error('Notification error:', notifError);
+
+      fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lease-notification`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lease_id: lease.id, type: 'tenant_signed' }),
+        }
+      ).catch(err => console.error('Email send error:', err));
 
       alert(language === 'fr' ? 'Contrat signé avec succès !' : 'Contract signed successfully!');
       loadLeases();
@@ -622,6 +638,19 @@ export default function Leases() {
                       </h3>
                       {getStatusBadge(lease.status)}
                     </div>
+
+                    {(lease.status === 'pending_signature' || lease.status === 'signed') && (
+                      <div className="flex items-center gap-4 mb-3 text-xs">
+                        <span className={`inline-flex items-center gap-1 ${lease.landlord_signature ? 'text-green-700' : 'text-gray-400'}`}>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {language === 'fr' ? 'Bailleur' : 'Landlord'} {lease.landlord_signature ? (language === 'fr' ? 'a signé' : 'signed') : (language === 'fr' ? 'non signé' : 'not signed')}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 ${lease.tenant_signature ? 'text-green-700' : 'text-gray-400'}`}>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {language === 'fr' ? 'Locataire' : 'Tenant'} {lease.tenant_signature ? (language === 'fr' ? 'a signé' : 'signed') : (language === 'fr' ? 'non signé' : 'not signed')}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
