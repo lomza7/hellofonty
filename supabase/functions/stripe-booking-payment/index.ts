@@ -150,8 +150,8 @@ Deno.serve(async (req: Request) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/payment-success?booking_id=${booking_id}`,
-      cancel_url: `${req.headers.get('origin')}/payment/${booking_id}`,
+      success_url: `${req.headers.get('origin')}/paiement/succes?booking_id=${booking_id}`,
+      cancel_url: `${req.headers.get('origin')}/paiement/${booking_id}`,
       metadata: {
         booking_id: booking_id,
         student_id: user.id,

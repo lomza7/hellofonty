@@ -97,6 +97,23 @@ interface PendingPaymentBooking {
   days_remaining: number;
 }
 
+interface PaidBooking {
+  id: string;
+  student_first_name: string;
+  student_last_name: string;
+  student_id: string;
+  landlord_first_name: string;
+  landlord_last_name: string;
+  listing_title: string;
+  payment_amount: number;
+  platform_fee: number;
+  platform_fee_refunded: boolean;
+  stripe_payment_intent_id: string | null;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+}
+
 interface FinanceStats {
   totalRevenue: number;
   bookingRevenue: number;
@@ -120,6 +137,7 @@ interface FinanceStats {
   activeSubscribers: number;
   churnedUsers: ChurnedUser[];
   pendingPayments: PendingPaymentBooking[];
+  paidBookings: PaidBooking[];
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
   churnData: { date: string; churned: number; active: number; rate: number }[];
 }
@@ -156,6 +174,10 @@ export default function Admin() {
   const [showBlockedDetailsModal, setShowBlockedDetailsModal] = useState(false);
   const [alertsFilter, setAlertsFilter] = useState<string>('all');
   const [pendingDocumentsCount, setPendingDocumentsCount] = useState(0);
+  const [refundModalBooking, setRefundModalBooking] = useState<PaidBooking | null>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundSuccess, setRefundSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile || profile.role !== 'admin') {
@@ -560,6 +582,26 @@ export default function Admin() {
         };
       });
 
+      const paidBookingsData: PaidBooking[] = paidBookings.map(b => {
+        const landlord = landlordMap.get((b as any).listings?.landlord_id);
+        return {
+          id: b.id,
+          student_first_name: (b as any).student?.first_name || 'N/A',
+          student_last_name: (b as any).student?.last_name || 'N/A',
+          student_id: b.student_id,
+          landlord_first_name: landlord?.first_name || 'N/A',
+          landlord_last_name: landlord?.last_name || 'N/A',
+          listing_title: (b as any).listings?.title || 'N/A',
+          payment_amount: parseFloat(b.payment_amount || '0'),
+          platform_fee: parseFloat(b.platform_fee || '0'),
+          platform_fee_refunded: b.platform_fee_refunded || false,
+          stripe_payment_intent_id: b.stripe_payment_intent_id,
+          start_date: b.start_date,
+          end_date: b.end_date,
+          created_at: b.created_at,
+        };
+      }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
       setFinanceStats({
         totalRevenue,
         bookingRevenue,
@@ -583,6 +625,7 @@ export default function Admin() {
         activeSubscribers: premiumSubs.length,
         churnedUsers,
         pendingPayments,
+        paidBookings: paidBookingsData,
         revenueGrowth,
         churnData,
       });
@@ -2013,6 +2056,182 @@ export default function Admin() {
                 </div>
               )}
             </div>
+
+            {/* Paid Bookings Table with Refund */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                Réservations Payées & Remboursements
+              </h3>
+
+              {financeStats.paidBookings.length === 0 ? (
+                <div className="text-center py-12">
+                  <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">Aucune réservation payée</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Étudiant</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logement</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {financeStats.paidBookings.map((booking) => (
+                        <tr key={booking.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {booking.student_first_name} {booking.student_last_name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 max-w-xs truncate">{booking.listing_title}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-gray-900">{booking.payment_amount.toFixed(2)}€</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {booking.platform_fee_refunded ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Frais remboursés
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-600">{booking.platform_fee.toFixed(2)}€</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(booking.start_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                            {' → '}
+                            {new Date(booking.end_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => {
+                                setRefundModalBooking(booking);
+                                setRefundError(null);
+                                setRefundSuccess(null);
+                              }}
+                              className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors"
+                            >
+                              Rembourser
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Refund Modal */}
+            {refundModalBooking && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Rembourser une réservation</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Réservation de {refundModalBooking.student_first_name} {refundModalBooking.student_last_name} — {refundModalBooking.listing_title}
+                  </p>
+
+                  {refundSuccess ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-green-800 font-medium">{refundSuccess}</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3 mb-4">
+                        <button
+                          onClick={async () => {
+                            setRefundLoading(true);
+                            setRefundError(null);
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-refund`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${session?.access_token}`,
+                                },
+                                body: JSON.stringify({ booking_id: refundModalBooking.id, refund_type: 'platform_fee' }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Erreur');
+                              setRefundSuccess(`Frais de ${data.amount.toFixed(2)}€ remboursés avec succès.`);
+                              await loadFinanceData();
+                            } catch (err: any) {
+                              setRefundError(err.message);
+                            } finally {
+                              setRefundLoading(false);
+                            }
+                          }}
+                          disabled={refundLoading || refundModalBooking.platform_fee_refunded}
+                          className="w-full px-4 py-3 text-left rounded-lg border-2 border-gray-200 hover:border-rose-300 transition-colors disabled:opacity-50"
+                        >
+                          <div className="font-semibold text-gray-900">Rembourser les frais uniquement</div>
+                          <div className="text-sm text-gray-500">{refundModalBooking.platform_fee.toFixed(2)}€ retournés à l'étudiant</div>
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            setRefundLoading(true);
+                            setRefundError(null);
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-refund`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${session?.access_token}`,
+                                },
+                                body: JSON.stringify({ booking_id: refundModalBooking.id, refund_type: 'full' }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Erreur');
+                              setRefundSuccess(`Remboursement total de ${data.amount.toFixed(2)}€ effectué.`);
+                              await loadFinanceData();
+                            } catch (err: any) {
+                              setRefundError(err.message);
+                            } finally {
+                              setRefundLoading(false);
+                            }
+                          }}
+                          disabled={refundLoading}
+                          className="w-full px-4 py-3 text-left rounded-lg border-2 border-gray-200 hover:border-rose-300 transition-colors disabled:opacity-50"
+                        >
+                          <div className="font-semibold text-gray-900">Rembourser le montant total</div>
+                          <div className="text-sm text-gray-500">{refundModalBooking.payment_amount.toFixed(2)}€ retournés à l'étudiant</div>
+                        </button>
+                      </div>
+
+                      {refundError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                          <p className="text-sm text-red-800">{refundError}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setRefundModalBooking(null);
+                        setRefundError(null);
+                        setRefundSuccess(null);
+                      }}
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Revenue Growth Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
