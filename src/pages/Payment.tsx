@@ -94,12 +94,10 @@ export default function Payment() {
               address,
               price_per_month,
               security_deposit,
-              images:listing_images(image_url, display_order),
               landlord:profiles!landlord_id(avatar_url, stripe_charges_enabled)
             )
           `)
           .eq('id', bookingId)
-          .order('display_order', { ascending: true, referencedTable: 'listing_images' })
           .maybeSingle(),
         supabase
           .from('platform_settings')
@@ -269,23 +267,9 @@ export default function Payment() {
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Détails du logement</h2>
                 <div className="flex gap-4">
-                  {(() => {
-                    const listingImage = booking.listing.images?.[0]?.image_url;
-                    const landlordAvatar = booking.listing.landlord?.avatar_url;
-                    const imageUrl = listingImage || landlordAvatar;
-
-                    return imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={booking.listing.title}
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
-                        <Home className="w-12 h-12 text-blue-600" />
-                      </div>
-                    );
-                  })()}
+                  <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Home className="w-12 h-12 text-blue-600" />
+                  </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-lg text-gray-900">{booking.listing.title}</h3>
                     <p className="text-gray-600 text-sm">{booking.listing.address}</p>
