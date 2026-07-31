@@ -471,6 +471,17 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                           </div>
                         )}
 
+                        {isPaymentExpired(booking) && booking.status === 'confirmed' && (
+                          <div className="text-sm text-red-700 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+                            <p className="font-medium">{language === 'fr' ? 'Delai de paiement depasse' : 'Payment deadline passed'}</p>
+                            <p className="text-xs mt-1 text-red-600">
+                              {language === 'fr'
+                                ? 'Le proprietaire peut relancer votre paiement ou annuler la reservation. Contactez-le via la messagerie.'
+                                : 'The landlord can extend your payment or cancel the booking. Contact them via messaging.'}
+                            </p>
+                          </div>
+                        )}
+
                         {booking.status === 'pending' && (
                           <button
                             onClick={() => cancelBooking(booking)}

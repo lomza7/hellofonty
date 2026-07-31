@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, X, User, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building } from 'lucide-react';
+import { Calendar, Check, X, User, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building, RefreshCw, Ban } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -162,6 +162,40 @@ export default function MyBookingRequests() {
     if (!error) {
       loadBookings();
       alert(status === 'confirmed' ? (language === 'fr' ? 'Reservation confirmee!' : 'Booking confirmed!') : (language === 'fr' ? 'Reservation refusee' : 'Booking declined'));
+    }
+  };
+
+  const handleExtendDeadline = async (bookingId: string) => {
+    const newDeadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase
+      .from('bookings')
+      .update({ payment_deadline: newDeadline, payment_status: 'pending' })
+      .eq('id', bookingId);
+
+    if (!error) {
+      loadBookings();
+      alert(language === 'fr' ? 'Delai de paiement prolonge de 72h.' : 'Payment deadline extended by 72h.');
+    } else {
+      alert(language === 'fr' ? 'Erreur lors de la prolongation.' : 'Error extending deadline.');
+    }
+  };
+
+  const handleCancelExpiredBooking = async (bookingId: string) => {
+    if (!confirm(language === 'fr'
+      ? 'Annuler cette reservation ? Le logement sera libere et l\'etudiant pourra refaire une demande.'
+      : 'Cancel this booking? The property will be freed and the student can make a new request.'
+    )) return;
+
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled', payment_status: 'expired' })
+      .eq('id', bookingId);
+
+    if (!error) {
+      loadBookings();
+      alert(language === 'fr' ? 'Reservation annulee. Le logement est de nouveau disponible.' : 'Booking cancelled. Property is available again.');
+    } else {
+      alert(language === 'fr' ? 'Erreur lors de l\'annulation.' : 'Error cancelling booking.');
     }
   };
 
@@ -492,6 +526,25 @@ export default function MyBookingRequests() {
                             <Euro className="w-5 h-5" />
                             <span>{language === 'fr' ? 'Voir les loyers' : 'View rents'}</span>
                           </button>
+                        )}
+
+                        {booking.status === 'confirmed' && booking.payment_status !== 'completed' && booking.payment_deadline && new Date(booking.payment_deadline) <= new Date() && (
+                          <div className="flex flex-col sm:flex-row gap-3 w-full">
+                            <button
+                              onClick={() => handleExtendDeadline(booking.id)}
+                              className="flex items-center justify-center space-x-2 px-5 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex-1"
+                            >
+                              <RefreshCw className="w-5 h-5" />
+                              <span>{language === 'fr' ? 'Relancer le paiement (72h)' : 'Extend payment (72h)'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleCancelExpiredBooking(booking.id)}
+                              className="flex items-center justify-center space-x-2 px-5 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition flex-1"
+                            >
+                              <Ban className="w-5 h-5" />
+                              <span>{language === 'fr' ? 'Annuler la reservation' : 'Cancel booking'}</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
