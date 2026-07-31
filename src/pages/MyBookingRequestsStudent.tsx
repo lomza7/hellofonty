@@ -456,7 +456,7 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                       <div className="flex items-center space-x-3">
                         {needsPayment(booking) && (
                           <button
-                            onClick={() => navigate(`/payment/${booking.id}`)}
+                            onClick={() => navigate(`/paiement/${booking.id}`)}
                             className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg font-bold hover:from-orange-600 hover:to-amber-600 transition shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
                             <CreditCard className="w-5 h-5" />

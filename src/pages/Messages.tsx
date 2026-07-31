@@ -569,7 +569,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                       {isSystemMessage && msg.event === 'payment_required' && msg.booking_id && msg.booking && msg.booking.payment_status === 'pending' && (
                         <div className="mt-4">
                           <button
-                            onClick={() => window.location.href = `/payment/${msg.booking_id}`}
+                            onClick={() => window.location.href = `/paiement/${msg.booking_id}`}
                             className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
                             💳 Payer maintenant
