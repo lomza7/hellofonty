@@ -26,6 +26,7 @@ type Booking = {
     images: Array<{ image_url: string }>;
     landlord: {
       avatar_url: string | null;
+      stripe_charges_enabled: boolean | null;
     };
   };
 };
@@ -94,7 +95,7 @@ export default function Payment() {
               price_per_month,
               security_deposit,
               images:listing_images(image_url, display_order),
-              landlord:profiles!landlord_id(avatar_url)
+              landlord:profiles!landlord_id(avatar_url, stripe_charges_enabled)
             )
           `)
           .eq('id', bookingId)
@@ -183,7 +184,14 @@ export default function Payment() {
       window.location.href = data.url;
     } catch (err: any) {
       console.error('Erreur:', err);
-      setError(err.message);
+      const msg = err.message || '';
+      if (msg.includes('Stripe') || msg.includes('configuré')) {
+        setError('Le paiement en ligne n\'est pas encore activé par le propriétaire. Veuillez réessayer dans quelques heures.');
+      } else if (msg.includes('expiré')) {
+        setError('Le délai de paiement pour cette réservation a expiré.');
+      } else {
+        setError(msg);
+      }
       setProcessing(false);
     }
   }
@@ -338,7 +346,7 @@ export default function Payment() {
               </div>
             </div>
 
-            {!isExpired && (
+            {!isExpired && booking.listing?.landlord?.stripe_charges_enabled && (
               <button
                 onClick={handlePayment}
                 disabled={processing}
@@ -356,6 +364,18 @@ export default function Payment() {
                   </>
                 )}
               </button>
+            )}
+
+            {!isExpired && !booking.listing?.landlord?.stripe_charges_enabled && (
+              <div className="text-center py-4 bg-amber-50 border border-amber-200 rounded-xl px-6">
+                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+                <p className="text-gray-800 font-semibold mb-2">
+                  Paiement bientôt disponible
+                </p>
+                <p className="text-sm text-gray-600">
+                  Le propriétaire finalise la configuration du paiement en ligne. Vous serez notifié dès que le paiement sera possible.
+                </p>
+              </div>
             )}
 
             {isExpired && (

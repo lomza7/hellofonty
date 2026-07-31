@@ -148,6 +148,7 @@ function BookingPaymentCard({
   const isInitialExpired = needsInitialPayment && new Date(booking.payment_deadline!) <= new Date();
   const isInitialPayable = needsInitialPayment && !isInitialExpired;
   const initialPaid = booking.payment_status === 'completed';
+  const landlordStripeReady = booking.listing?.landlord?.stripe_charges_enabled === true;
 
   const paidCount = schedule.filter(p => p.status === 'paid').length;
   const pendingCount = schedule.filter(p => p.status === 'pending' || p.status === 'overdue').length;
@@ -267,6 +268,17 @@ function BookingPaymentCard({
                 </div>
               </div>
 
+              {!landlordStripeReady ? (
+                <div className="flex-shrink-0">
+                  <div className="flex items-center gap-2 px-5 py-3 bg-gray-100 border border-gray-300 text-gray-600 font-medium rounded-xl">
+                    <AlertCircle className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm">{language === 'fr' ? 'Paiement bientôt disponible' : 'Payment available soon'}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-right">
+                    {language === 'fr' ? 'Le propriétaire finalise la configuration du paiement' : 'The landlord is finalizing payment setup'}
+                  </p>
+                </div>
+              ) : (
               <button
                 onClick={() => onPayInitial(booking.id)}
                 disabled={processingPayment === booking.id}
@@ -284,6 +296,7 @@ function BookingPaymentCard({
                   </>
                 )}
               </button>
+              )}
             </div>
 
             <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
@@ -373,7 +386,7 @@ function BookingPaymentCard({
                         )}
                       </div>
 
-                      {canPay && (
+                      {canPay && landlordStripeReady && (
                         <button
                           onClick={() => onPayRent(payment.rent_payment_id!)}
                           disabled={processingPayment === payment.rent_payment_id}
@@ -386,6 +399,12 @@ function BookingPaymentCard({
                           )}
                           <span>{language === 'fr' ? 'Payer' : 'Pay'}</span>
                         </button>
+                      )}
+
+                      {canPay && !landlordStripeReady && (
+                        <span className="text-xs font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">
+                          {language === 'fr' ? 'Bientôt disponible' : 'Available soon'}
+                        </span>
                       )}
 
                       {payment.is_initial && isInitialPayable && (
@@ -551,6 +570,8 @@ export default function MyMonthlyRents() {
             title,
             address,
             price_per_month,
+            landlord_id,
+            landlord:profiles!landlord_id(stripe_charges_enabled),
             images:listing_images(image_url, display_order)
           )
         `)
@@ -600,7 +621,14 @@ export default function MyMonthlyRents() {
       if (data.url) window.location.href = data.url;
     } catch (error: any) {
       console.error('Error:', error);
-      alert(error.message || 'Erreur lors du paiement');
+      const msg = error.message || '';
+      if (msg.includes('Stripe') || msg.includes('configuré')) {
+        alert(language === 'fr' ? 'Le paiement en ligne n\'est pas encore activé par votre propriétaire. Veuillez réessayer plus tard.' : 'Online payment has not been activated by your landlord yet. Please try again later.');
+      } else if (msg.includes('expiré')) {
+        alert(language === 'fr' ? 'Le délai de paiement pour cette réservation a expiré. Veuillez contacter le support.' : 'The payment deadline for this booking has expired. Please contact support.');
+      } else {
+        alert(msg || (language === 'fr' ? 'Erreur lors du paiement' : 'Payment error'));
+      }
     } finally {
       setProcessingPayment(null);
     }
@@ -630,7 +658,12 @@ export default function MyMonthlyRents() {
       if (data.url) window.location.href = data.url;
     } catch (error: any) {
       console.error('Error:', error);
-      alert(error.message || 'Erreur lors du paiement');
+      const msg = error.message || '';
+      if (msg.includes('Stripe') || msg.includes('configuré')) {
+        alert(language === 'fr' ? 'Le paiement en ligne n\'est pas encore activé par votre propriétaire. Veuillez réessayer plus tard.' : 'Online payment has not been activated by your landlord yet. Please try again later.');
+      } else {
+        alert(msg || (language === 'fr' ? 'Erreur lors du paiement' : 'Payment error'));
+      }
     } finally {
       setProcessingPayment(null);
     }
