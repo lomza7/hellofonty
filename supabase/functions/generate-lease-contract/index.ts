@@ -14,10 +14,54 @@ function replaceVariables(content: string, vars: Record<string, string>): string
   return result;
 }
 
-function buildContractHTML(sections: Array<{ content: string }>, vars: Record<string, string>): string {
+interface SignatureData {
+  name: string;
+  signed_at: string;
+  signed_by: string;
+}
+
+function formatSignatureDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return '';
+  try {
+    return new Date(isoDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+function buildSignatureBox(title: string, sig: SignatureData | null, fallbackName: string): string {
+  if (sig && sig.name) {
+    const dateStr = formatSignatureDate(sig.signed_at);
+    return `
+  <div class="signature-box">
+    <div class="signature-title">${title}</div>
+    <div class="signature-stamp">Signe electroniquement</div>
+    <div class="signature-line">&nbsp;</div>
+    <div class="signature-name">${sig.name}</div>
+    <div class="signature-date">Le ${dateStr}</div>
+  </div>`;
+  }
+  return `
+  <div class="signature-box">
+    <div class="signature-title">${title}</div>
+    <div class="signature-line">Signature precedee de la mention<br>"Lu et approuve"</div>
+    <div class="signature-name">${fallbackName}</div>
+    <div class="signature-date" style="color:#94a3b8;">Non signe</div>
+  </div>`;
+}
+
+function buildContractHTML(
+  sections: Array<{ content: string }>,
+  vars: Record<string, string>,
+  landlordSig: SignatureData | null,
+  tenantSig: SignatureData | null,
+): string {
   const bodyContent = sections
     .map(s => `<div class="section">${replaceVariables(s.content, vars)}</div>`)
     .join('\n');
+
+  const landlordBox = buildSignatureBox('Le Bailleur', landlordSig, vars['{{landlord_name}}']);
+  const tenantBox = buildSignatureBox('Le Locataire', tenantSig, vars['{{tenant_name}}']);
 
   return `
 <!DOCTYPE html>
@@ -44,7 +88,8 @@ function buildContractHTML(sections: Array<{ content: string }>, vars: Record<st
     .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
     .signature-box { border: 2px solid #cbd5e1; border-radius: 8px; padding: 20px; min-height: 180px; }
     .signature-title { font-weight: 700; color: #1e3a8a; margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
-    .signature-line { margin-top: 60px; border-bottom: 2px solid #1e3a8a; text-align: center; padding-bottom: 2px; }
+    .signature-stamp { display: inline-block; background: #dcfce7; color: #166534; font-size: 8pt; font-weight: 700; padding: 4px 12px; border-radius: 4px; margin-bottom: 15px; }
+    .signature-line { margin-top: 30px; border-bottom: 2px solid #1e3a8a; text-align: center; padding-bottom: 2px; }
     .signature-name { margin-top: 10px; font-size: 10pt; color: #475569; text-align: center; }
     .signature-date { margin-top: 5px; font-size: 9pt; color: #64748b; font-style: italic; text-align: center; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 9pt; }
@@ -55,18 +100,8 @@ ${bodyContent}
 
 <div class="page-break"></div>
 <div class="signature-grid">
-  <div class="signature-box">
-    <div class="signature-title">Le Bailleur</div>
-    <div class="signature-line">Signature precedee de la mention<br>"Lu et approuve"</div>
-    <div class="signature-name">${vars['{{landlord_name}}']}</div>
-    <div class="signature-date">Le ${vars['{{today}}']}</div>
-  </div>
-  <div class="signature-box">
-    <div class="signature-title">Le Locataire</div>
-    <div class="signature-line">Signature precedee de la mention<br>"Lu et approuve"</div>
-    <div class="signature-name">${vars['{{tenant_name}}']}</div>
-    <div class="signature-date">Le ${vars['{{today}}']}</div>
-  </div>
+${landlordBox}
+${tenantBox}
 </div>
 
 <div class="footer">
@@ -120,7 +155,7 @@ Deno.serve(async (req: Request) => {
 
     if (leaseError) throw leaseError;
 
-    if (lease.landlord_id !== user.id) {
+    if (lease.landlord_id !== user.id && lease.tenant_id !== user.id) {
       throw new Error('Unauthorized');
     }
 
@@ -192,7 +227,7 @@ Deno.serve(async (req: Request) => {
 
     if (templateSections && templateSections.length > 0 && !templateError) {
       // Use database template
-      html = buildContractHTML(templateSections, vars);
+      html = buildContractHTML(templateSections, vars, lease.landlord_signature as SignatureData | null, lease.tenant_signature as SignatureData | null);
     } else {
       // Fallback: generate basic contract if no template found
       const fallbackSections = [
@@ -202,7 +237,7 @@ Deno.serve(async (req: Request) => {
         { content: `<h2>III. Duree</h2><p>Du ${startDate} au ${endDate} (${durationMonths} mois)</p>` },
         { content: `<h2>IV. Loyer</h2><p>Loyer : ${vars['{{monthly_rent}}']} EUR | Charges : ${vars['{{charges}}']} EUR | Total : ${vars['{{total_monthly}}']} EUR</p>` },
       ];
-      html = buildContractHTML(fallbackSections, vars);
+      html = buildContractHTML(fallbackSections, vars, lease.landlord_signature as SignatureData | null, lease.tenant_signature as SignatureData | null);
     }
 
     return new Response(html, {

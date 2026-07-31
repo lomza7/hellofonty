@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, CheckCircle, Clock, XCircle, Download, Trash2, AlertCircle, Building2, Home } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Clock, XCircle, Download, Trash2, AlertCircle, Building2, Home, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -28,6 +28,15 @@ type TenantInsurance = Document & {
   listing_title?: string;
 };
 
+type SignedLease = {
+  id: string;
+  tenant_name: string;
+  start_date: string;
+  end_date: string;
+  signed_at: string;
+  listing_id: string;
+};
+
 type DocumentType = {
   id: string;
   labelFr: string;
@@ -45,6 +54,7 @@ export default function MyDocumentsLandlord() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [tenantInsurances, setTenantInsurances] = useState<TenantInsurance[]>([]);
+  const [signedLeases, setSignedLeases] = useState<SignedLease[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -155,6 +165,7 @@ export default function MyDocumentsLandlord() {
         }));
         setTenantInsurances(formattedInsurances);
       }
+      await loadSignedLeases();
     } catch (err: any) {
       console.error('Error loading data:', err);
       setError('Erreur lors du chargement des données');
@@ -270,6 +281,93 @@ export default function MyDocumentsLandlord() {
       await loadData();
     } catch (err: any) {
       setError('Erreur lors de la suppression : ' + err.message);
+    }
+  };
+
+  const loadSignedLeases = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          signed_at,
+          listing_id,
+          profiles:tenant_id ( first_name, last_name )
+        `)
+        .eq('landlord_id', user.id)
+        .eq('status', 'signed')
+        .order('signed_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((lease: any) => ({
+        id: lease.id,
+        tenant_name: lease.profiles ? `${lease.profiles.first_name} ${lease.profiles.last_name}` : 'Inconnu',
+        start_date: lease.start_date,
+        end_date: lease.end_date,
+        signed_at: lease.signed_at,
+        listing_id: lease.listing_id,
+      }));
+      setSignedLeases(formatted);
+    } catch (err: any) {
+      console.error('Error loading signed leases:', err);
+    }
+  };
+
+  const handleDownloadLease = async (leaseId: string, leaseTitle: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      );
+
+      if (!response.ok) throw new Error('Erreur lors de la génération du contrat');
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Bail_${leaseTitle}_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Erreur lors du téléchargement du bail');
+    }
+  };
+
+  const handleViewLease = async (leaseId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      );
+
+      if (!response.ok) throw new Error('Erreur lors de la génération du contrat');
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      setError('Erreur lors de l\'ouverture du bail');
     }
   };
 
@@ -578,95 +676,136 @@ export default function MyDocumentsLandlord() {
                   </select>
                 </div>
 
-                {selectedListing && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {['lease_copy', 'inventory_copy'].map((docType) => {
-                      const doc = getDocumentByType(docType, selectedListing);
-                      const isLease = docType === 'lease_copy';
-                      const label = isLease
-                        ? (language === 'fr' ? 'Bail signé' : 'Signed Lease')
-                        : (language === 'fr' ? 'État des lieux' : 'Inventory');
-
-                      return (
-                        <div
-                          key={docType}
-                          className="border-2 border-gray-200 rounded-xl p-5"
-                        >
-                          <h3 className="font-bold text-gray-900 mb-3">{label}</h3>
-
-                          {doc ? (
-                            <div className="space-y-3">
-                              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                                <div className="flex items-center justify-between mb-2">
-                                  <p className="text-sm font-medium text-gray-900 truncate flex-1">
-                                    {doc.file_name}
+                {selectedListing && (() => {
+                  const listingLeases = signedLeases.filter(l => l.listing_id === selectedListing);
+                  return (
+                    <div className="space-y-6">
+                      {listingLeases.length > 0 && (
+                        <div className="space-y-4">
+                          {listingLeases.map((lease) => (
+                            <div key={lease.id} className="border-2 border-green-200 rounded-xl p-5">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h3 className="font-bold text-gray-900 mb-1">
+                                    {language === 'fr' ? 'Bail signé' : 'Signed Lease'} — {lease.tenant_name}
+                                  </h3>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(lease.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')} → {new Date(lease.end_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
                                   </p>
-                                  <CheckCircle className="w-5 h-5 text-green-500" />
                                 </div>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(doc.uploaded_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
-                                </span>
+                                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                               </div>
-
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => handleDownload(doc.file_url, doc.file_name)}
+                                  onClick={() => handleViewLease(lease.id)}
                                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-semibold flex items-center justify-center gap-2"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  {language === 'fr' ? 'Consulter' : 'View'}
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadLease(lease.id, lease.tenant_name)}
+                                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm font-semibold flex items-center justify-center gap-2"
                                 >
                                   <Download className="w-4 h-4" />
                                   {language === 'fr' ? 'Télécharger' : 'Download'}
                                 </button>
-                                <button
-                                  onClick={() => handleDelete(doc)}
-                                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-semibold flex items-center gap-2"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
                               </div>
-
-                              <input
-                                ref={(el) => fileInputRefs.current[docType + selectedListing] = el}
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => handleFileSelect(docType, e, selectedListing)}
-                                className="hidden"
-                              />
-                              <button
-                                onClick={() => fileInputRefs.current[docType + selectedListing]?.click()}
-                                disabled={uploading === docType + selectedListing}
-                                className="w-full px-4 py-2 border-2 border-green-300 text-green-600 rounded-lg hover:bg-green-50 transition text-sm font-semibold disabled:opacity-50"
-                              >
-                                {uploading === docType + selectedListing
-                                  ? (language === 'fr' ? 'Upload...' : 'Uploading...')
-                                  : (language === 'fr' ? 'Remplacer' : 'Replace')}
-                              </button>
                             </div>
-                          ) : (
-                            <div>
-                              <input
-                                ref={(el) => fileInputRefs.current[docType + selectedListing] = el}
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => handleFileSelect(docType, e, selectedListing)}
-                                className="hidden"
-                              />
-                              <button
-                                onClick={() => fileInputRefs.current[docType + selectedListing]?.click()}
-                                disabled={uploading === docType + selectedListing}
-                                className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                              >
-                                <Upload className="w-5 h-5" />
-                                {uploading === docType + selectedListing
-                                  ? (language === 'fr' ? 'Upload en cours...' : 'Uploading...')
-                                  : (language === 'fr' ? 'Uploader' : 'Upload')}
-                              </button>
-                            </div>
-                          )}
+                          ))}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {['lease_copy', 'inventory_copy'].map((docType) => {
+                          const doc = getDocumentByType(docType, selectedListing);
+                          const isLease = docType === 'lease_copy';
+                          const label = isLease
+                            ? (language === 'fr' ? 'Bail (upload manuel)' : 'Lease (manual upload)')
+                            : (language === 'fr' ? 'État des lieux' : 'Inventory');
+
+                          return (
+                            <div
+                              key={docType}
+                              className="border-2 border-gray-200 rounded-xl p-5"
+                            >
+                              <h3 className="font-bold text-gray-900 mb-3">{label}</h3>
+
+                              {doc ? (
+                                <div className="space-y-3">
+                                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-sm font-medium text-gray-900 truncate flex-1">
+                                        {doc.file_name}
+                                      </p>
+                                      <CheckCircle className="w-5 h-5 text-green-500" />
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(doc.uploaded_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleDownload(doc.file_url, doc.file_name)}
+                                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-semibold flex items-center justify-center gap-2"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                      {language === 'fr' ? 'Télécharger' : 'Download'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(doc)}
+                                      className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-semibold flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+
+                                  <input
+                                    ref={(el) => fileInputRefs.current[docType + selectedListing] = el}
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => handleFileSelect(docType, e, selectedListing)}
+                                    className="hidden"
+                                  />
+                                  <button
+                                    onClick={() => fileInputRefs.current[docType + selectedListing]?.click()}
+                                    disabled={uploading === docType + selectedListing}
+                                    className="w-full px-4 py-2 border-2 border-green-300 text-green-600 rounded-lg hover:bg-green-50 transition text-sm font-semibold disabled:opacity-50"
+                                  >
+                                    {uploading === docType + selectedListing
+                                      ? (language === 'fr' ? 'Upload...' : 'Uploading...')
+                                      : (language === 'fr' ? 'Remplacer' : 'Replace')}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <input
+                                    ref={(el) => fileInputRefs.current[docType + selectedListing] = el}
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => handleFileSelect(docType, e, selectedListing)}
+                                    className="hidden"
+                                  />
+                                  <button
+                                    onClick={() => fileInputRefs.current[docType + selectedListing]?.click()}
+                                    disabled={uploading === docType + selectedListing}
+                                    className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                                  >
+                                    <Upload className="w-5 h-5" />
+                                    {uploading === docType + selectedListing
+                                      ? (language === 'fr' ? 'Upload en cours...' : 'Uploading...')
+                                      : (language === 'fr' ? 'Uploader' : 'Upload')}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

@@ -1,9 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, CheckCircle, Clock, XCircle, Download, Trash2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Clock, XCircle, Download, Trash2, AlertCircle, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
+
+type SignedLease = {
+  id: string;
+  listing_title: string;
+  listing_address: string;
+  landlord_name: string;
+  start_date: string;
+  end_date: string;
+  signed_at: string;
+};
 
 type Document = {
   id: string;
@@ -30,6 +40,7 @@ export default function MyDocuments() {
   const { profile, user } = useAuth();
   const { language, t } = useLanguage();
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [signedLeases, setSignedLeases] = useState<SignedLease[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -116,11 +127,100 @@ export default function MyDocuments() {
 
       if (error) throw error;
       setDocuments(data || []);
+      await loadSignedLeases();
     } catch (err: any) {
       console.error('Error loading documents:', err);
       setError('Erreur lors du chargement des documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSignedLeases = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          signed_at,
+          listings ( title, address ),
+          profiles:landlord_id ( first_name, last_name )
+        `)
+        .eq('tenant_id', user.id)
+        .eq('status', 'signed')
+        .order('signed_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((lease: any) => ({
+        id: lease.id,
+        listing_title: lease.listings?.title || 'Logement inconnu',
+        listing_address: lease.listings?.address || '',
+        landlord_name: lease.profiles ? `${lease.profiles.first_name} ${lease.profiles.last_name}` : 'Inconnu',
+        start_date: lease.start_date,
+        end_date: lease.end_date,
+        signed_at: lease.signed_at,
+      }));
+      setSignedLeases(formatted);
+    } catch (err: any) {
+      console.error('Error loading signed leases:', err);
+    }
+  };
+
+  const handleDownloadLease = async (leaseId: string, leaseTitle: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      );
+
+      if (!response.ok) throw new Error('Erreur lors de la génération du contrat');
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Bail_${leaseTitle}_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Erreur lors du téléchargement du bail');
+    }
+  };
+
+  const handleViewLease = async (leaseId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      );
+
+      if (!response.ok) throw new Error('Erreur lors de la génération du contrat');
+
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      setError('Erreur lors de l\'ouverture du bail');
     }
   };
 
@@ -621,61 +721,100 @@ export default function MyDocuments() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {signedDocs.map((docType) => {
-                const doc = getDocumentByType(docType.id);
-                return (
-                  <div
-                    key={docType.id}
-                    className="border-2 border-gray-200 rounded-xl p-5"
-                  >
+            {signedLeases.length > 0 ? (
+              <div className="space-y-4">
+                {signedLeases.map((lease) => (
+                  <div key={lease.id} className="border-2 border-green-200 rounded-xl p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="font-bold text-gray-900 mb-1">
-                          {language === 'fr' ? docType.labelFr : docType.labelEn}
+                          {language === 'fr' ? 'Bail signé' : 'Signed Lease'} — {lease.listing_title}
                         </h3>
-                        <p className="text-xs text-gray-600 mb-2">
-                          {language === 'fr' ? docType.descriptionFr : docType.descriptionEn}
+                        <p className="text-xs text-gray-600 mb-1">
+                          {lease.listing_address}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {language === 'fr' ? 'Propriétaire' : 'Landlord'}: {lease.landlord_name} · {new Date(lease.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')} → {new Date(lease.end_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
                         </p>
                       </div>
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                     </div>
-
-                    {doc ? (
-                      <div className="space-y-3">
-                        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-gray-900 truncate flex-1">
-                              {doc.file_name}
-                            </p>
-                            <CheckCircle className="w-5 h-5 text-green-500" />
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {new Date(doc.uploaded_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={() => handleDownload(doc)}
-                          className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center gap-2"
-                        >
-                          <Download className="w-5 h-5" />
-                          {language === 'fr' ? 'Télécharger' : 'Download'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">
-                          {language === 'fr'
-                            ? 'Pas encore disponible'
-                            : 'Not yet available'}
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewLease(lease.id)}
+                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-semibold flex items-center justify-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {language === 'fr' ? 'Consulter' : 'View'}
+                      </button>
+                      <button
+                        onClick={() => handleDownloadLease(lease.id, lease.listing_title)}
+                        className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm font-semibold flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        {language === 'fr' ? 'Télécharger' : 'Download'}
+                      </button>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {signedDocs.map((docType) => {
+                  const doc = getDocumentByType(docType.id);
+                  return (
+                    <div
+                      key={docType.id}
+                      className="border-2 border-gray-200 rounded-xl p-5"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 mb-1">
+                            {language === 'fr' ? docType.labelFr : docType.labelEn}
+                          </h3>
+                          <p className="text-xs text-gray-600 mb-2">
+                            {language === 'fr' ? docType.descriptionFr : docType.descriptionEn}
+                          </p>
+                        </div>
+                      </div>
+
+                      {doc ? (
+                        <div className="space-y-3">
+                          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-medium text-gray-900 truncate flex-1">
+                                {doc.file_name}
+                              </p>
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {new Date(doc.uploaded_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleDownload(doc)}
+                            className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center gap-2"
+                          >
+                            <Download className="w-5 h-5" />
+                            {language === 'fr' ? 'Télécharger' : 'Download'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                          <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">
+                            {language === 'fr'
+                              ? 'Pas encore disponible'
+                              : 'Not yet available'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
