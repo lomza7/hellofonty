@@ -343,12 +343,21 @@ export default function Messages({ selectedUserId }: MessagesProps) {
     if (conv.listingId) {
       insertData.listing_id = conv.listingId;
     }
-    const { error } = await supabase.from('messages').insert(insertData);
+    const { data: insertedMessage, error } = await supabase.from('messages').insert(insertData).select('id').single();
 
-    if (!error) {
+    if (!error && insertedMessage) {
       setNewMessage('');
       await loadMessages(conv.otherUserId, conv.listingId);
       await loadConversations();
+
+      fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-message-notification`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message_id: insertedMessage.id }),
+        }
+      ).catch(err => console.error('Email notification error:', err));
     }
     setSending(false);
   };
