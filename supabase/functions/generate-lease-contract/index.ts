@@ -85,8 +85,8 @@ ${buildSignedColumn(tenantSig, 'Le(s) LOCATAIRE(S)')}
     .sig-column { text-align: left; }
     .sig-name { font-weight: 700; font-size: 11pt; color: #1a1a1a; margin-bottom: 8px; }
     .sig-line { border-bottom: 1.5px solid #1a1a1a; margin-bottom: 8px; }
-    .sig-role { font-size: 10pt; color: #0d9488; font-weight: 600; margin-bottom: 6px; }
-    .sig-date { font-size: 9pt; color: #64748b; font-style: italic; }
+    .sig-role { font-size: 10pt; color: #1e40af; font-weight: 600; margin-bottom: 6px; }
+    .sig-date { font-size: 10pt; color: #1e40af; font-weight: 700; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 9pt; }
   </style>
 </head>
@@ -96,7 +96,7 @@ ${bodyContent}
 ${signatureBlock}
 
 <div class="footer">
-  <p><strong>HelloFonty - Plateforme de Gestion Locative</strong></p>
+  <p><strong>HelloFonty - Plateforme de Mise en Relation</strong></p>
   <p>Document genere le ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
   <p style="margin-top: 10px; font-size: 8pt; color: #94a3b8;">
     Ce contrat a ete genere conformement a la loi n 89-462 du 6 juillet 1989 et a la loi ALUR du 24 mars 2014.<br>
@@ -177,12 +177,12 @@ Deno.serve(async (req: Request) => {
                           lease.lease_type === 'unfurnished' ? 'Non meuble' :
                           'Etudiant (Meuble)';
 
-    const bailType = lease.lease_type === 'student' ? 'Bail etudiant (9 mois)' : 'Bail mobilite (1 a 10 mois)';
-    const bailTypeShort = lease.lease_type === 'student' ? 'bail etudiant' : 'bail mobilite';
+    const bailType = lease.lease_type === 'student' ? 'Bail etudiant (9 mois)' : 'Bail de courte duree (1 a 10 mois)';
+    const bailTypeShort = lease.lease_type === 'student' ? 'bail etudiant' : 'bail de courte duree';
 
-    const depositClause = lease.lease_type === 'furnished' && lease.security_deposit > 0
+    const depositClause = lease.security_deposit > 0
       ? `Un depot de garantie d'un montant de ${lease.security_deposit.toFixed(2)} EUR est verse a la signature du present contrat. Ce depot sera restitue dans un delai d'un mois apres la remise des cles, deduction faite, le cas echeant, des sommes dues au bailleur.`
-      : 'En application de la loi, aucun depot de garantie ne peut etre exige pour un bail mobilite.';
+      : `Un depot de garantie d'un montant equivalent a un mois de loyer hors charges est verse a la signature du present contrat. Ce depot sera restitue dans un delai d'un mois apres la remise des cles, deduction faite, le cas echeant, des sommes dues au bailleur.`;
 
     const houseRulesSection = listing.house_rules
       ? `<h3>C. Reglement interieur et regles d'usage</h3><p>Le locataire s'engage a respecter les regles suivantes :</p><ul>${listing.house_rules.split('\n').map((r: string) => `<li>${r}</li>`).join('')}</ul>`
