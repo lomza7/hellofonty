@@ -138,7 +138,7 @@ interface FinanceStats {
   arr: number;
   totalBookings: number;
   confirmedBookings: number;
-  paidBookings: number;
+  paidBookingsCount: number;
   pendingPaymentBookings: number;
   pendingBookings: number;
   cancelledBookings: number;
@@ -626,7 +626,7 @@ export default function Admin() {
         student_id: b.student_id,
         listing_title: (b as any).listings?.title || 'N/A',
         fee_amount: parseFloat(b.platform_fee || '0'),
-        payment_status: b.platform_fee_refunded ? 'refunded' : (b.payment_status === 'completed' ? 'paid' : 'pending'),
+        payment_status: (b.platform_fee_refunded ? 'refunded' : (b.payment_status === 'completed' ? 'paid' : 'pending')) as 'paid' | 'pending' | 'refunded',
         platform_fee_refunded: b.platform_fee_refunded || false,
         stripe_payment_intent_id: b.stripe_payment_intent_id,
         booking_status: b.status,
@@ -643,7 +643,7 @@ export default function Admin() {
         arr,
         totalBookings: bookings?.length || 0,
         confirmedBookings: confirmedBookings.length,
-        paidBookings: paidBookings.length,
+        paidBookingsCount: paidBookings.length,
         pendingPaymentBookings: pendingPaymentBookings.length,
         pendingBookings: pendingBookings.length,
         cancelledBookings: cancelledBookings.length,
@@ -658,8 +658,8 @@ export default function Admin() {
         activeSubscribers: premiumSubs.length,
         churnedUsers,
         pendingPayments,
-        paidBookings: paidBookingsData,
-        studentFees: studentFeesData,
+        paidBookings: paidBookingsData as PaidBooking[],
+        studentFees: studentFeesData as StudentFee[],
         revenueGrowth,
         churnData,
       });
@@ -1937,8 +1937,8 @@ export default function Admin() {
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
                   <p className="text-sm text-gray-600 mb-1">Payées</p>
-                  <p className="text-2xl font-bold text-blue-600">{financeStats.paidBookings}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(financeStats.paidBookings * financeStats.bookingFeePrice).toFixed(2)}€ générés</p>
+                  <p className="text-2xl font-bold text-blue-600">{financeStats.paidBookingsCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">{(financeStats.paidBookingsCount * financeStats.bookingFeePrice).toFixed(2)}€ générés</p>
                 </div>
                 <div className="p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
                   <p className="text-sm text-gray-600 mb-1">En attente paiement</p>
