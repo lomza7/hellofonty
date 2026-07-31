@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, TrendingUp, BarChart3, Trash2, DollarSign, CreditCard, Percent, Tag, MapPin, CreditCard as Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone, Euro, Clock } from 'lucide-react';
+import { Users, User, Home, Calendar, MessageSquare, FileText, Shield, Search, Filter, CheckCircle, XCircle, Eye, TrendingUp, BarChart3, Trash2, DollarSign, CreditCard, Percent, Tag, MapPin, CreditCard as Edit3, AlertTriangle, Ban, Image, BookOpen, Wallet, Megaphone, Euro, Clock, GraduationCap } from 'lucide-react';
 import PricingPlansManager from '../components/PricingPlansManager';
 import AgencyComparisonManager from '../components/AgencyComparisonManager';
 import BlockedMessageDetailsModal from '../components/BlockedMessageDetailsModal';
@@ -114,6 +114,22 @@ interface PaidBooking {
   created_at: string;
 }
 
+interface StudentFee {
+  id: string;
+  student_first_name: string;
+  student_last_name: string;
+  student_id: string;
+  listing_title: string;
+  fee_amount: number;
+  payment_status: 'paid' | 'pending' | 'refunded';
+  platform_fee_refunded: boolean;
+  stripe_payment_intent_id: string | null;
+  booking_status: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+}
+
 interface FinanceStats {
   totalRevenue: number;
   bookingRevenue: number;
@@ -138,6 +154,7 @@ interface FinanceStats {
   churnedUsers: ChurnedUser[];
   pendingPayments: PendingPaymentBooking[];
   paidBookings: PaidBooking[];
+  studentFees: StudentFee[];
   revenueGrowth: { date: string; revenue: number; bookings: number; subscriptions: number }[];
   churnData: { date: string; churned: number; active: number; rate: number }[];
 }
@@ -602,6 +619,22 @@ export default function Admin() {
         };
       }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+      const studentFeesData: StudentFee[] = confirmedBookings.map(b => ({
+        id: b.id,
+        student_first_name: (b as any).student?.first_name || 'N/A',
+        student_last_name: (b as any).student?.last_name || 'N/A',
+        student_id: b.student_id,
+        listing_title: (b as any).listings?.title || 'N/A',
+        fee_amount: parseFloat(b.platform_fee || '0'),
+        payment_status: b.platform_fee_refunded ? 'refunded' : (b.payment_status === 'paid' ? 'paid' : 'pending'),
+        platform_fee_refunded: b.platform_fee_refunded || false,
+        stripe_payment_intent_id: b.stripe_payment_intent_id,
+        booking_status: b.status,
+        start_date: b.start_date,
+        end_date: b.end_date,
+        created_at: b.created_at,
+      })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
       setFinanceStats({
         totalRevenue,
         bookingRevenue,
@@ -626,6 +659,7 @@ export default function Admin() {
         churnedUsers,
         pendingPayments,
         paidBookings: paidBookingsData,
+        studentFees: studentFeesData,
         revenueGrowth,
         churnData,
       });
@@ -2232,6 +2266,138 @@ export default function Admin() {
                 </div>
               </div>
             )}
+
+            {/* Frais Étudiants (Student Fees) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-blue-600" />
+                Frais Étudiants (Frais de Réservation)
+              </h3>
+
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs text-gray-600 mb-1">Total frais</p>
+                  <p className="text-xl font-bold text-blue-700">{financeStats.studentFees.length}</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-xs text-gray-600 mb-1">Frais payés</p>
+                  <p className="text-xl font-bold text-green-700">
+                    {financeStats.studentFees.filter(f => f.payment_status === 'paid').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-xs text-gray-600 mb-1">En attente</p>
+                  <p className="text-xl font-bold text-amber-700">
+                    {financeStats.studentFees.filter(f => f.payment_status === 'pending').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-rose-50 rounded-lg border border-rose-200">
+                  <p className="text-xs text-gray-600 mb-1">Remboursés</p>
+                  <p className="text-xl font-bold text-rose-700">
+                    {financeStats.studentFees.filter(f => f.payment_status === 'refunded').length}
+                  </p>
+                </div>
+              </div>
+
+              {financeStats.studentFees.length === 0 ? (
+                <div className="text-center py-12">
+                  <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">Aucun frais étudiant</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Étudiant</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logement</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {financeStats.studentFees.map((fee) => (
+                        <tr key={fee.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {fee.student_first_name} {fee.student_last_name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 max-w-xs truncate">{fee.listing_title}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-gray-900">{fee.fee_amount.toFixed(2)}€</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {fee.payment_status === 'paid' && (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Payé
+                              </span>
+                            )}
+                            {fee.payment_status === 'pending' && (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
+                                En attente
+                              </span>
+                            )}
+                            {fee.payment_status === 'refunded' && (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-rose-100 text-rose-800">
+                                Remboursé
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(fee.start_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                            {' → '}
+                            {new Date(fee.end_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(fee.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {fee.payment_status === 'paid' && !fee.platform_fee_refunded ? (
+                              <button
+                                onClick={() => {
+                                  setRefundModalBooking({
+                                    id: fee.id,
+                                    student_first_name: fee.student_first_name,
+                                    student_last_name: fee.student_last_name,
+                                    student_id: fee.student_id,
+                                    landlord_first_name: '',
+                                    landlord_last_name: '',
+                                    listing_title: fee.listing_title,
+                                    payment_amount: fee.fee_amount,
+                                    platform_fee: fee.fee_amount,
+                                    platform_fee_refunded: false,
+                                    stripe_payment_intent_id: fee.stripe_payment_intent_id,
+                                    start_date: fee.start_date,
+                                    end_date: fee.end_date,
+                                    created_at: fee.created_at,
+                                  });
+                                  setRefundError(null);
+                                  setRefundSuccess(null);
+                                }}
+                                className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors"
+                              >
+                                Rembourser
+                              </button>
+                            ) : fee.payment_status === 'refunded' ? (
+                              <span className="text-xs text-gray-400 italic">Remboursé</span>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             {/* Revenue Growth Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
