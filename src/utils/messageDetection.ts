@@ -107,8 +107,13 @@ function detectContactInfo(message: string, context: 'message' | 'listing'): Det
   for (const pattern of urlPatterns) {
     const matches = message.match(pattern);
     if (matches && detectionType === 'none') {
-      detectedPatterns.push(...matches.map(m => m.trim()));
-      detectionType = 'url';
+      const external = matches
+        .map(m => m.trim())
+        .filter(m => !/hellofonty\.fr/i.test(m));
+      if (external.length > 0) {
+        detectedPatterns.push(...external);
+        detectionType = 'url';
+      }
     }
   }
 
