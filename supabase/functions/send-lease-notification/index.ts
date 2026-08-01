@@ -136,6 +136,29 @@ Deno.serve(async (req: Request) => {
         });
         emailsSent.push(landlordEmail);
       }
+    } else if (type === 'signature_reminder') {
+      // Reminder email to tenant only
+      if (tenantEmail) {
+        const tenantHtml = buildEmail({
+          title: 'Rappel : Contrat de location a signer',
+          greeting: `Bonjour ${tenant.first_name},`,
+          body: `
+            <p>Ceci est un rappel : <strong>${landlord.first_name} ${landlord.last_name}</strong> vous a envoye un contrat de location et attend toujours votre signature.</p>
+            ${leaseDetailsTable}
+            <p>Merci de vous connecter a votre espace pour consulter et signer le contrat des que possible.</p>
+          `,
+          ctaUrl: `${SITE_URL}/mes-baux`,
+          ctaText: 'Voir et signer mon contrat',
+          headerColor: '#0d9488',
+        });
+
+        await sendEmail(resendApiKey, {
+          to: tenantEmail,
+          subject: `Rappel : Contrat de location a signer - ${listing?.title || 'Votre logement'}`,
+          html: tenantHtml,
+        });
+        emailsSent.push(tenantEmail);
+      }
     } else if (type === 'tenant_signed') {
       // Email to landlord when tenant signs
       if (landlordEmail) {

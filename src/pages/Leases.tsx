@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send, RotateCcw } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send, RotateCcw, Bell } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -99,6 +99,7 @@ export default function Leases() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [reminding, setReminding] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -482,6 +483,46 @@ export default function Leases() {
     }
   };
 
+  const handleSendReminder = async (lease: Lease) => {
+    setReminding(lease.id);
+    try {
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: lease.tenant_id,
+          type: 'lease_signature_request',
+          title: language === 'fr' ? 'Rappel : contrat à signer' : 'Reminder: contract to sign',
+          message: language === 'fr'
+            ? `Rappel : votre propriétaire attend votre signature pour le contrat de location du logement situé au ${lease.listing?.address || 'votre logement'}.`
+            : `Reminder: your landlord is waiting for your signature on the lease for the property at ${lease.listing?.address || 'your property'}.`,
+          link: '/mes-baux',
+          related_id: lease.id,
+        });
+
+      if (notifError) console.error('Notification error:', notifError);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lease-notification`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lease_id: lease.id, type: 'signature_reminder' }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Email send failed');
+      }
+
+      alert(language === 'fr' ? 'Rappel envoyé au locataire !' : 'Reminder sent to tenant!');
+    } catch (error) {
+      console.error('Erreur envoi rappel:', error);
+      alert(language === 'fr' ? 'Erreur lors de l\'envoi du rappel' : 'Error sending reminder');
+    } finally {
+      setReminding(null);
+    }
+  };
+
   const handleViewContract = async (lease: Lease) => {
     setSelectedLease(lease);
     setShowViewModal(true);
@@ -729,6 +770,19 @@ export default function Leases() {
                       >
                         <CheckCircle className="w-5 h-5" />
                         <span>{language === 'fr' ? 'Signer' : 'Sign'}</span>
+                      </button>
+                    )}
+
+                    {isLandlord && lease.status === 'pending_signature' && (
+                      <button
+                        onClick={() => handleSendReminder(lease)}
+                        disabled={reminding === lease.id}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={language === 'fr' ? 'Envoyer un rappel de signature' : 'Send signature reminder'}
+                      >
+                        {reminding === lease.id
+                          ? <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          : <Bell className="w-5 h-5" />}
                       </button>
                     )}
 
