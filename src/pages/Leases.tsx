@@ -486,6 +486,12 @@ export default function Leases() {
   const handleSendReminder = async (lease: Lease) => {
     setReminding(lease.id);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert(language === 'fr' ? 'Vous devez être connecté' : 'You must be logged in');
+        return;
+      }
+
       const { error: notifError } = await supabase
         .from('notifications')
         .insert({
@@ -501,18 +507,17 @@ export default function Leases() {
 
       if (notifError) console.error('Notification error:', notifError);
 
-      const response = await fetch(
+      fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lease-notification`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({ lease_id: lease.id, type: 'signature_reminder' }),
         }
-      );
-
-      if (!response.ok) {
-        throw new Error('Email send failed');
-      }
+      ).catch(err => console.error('Email send error:', err));
 
       alert(language === 'fr' ? 'Rappel envoyé au locataire !' : 'Reminder sent to tenant!');
     } catch (error) {
