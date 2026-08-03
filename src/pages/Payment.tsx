@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CreditCard, Clock, Shield, CheckCircle, AlertCircle, Home } from 'lucide-react';
+import { CreditCard, Clock, Shield, CheckCircle, AlertCircle, Home, XCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,7 +39,9 @@ export default function Payment() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState('');
+  const [pageError, setPageError] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [slowPayment, setSlowPayment] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [studentFeeAmount, setStudentFeeAmount] = useState(0);
 
@@ -77,10 +79,10 @@ export default function Payment() {
   async function loadBooking() {
     try {
       setLoading(true);
-      setError('');
+      setPageError('');
 
       if (!profile) {
-        setError('Vous devez être connecté pour accéder à cette page');
+        setPageError('Vous devez être connecté pour accéder à cette page');
         return;
       }
 
@@ -114,34 +116,34 @@ export default function Payment() {
       }
 
       if (!data) {
-        setError('Réservation introuvable');
+        setPageError('Réservation introuvable');
         return;
       }
 
       if (data.student_id !== profile.id) {
-        setError('Vous n\'avez pas accès à cette réservation');
+        setPageError('Vous n\'avez pas accès à cette réservation');
         return;
       }
 
       if (data.status !== 'confirmed') {
-        setError('Cette réservation n\'a pas été confirmée');
+        setPageError('Cette réservation n\'a pas été confirmée');
         return;
       }
 
       if (data.payment_status === 'completed') {
-        setError('Cette réservation a déjà été payée');
+        setPageError('Cette réservation a déjà été payée');
         return;
       }
 
       if (data.payment_status === 'expired') {
-        setError('Le délai de paiement a expiré');
+        setPageError('Le délai de paiement a expiré');
         return;
       }
 
       setBooking(data);
     } catch (err: any) {
       console.error('Erreur lors du chargement:', err);
-      setError(err.message);
+      setPageError(err.message || 'Une erreur est survenue lors du chargement de la réservation.');
     } finally {
       setLoading(false);
     }
@@ -150,9 +152,13 @@ export default function Payment() {
   async function handlePayment() {
     if (!booking || !profile) return;
 
+    let slowTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       setProcessing(true);
-      setError('');
+      setPaymentError('');
+      setSlowPayment(false);
+
+      slowTimer = setTimeout(() => setSlowPayment(true), 10000);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -176,7 +182,11 @@ export default function Payment() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la création du paiement');
+        throw new Error(data.error || 'Le serveur de paiement a renvoyé une erreur. Veuillez réessayer.');
+      }
+
+      if (!data.url || typeof data.url !== 'string' || !data.url.startsWith('https://')) {
+        throw new Error('Le lien de paiement Stripe est invalide. Veuillez réessayer ou contacter le support.');
       }
 
       window.location.href = data.url;
@@ -184,13 +194,18 @@ export default function Payment() {
       console.error('Erreur:', err);
       const msg = err.message || '';
       if (msg.includes('Stripe') || msg.includes('configuré')) {
-        setError('Le paiement en ligne n\'est pas encore activé par le propriétaire. Veuillez réessayer dans quelques heures.');
+        setPaymentError('Le paiement en ligne n\'est pas encore activé par le propriétaire. Veuillez réessayer dans quelques heures.');
       } else if (msg.includes('expiré')) {
-        setError('Le délai de paiement pour cette réservation a expiré.');
+        setPaymentError('Le délai de paiement pour cette réservation a expiré.');
+      } else if (msg.trim()) {
+        setPaymentError(msg);
       } else {
-        setError(msg);
+        setPaymentError('Une erreur inattendue est survenue. Veuillez réessayer. Si le problème persiste, contactez le support.');
       }
       setProcessing(false);
+    } finally {
+      if (slowTimer) clearTimeout(slowTimer);
+      setSlowPayment(false);
     }
   }
 
@@ -205,7 +220,7 @@ export default function Payment() {
     );
   }
 
-  if (error || !booking) {
+  if (pageError || !booking) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -213,7 +228,7 @@ export default function Payment() {
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h2>
-          <p className="text-gray-600 mb-6">{error || 'Une erreur est survenue'}</p>
+          <p className="text-gray-600 mb-6">{pageError || 'Une erreur est survenue'}</p>
           <button
             onClick={() => navigate('/messages')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -263,6 +278,23 @@ export default function Payment() {
           </div>
 
           <div className="p-8">
+            {paymentError && (
+              <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 mb-1">Le paiement n'a pas pu être lancé</p>
+                  <p className="text-sm text-red-700">{paymentError}</p>
+                </div>
+                <button
+                  onClick={() => setPaymentError('')}
+                  className="text-red-400 hover:text-red-600 transition flex-shrink-0"
+                  aria-label="Fermer"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
             {booking.listing && (
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Détails du logement</h2>
@@ -339,7 +371,7 @@ export default function Payment() {
                 {processing ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Traitement en cours...</span>
+                    <span>{slowPayment ? 'Connexion au serveur de paiement...' : 'Traitement en cours...'}</span>
                   </>
                 ) : (
                   <>
