@@ -188,15 +188,13 @@ export default function LandlordRentPayments() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Date', 'Mois', 'Propriété', 'Étudiant', 'Loyer', 'Frais', 'Net', 'Statut'];
+    const headers = ['Date', 'Mois', 'Propriété', 'Étudiant', 'Loyer', 'Statut'];
     const rows = filteredPayments.map(p => [
       formatDate(p.payment_date),
       formatMonthYear(p.month_year),
       p.listing.title,
       p.student_name,
       p.rent_amount.toFixed(2),
-      p.platform_fee.toFixed(2),
-      (p.rent_amount - p.platform_fee).toFixed(2),
       p.status
     ]);
 
@@ -453,13 +451,7 @@ export default function LandlordRentPayments() {
   const pendingPayments = filteredPayments.filter(p => p.status === 'pending');
   const overduePayments = filteredPayments.filter(p => p.status === 'overdue');
 
-  const totalNet = filteredPayments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + (p.rent_amount - p.platform_fee), 0);
 
-  const totalFees = filteredPayments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + p.platform_fee, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -498,23 +490,14 @@ export default function LandlordRentPayments() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Total reçu (brut)</p>
+              <p className="text-sm text-gray-600">Total perçu</p>
               <Euro className="w-5 h-5 text-green-500" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.total_received.toFixed(2)} €</p>
             <p className="text-xs text-gray-500 mt-1">{paidPayments.length} loyer(s) payé(s)</p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Net perçu</p>
-              <TrendingUp className="w-5 h-5 text-blue-500" />
-            </div>
-            <p className="text-2xl font-bold text-blue-900">{totalNet.toFixed(2)} €</p>
-            <p className="text-xs text-gray-500 mt-1">Après frais plateforme</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
@@ -535,13 +518,13 @@ export default function LandlordRentPayments() {
             <p className="text-xs text-gray-500 mt-1">{overduePayments.length} paiement(s)</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Frais plateforme</p>
-              <FileText className="w-5 h-5 text-gray-500" />
+              <p className="text-sm text-gray-600">Total loyers</p>
+              <FileText className="w-5 h-5 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{totalFees.toFixed(2)} €</p>
-            <p className="text-xs text-gray-500 mt-1">Total prélevé</p>
+            <p className="text-2xl font-bold text-gray-900">{payments.length}</p>
+            <p className="text-xs text-gray-500 mt-1">échéances générées</p>
           </div>
         </div>
 
@@ -866,13 +849,7 @@ export default function LandlordRentPayments() {
                       Date échéance
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Loyer brut
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Frais
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Net perçu
+                      Loyer
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Statut
@@ -938,18 +915,6 @@ export default function LandlordRentPayments() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">
-                            {payment.platform_fee.toFixed(2)} €
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <span className="text-sm font-semibold text-blue-600">
-                            {(payment.rent_amount - payment.platform_fee).toFixed(2)} €
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4">
                           {getStatusBadge(payment.status)}
                         </td>
 
@@ -975,7 +940,7 @@ export default function LandlordRentPayments() {
 
                       {expandedRows.has(payment.id) && (
                         <tr className="bg-gray-50">
-                          <td colSpan={8} className="px-6 py-6">
+                          <td colSpan={7} className="px-6 py-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               <div className="bg-white rounded-lg p-4 border border-gray-200">
                                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -984,27 +949,21 @@ export default function LandlordRentPayments() {
                                 </h4>
                                 <div className="space-y-2">
                                   <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Loyer brut :</span>
+                                    <span className="text-gray-600">Loyer mensuel :</span>
                                     <span className="font-medium text-gray-900">
                                       {payment.rent_amount.toFixed(2)} €
                                     </span>
                                   </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Frais plateforme :</span>
-                                    <span className="font-medium text-red-600">
-                                      - {payment.platform_fee.toFixed(2)} €
-                                    </span>
-                                  </div>
                                   <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                                    <span className="text-gray-900 font-semibold">Net perçu :</span>
+                                    <span className="text-gray-900 font-semibold">Montant à percevoir :</span>
                                     <span className="font-bold text-blue-600">
-                                      {(payment.rent_amount - payment.platform_fee).toFixed(2)} €
+                                      {payment.rent_amount.toFixed(2)} €
                                     </span>
                                   </div>
                                   {payment.status === 'paid' && (
                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                       <p className="text-xs text-gray-600">
-                                        Le montant net sera viré sur votre compte bancaire selon les conditions de votre contrat Stripe Connect
+                                        Le loyer sera viré sur votre compte bancaire selon les conditions de votre contrat Stripe Connect
                                       </p>
                                     </div>
                                   )}

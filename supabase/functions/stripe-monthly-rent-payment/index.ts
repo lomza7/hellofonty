@@ -83,10 +83,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const rentAmount = Math.round(payment.rent_amount * 100);
-    const platformFee = Math.round(payment.platform_fee * 100);
-    const totalAmount = Math.round(payment.total_amount * 100);
-
-    const landlordAmount = rentAmount;
 
     const monthDate = new Date(payment.payment_date);
     const monthName = monthDate.toLocaleDateString('fr-FR', {
@@ -109,17 +105,6 @@ Deno.serve(async (req: Request) => {
           },
           quantity: 1,
         },
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: 'Frais de plateforme Hellofonty',
-              description: 'Frais de traitement mensuel',
-            },
-            unit_amount: platformFee,
-          },
-          quantity: 1,
-        },
       ],
       mode: 'payment',
       success_url: `${req.headers.get('origin')}/mes-loyers?payment=success`,
@@ -133,7 +118,6 @@ Deno.serve(async (req: Request) => {
         month_year: payment.month_year,
       },
       payment_intent_data: {
-        application_fee_amount: platformFee,
         transfer_data: {
           destination: payment.booking.listing.landlord.stripe_account_id,
         },

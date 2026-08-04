@@ -379,11 +379,7 @@ function BookingPaymentCard({
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <span className="font-bold text-gray-900">{payment.total_amount.toFixed(2)} EUR</span>
-                        {!payment.is_initial && (
-                          <p className="text-xs text-gray-500">
-                            {payment.rent_amount.toFixed(0)} + {payment.platform_fee.toFixed(0)} {language === 'fr' ? 'frais' : 'fees'}
-                          </p>
-                        )}
+
                       </div>
 
                       {canPay && landlordStripeReady && (
@@ -496,13 +492,6 @@ export default function MyMonthlyRents() {
       (rentPayments || []).map((rp: RentPayment) => [rp.month_year, rp])
     );
 
-    const { data: settings } = await supabase
-      .from('platform_settings')
-      .select('platform_fee_amount')
-      .maybeSingle();
-
-    const platformFeeAmount = settings?.platform_fee_amount || 0;
-
     const paymentDeadline = booking.payment_deadline ? new Date(booking.payment_deadline) : null;
     const isInitialPaid = booking.payment_status === 'completed';
     const isInitialOverdue = booking.payment_status === 'pending' && paymentDeadline && paymentDeadline < now;
@@ -545,8 +534,8 @@ export default function MyMonthlyRents() {
         month_year: monthYear,
         payment_date: paymentDate.toISOString().split('T')[0],
         rent_amount: monthlyRent,
-        platform_fee: platformFeeAmount,
-        total_amount: monthlyRent + platformFeeAmount,
+        platform_fee: 0,
+        total_amount: monthlyRent,
         status,
         is_initial: false,
         rent_payment_id: existingPayment?.id,
