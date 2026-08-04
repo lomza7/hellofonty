@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
       .eq('setting_key', 'platform_fee_amount')
       .maybeSingle();
 
-    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 390;
+    const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 299;
 
     const rentAmount = Math.round(booking.rent_amount * 100);
     const depositAmount = Math.round((booking.deposit_amount || 0) * 100);
