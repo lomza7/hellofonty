@@ -48,6 +48,7 @@ const ReviewInventory = lazy(() => import('./pages/ReviewInventory'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Admin = lazy(() => import('./pages/Admin'));
+const DashboardManager = lazy(() => import('./pages/DashboardManager'));
 const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
 const SupportAdmin = lazy(() => import('./pages/SupportAdmin'));
 const LegalNotice = lazy(() => import('./pages/LegalNotice'));
@@ -110,6 +111,7 @@ export default function App() {
               <Route path="/profil" element={<Profile />} />
               <Route path="/dashboard-proprietaire" element={<DashboardLandlord />} />
               <Route path="/dashboard-etudiant" element={<DashboardStudent />} />
+              <Route path="/manager" element={<DashboardManager />} />
               <Route path="/dashboard" element={<DashboardStudent />} />
               <Route path="/mes-demandes" element={<MyBookingRequests />} />
               <Route path="/mes-demandes-etudiant" element={<MyBookingRequestsStudent />} />
