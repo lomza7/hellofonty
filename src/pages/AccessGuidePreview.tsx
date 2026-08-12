@@ -3,26 +3,27 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { MapPin, Key, Wifi, Home, Image as ImageIcon, Video, AlertCircle } from 'lucide-react';
 
-interface AccessGuide {
-  id: string;
+interface AccessGuideRow {
   listing_id: string;
-  access_type: string;
-  access_instructions: string;
-  wifi_ssid: string;
-  wifi_password: string;
-  parking_info: string;
-  additional_info: string;
-  access_photos: string[];
-  access_video: string;
-  listing?: {
-    title: string;
-    address: string;
-  };
+  access_type: string | null;
+  access_instructions: string | null;
+  wifi_ssid: string | null;
+  wifi_password: string | null;
+  parking_info: string | null;
+  access_photos: string[] | null;
+  access_video: string | null;
+  additional_info: string | null;
+}
+
+interface ListingInfo {
+  title: string;
+  address: string;
 }
 
 export default function AccessGuidePreview() {
   const { token } = useParams<{ token: string }>();
-  const [guide, setGuide] = useState<AccessGuide | null>(null);
+  const [guide, setGuide] = useState<AccessGuideRow | null>(null);
+  const [listing, setListing] = useState<ListingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -40,21 +41,23 @@ export default function AccessGuidePreview() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('access_guides')
-        .select(`
-          *,
-          listing:listings(title, address)
-        `)
-        .eq('share_token', token)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_access_guide_by_token', { p_token: token });
 
       if (error) throw error;
 
-      if (!data) {
+      if (!data || data.length === 0) {
         setError(true);
       } else {
-        setGuide(data);
+        const row = data[0] as AccessGuideRow;
+        setGuide(row);
+        if (row.listing_id) {
+          const { data: listingData } = await supabase
+            .from('listings')
+            .select('title, address')
+            .eq('id', row.listing_id)
+            .maybeSingle();
+          if (listingData) setListing(listingData as ListingInfo);
+        }
       }
     } catch (err) {
       console.error('Error loading guide:', err);
@@ -100,12 +103,12 @@ export default function AccessGuidePreview() {
             <Key className="w-12 h-12" />
           </div>
           <h1 className="text-3xl font-bold text-center mb-2">Guide d'accès au logement</h1>
-          {guide.listing && (
+          {listing && (
             <>
-              <p className="text-xl text-center text-blue-100 font-medium">{guide.listing.title}</p>
+              <p className="text-xl text-center text-blue-100 font-medium">{listing.title}</p>
               <p className="text-center text-blue-100 mt-2 flex items-center justify-center">
                 <MapPin className="w-4 h-4 mr-2" />
-                {guide.listing.address}
+                {listing.address}
               </p>
             </>
           )}

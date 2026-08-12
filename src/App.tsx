@@ -40,6 +40,7 @@ const CheckoutSuccess = lazy(() => import('./pages/CheckoutSuccess'));
 const Features = lazy(() => import('./pages/Features'));
 const AccessGuide = lazy(() => import('./pages/AccessGuide'));
 const AccessGuidePreview = lazy(() => import('./pages/AccessGuidePreview'));
+const MonGuideAcces = lazy(() => import('./pages/MonGuideAcces'));
 const PropertyInventory = lazy(() => import('./pages/PropertyInventory'));
 const CreateInventory = lazy(() => import('./pages/CreateInventory'));
 const EditInventory = lazy(() => import('./pages/EditInventory'));
@@ -139,6 +140,8 @@ export default function App() {
               <Route path="/fonctionnalites" element={<Features />} />
               <Route path="/guide-acces/:listingId" element={<AccessGuide />} />
               <Route path="/guide-acces/preview/:token" element={<AccessGuidePreview />} />
+              <Route path="/mon-guide/:bookingId" element={<MonGuideAcces />} />
+              <Route path="/partage/:token" element={<AccessGuidePreview />} />
               <Route path="/etats-des-lieux" element={<PropertyInventory />} />
               <Route path="/etat-des-lieux" element={<PropertyInventory />} />
               <Route path="/inventory" element={<PropertyInventory />} />
