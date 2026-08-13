@@ -245,7 +245,11 @@ export default function LandlordDeposits() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {deposits.map((deposit) => {
-                    const cfg = statusConfig[deposit.status];
+                    const cfg = statusConfig[deposit.status] ?? {
+                      label: deposit.status || 'Inconnu',
+                      color: 'bg-gray-100 text-gray-700',
+                      icon: AlertTriangle,
+                    };
                     const Icon = cfg.icon;
                     return (
                       <tr key={deposit.id} className="hover:bg-gray-50 transition-colors">
