@@ -588,9 +588,7 @@ export default function AccessGuide() {
                       parking_info: '',
                       access_photos: [],
                       access_video: '',
-                      additional_info: '',
-                      unlock_date: null,
-                      valid_until_date: null
+                      additional_info: ''
                     });
                   }}
                   className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
