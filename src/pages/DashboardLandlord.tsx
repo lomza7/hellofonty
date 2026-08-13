@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Calendar, MessageSquare, CreditCard, FileText, ClipboardList, DollarSign, Users, CheckCircle, Clock, AlertCircle, PlusCircle, Ligature as FileSignature, User } from 'lucide-react';
+import { Home, Calendar, MessageSquare, CreditCard, FileText, ClipboardList, DollarSign, Users, CheckCircle, Clock, AlertCircle, PlusCircle, Ligature as FileSignature, User, Shield } from 'lucide-react';
 import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
 import TaskList from '../components/dashboard/TaskList';
@@ -453,6 +453,12 @@ export default function DashboardLandlord() {
                   label={t('dashboard.payouts')}
                   href="/proprietaire/paiements"
                   color="green"
+                />
+                <QuickActionButton
+                  icon={Shield}
+                  label="Mes cautions"
+                  href="/proprietaire/cautions"
+                  color="rose"
                 />
                 <QuickActionButton
                   icon={FileSignature}

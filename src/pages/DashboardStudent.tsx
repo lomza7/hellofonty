@@ -13,7 +13,8 @@ import {
   User,
   HelpCircle,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react';
 import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
@@ -440,6 +441,12 @@ export default function DashboardStudent() {
                   label={t('dashboard.student.myDocuments')}
                   href="/mes-documents"
                   color="purple"
+                />
+                <QuickActionButton
+                  icon={Shield}
+                  label="Mes cautions"
+                  href="/mes-cautions"
+                  color="rose"
                 />
                 <QuickActionButton
                   icon={User}

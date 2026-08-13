@@ -52,6 +52,8 @@ const Admin = lazy(() => import('./pages/Admin'));
 const DashboardManager = lazy(() => import('./pages/DashboardManager'));
 const BlogAdmin = lazy(() => import('./pages/BlogAdmin'));
 const SupportAdmin = lazy(() => import('./pages/SupportAdmin'));
+const LandlordDeposits = lazy(() => import('./pages/LandlordDeposits'));
+const StudentDeposits = lazy(() => import('./pages/StudentDeposits'));
 const LegalNotice = lazy(() => import('./pages/LegalNotice'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfSale = lazy(() => import('./pages/TermsOfSale'));
@@ -160,6 +162,8 @@ export default function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/blog" element={<BlogAdmin />} />
               <Route path="/admin/support" element={<SupportAdmin />} />
+              <Route path="/proprietaire/cautions" element={<LandlordDeposits />} />
+              <Route path="/mes-cautions" element={<StudentDeposits />} />
               <Route path="/mentions-legales" element={<LegalNotice />} />
               <Route path="/politique-confidentialite" element={<PrivacyPolicy />} />
               <Route path="/rgpd" element={<PrivacyPolicy />} />
