@@ -686,7 +686,7 @@ export default function AccessGuide() {
                       Vidéo d'accès
                     </label>
                     <p className="text-sm text-gray-500 mb-3">
-                      Filmez le trajet depuis l'entrée du bâtiment jusqu'au logement
+                      Filmez le trajet depuis l'entrée du bâtiment jusqu'au logement. Importez un fichier vidéo uniquement — les liens YouTube ou autres plateformes ne sont pas acceptés.
                     </p>
 
                     {formData.access_video && (
