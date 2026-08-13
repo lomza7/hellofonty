@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, Ligature as FileSignature, BookOpen, Wallet, LayoutDashboard } from 'lucide-react';
+import { Menu, User, Heart, MessageCircle, Calendar, Home, CircleUser as UserCircle, FolderOpen, Shield, CreditCard, KeyRound, FileText, Ligature as FileSignature, BookOpen, Wallet, LayoutDashboard, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useState, useEffect, useRef } from 'react';
@@ -12,6 +12,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [notificationCounts, setNotificationCounts] = useState({
     messages: 0,
@@ -55,6 +56,7 @@ export default function Navbar() {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+        setOpenSubmenu(null);
       }
     }
 
@@ -68,6 +70,7 @@ export default function Navbar() {
 
   useEffect(() => {
     setShowUserMenu(false);
+    setOpenSubmenu(null);
   }, [location.pathname]);
 
   const loadNotificationCounts = async () => {
@@ -253,14 +256,41 @@ export default function Navbar() {
                             <CreditCard className="h-4 w-4" />
                             <span>{language === 'fr' ? 'Mes loyers' : 'My Rents'}</span>
                           </Link>
-                          <Link
-                            to="/mes-documents"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FolderOpen className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
-                          </Link>
+
+                          {/* Mes documents - collapsible submenu */}
+                          <div>
+                            <button
+                              onClick={() => setOpenSubmenu(openSubmenu === 'student-documents' ? null : 'student-documents')}
+                              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <FolderOpen className="h-4 w-4" />
+                                <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'student-documents' ? 'rotate-180' : ''}`} />
+                            </button>
+                            {openSubmenu === 'student-documents' && (
+                              <div className="bg-gray-50 border-l-2 border-gray-200 ml-2">
+                                <Link
+                                  to="/mes-documents"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <FolderOpen className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Documents' : 'Documents'}</span>
+                                </Link>
+                                <Link
+                                  to="/mes-cautions"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+
                           <Link
                             to="/favoris"
                             onClick={() => setShowUserMenu(false)}
@@ -297,62 +327,106 @@ export default function Navbar() {
                               </span>
                             )}
                           </Link>
-                          <Link
-                            to="/documents-proprietaire"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FolderOpen className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
-                          </Link>
-                          <Link
-                            to="/guide-acces"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <KeyRound className="h-4 w-4" />
-                            <span>{language === 'fr' ? "Guide d'accès" : 'Access Guide'}</span>
-                          </Link>
-                          <Link
-                            to="/etat-des-lieux"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'États des lieux' : 'Property Inventory'}</span>
-                          </Link>
-                          <Link
-                            to="/mes-baux"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FileSignature className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Baux' : 'Leases'}</span>
-                          </Link>
-                          <Link
-                            to="/mon-abonnement"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
-                          </Link>
-                          <Link
-                            to="/proprietaire/paiements"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <Wallet className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Paiements' : 'Payouts'}</span>
-                          </Link>
-                          <Link
-                            to="/proprietaire/loyers"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <CreditCard className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
-                          </Link>
+
+                          {/* Mes documents - collapsible submenu */}
+                          <div>
+                            <button
+                              onClick={() => setOpenSubmenu(openSubmenu === 'documents' ? null : 'documents')}
+                              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <FolderOpen className="h-4 w-4" />
+                                <span>{language === 'fr' ? 'Mes documents' : 'My Documents'}</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'documents' ? 'rotate-180' : ''}`} />
+                            </button>
+                            {openSubmenu === 'documents' && (
+                              <div className="bg-gray-50 border-l-2 border-gray-200 ml-2">
+                                <Link
+                                  to="/documents-proprietaire"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <FolderOpen className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Documents' : 'Documents'}</span>
+                                </Link>
+                                <Link
+                                  to="/guide-acces"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <KeyRound className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? "Guide d'accès" : 'Access Guide'}</span>
+                                </Link>
+                                <Link
+                                  to="/etat-des-lieux"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'États des lieux' : 'Property Inventory'}</span>
+                                </Link>
+                                <Link
+                                  to="/mes-baux"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <FileSignature className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Baux' : 'Leases'}</span>
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Mon abonnement & paiements - collapsible submenu */}
+                          <div>
+                            <button
+                              onClick={() => setOpenSubmenu(openSubmenu === 'subscription' ? null : 'subscription')}
+                              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <CreditCard className="h-4 w-4" />
+                                <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'subscription' ? 'rotate-180' : ''}`} />
+                            </button>
+                            {openSubmenu === 'subscription' && (
+                              <div className="bg-gray-50 border-l-2 border-gray-200 ml-2">
+                                <Link
+                                  to="/mon-abonnement"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <CreditCard className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
+                                </Link>
+                                <Link
+                                  to="/proprietaire/paiements"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <Wallet className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Paiements' : 'Payouts'}</span>
+                                </Link>
+                                <Link
+                                  to="/proprietaire/loyers"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <CreditCard className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
+                                </Link>
+                                <Link
+                                  to="/proprietaire/cautions"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
+                                </Link>
+                              </div>
+                            )}
+                          </div>
                         </>
                       )}
 
