@@ -79,7 +79,12 @@ export default function LandlordDeposits() {
 
       if (error) throw error;
 
-      const rows = (data || []) as unknown as DepositTransaction[];
+      const rows = ((data || []) as unknown as DepositTransaction[]).map((d) => ({
+        ...d,
+        deposit_amount: Number(d.deposit_amount),
+        retained_amount: Number(d.retained_amount),
+        refunded_amount: Number(d.refunded_amount),
+      }));
       setDeposits(rows);
 
       setStats({
