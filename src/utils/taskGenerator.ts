@@ -13,7 +13,8 @@ export type TaskType =
   | 'UPLOAD_PROFILE_PHOTO'
   | 'UPLOAD_ID_DOCUMENT_LANDLORD'
   | 'UPLOAD_PROPERTY_TAX'
-  | 'UPLOAD_INSEAD_ATTESTATION';
+  | 'UPLOAD_INSEAD_ATTESTATION'
+  | 'CHOOSE_LEASE_TYPE';
 
 interface GenerateTaskParams {
   userId: string;
@@ -115,5 +116,17 @@ export async function checkAndGenerateUnreadMessagesTasks(userId: string) {
     }
   } catch (error) {
     console.error('Error checking unread messages:', error);
+  }
+}
+
+export async function generateLeaseTypeTask(userId: string) {
+  try {
+    await generateTask({
+      userId,
+      taskType: 'CHOOSE_LEASE_TYPE',
+      relatedEntityType: 'profile',
+    });
+  } catch (error) {
+    console.error('Error generating lease type task:', error);
   }
 }

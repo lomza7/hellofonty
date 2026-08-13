@@ -185,6 +185,16 @@ Deno.serve(async (req: Request) => {
         };
         break;
 
+      case 'CHOOSE_LEASE_TYPE':
+        taskData = {
+          ...taskData,
+          title: 'Choisir le type de bail',
+          description: 'Choisissez entre le modèle de bail HelloFonty et votre propre document de bail. Vous pouvez consulter le modèle HelloFonty avant de décider.',
+          priority: 'important',
+          related_entity_type: 'profile',
+        };
+        break;
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown task type" }),

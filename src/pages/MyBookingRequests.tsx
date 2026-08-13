@@ -31,6 +31,10 @@ type Booking = {
     title: string;
     address: string;
     price_per_month: number;
+    electricity_cost?: number;
+    heating_cost?: number;
+    water_cost?: number;
+    security_deposit?: number;
     images: Array<{ image_url: string }>;
   } | null;
 };
@@ -136,6 +140,10 @@ export default function MyBookingRequests() {
           title,
           address,
           price_per_month,
+          electricity_cost,
+          heating_cost,
+          water_cost,
+          security_deposit,
           images:listing_images(image_url, display_order)
         )
       `)
@@ -159,9 +167,61 @@ export default function MyBookingRequests() {
       .update({ status })
       .eq('id', bookingId);
 
+    if (!error && status === 'confirmed') {
+      try {
+        const booking = bookings.find(b => b.id === bookingId);
+        if (booking && profile) {
+          const { data: existingLease } = await supabase
+            .from('leases')
+            .select('id')
+            .eq('booking_id', bookingId)
+            .maybeSingle();
+
+          if (!existingLease) {
+            const totalPrice = booking.listing?.price_per_month || 0;
+            const electricityCost = booking.listing?.electricity_cost || 0;
+            const heatingCost = booking.listing?.heating_cost || 0;
+            const waterCost = booking.listing?.water_cost || 0;
+            const charges = electricityCost + heatingCost + waterCost;
+            const monthlyRent = totalPrice - charges;
+            const securityDeposit = booking.listing?.security_deposit || monthlyRent;
+
+            await supabase.from('leases').insert({
+              booking_id: bookingId,
+              listing_id: booking.listing_id,
+              landlord_id: profile.id,
+              tenant_id: booking.student_id,
+              start_date: booking.start_date,
+              end_date: booking.end_date,
+              monthly_rent: monthlyRent,
+              security_deposit: securityDeposit,
+              charges: charges,
+              lease_type: 'furnished',
+              status: 'draft',
+              lease_source: profile.preferred_lease_type || 'hellofonty',
+              terms_and_conditions: '',
+              inventory_included: false
+            });
+
+            await supabase.from('notifications').insert({
+              user_id: profile.id,
+              type: 'lease_signature_request',
+              title: language === 'fr' ? 'Bail automatique créé' : 'Lease auto-created',
+              message: language === 'fr'
+                ? `Un bail a été automatiquement créé pour la réservation de ${booking.student?.first_name} ${booking.student?.last_name}. Vérifiez et complétez-le dans "Mes Baux".`
+                : `A lease has been auto-created for ${booking.student?.first_name} ${booking.student?.last_name}'s booking. Review and complete it in "My Leases".`,
+              link: '/mes-baux',
+            });
+          }
+        }
+      } catch (leaseError) {
+        console.error('Erreur création bail automatique:', leaseError);
+      }
+    }
+
     if (!error) {
       loadBookings();
-      alert(status === 'confirmed' ? (language === 'fr' ? 'Reservation confirmee!' : 'Booking confirmed!') : (language === 'fr' ? 'Reservation refusee' : 'Booking declined'));
+      alert(status === 'confirmed' ? (language === 'fr' ? 'Réservation confirmée ! Un bail a été créé automatiquement.' : 'Booking confirmed! A lease has been auto-created.') : (language === 'fr' ? 'Réservation refusée' : 'Booking declined'));
     }
   };
 

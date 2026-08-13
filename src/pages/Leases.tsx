@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send, RotateCcw, Bell } from 'lucide-react';
+import { FileText, Plus, Eye, Trash2, CheckCircle, AlertCircle, Clock, X, Download, CreditCard as Edit, Send, RotateCcw, Bell, Upload } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -50,6 +50,7 @@ interface Lease {
   lease_type: string;
   status: 'draft' | 'pending_signature' | 'signed' | 'active' | 'terminated' | 'cancelled';
   document_url?: string;
+  lease_source?: 'hellofonty' | 'custom';
   terms_and_conditions?: string;
   inventory_included: boolean;
   created_at: string;
@@ -100,6 +101,11 @@ export default function Leases() {
 
   const [saving, setSaving] = useState(false);
   const [reminding, setReminding] = useState<string | null>(null);
+  const [customLeaseFile, setCustomLeaseFile] = useState<File | null>(null);
+  const [uploadingLease, setUploadingLease] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isCustomLeaseMode = profile?.preferred_lease_type === 'custom';
 
   useEffect(() => {
     if (user?.id) {
@@ -238,12 +244,31 @@ export default function Leases() {
       return;
     }
 
+    if (isCustomLeaseMode && !customLeaseFile) {
+      alert('Veuillez téléverser votre document de bail (PDF ou Word)');
+      return;
+    }
+
     setSaving(true);
     try {
+      let documentUrl: string | null = null;
+
+      if (isCustomLeaseMode && customLeaseFile && profile) {
+        const fileExt = customLeaseFile.name.split('.').pop();
+        const fileName = `${profile.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('lease-documents')
+          .upload(fileName, customLeaseFile);
+        if (uploadError) throw uploadError;
+        documentUrl = fileName;
+      }
+
       const leaseData = {
         ...formData,
         landlord_id: profile?.id,
-        status: 'draft'
+        status: 'draft',
+        lease_source: isCustomLeaseMode ? 'custom' : 'hellofonty',
+        ...(documentUrl ? { document_url: documentUrl } : {})
       };
 
       const { error } = await supabase
@@ -255,6 +280,7 @@ export default function Leases() {
       alert('Bail créé avec succès !');
       setShowCreateModal(false);
       resetForm();
+      setCustomLeaseFile(null);
       loadLeases();
       loadAvailableBookings();
     } catch (error) {
@@ -596,6 +622,43 @@ export default function Leases() {
       inventory_included: false
     });
     setSelectedBooking(null);
+    setCustomLeaseFile(null);
+  };
+
+  const handleCustomLeaseFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type)) {
+      alert('Format non supporté. Veuillez téléverser un fichier PDF ou Word.');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Le fichier doit faire moins de 20 Mo.');
+      return;
+    }
+    setCustomLeaseFile(file);
+  };
+
+  const handleDownloadCustomLease = async (lease: Lease) => {
+    if (!lease.document_url) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from('lease-documents')
+        .download(lease.document_url);
+      if (error) throw error;
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Bail_${lease.listing?.title || 'document'}.${lease.document_url.split('.').pop()}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Erreur téléchargement bail:', error);
+      alert('Erreur lors du téléchargement du bail');
+    }
   };
 
   const getStatusBadge = (status: Lease['status']) => {
@@ -683,6 +746,18 @@ export default function Leases() {
                         {lease.listing?.title || 'Logement supprimé'}
                       </h3>
                       {getStatusBadge(lease.status)}
+                      {lease.lease_source === 'custom' && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <Upload className="w-3 h-3 mr-1" />
+                          Document personnel
+                        </span>
+                      )}
+                      {lease.lease_source !== 'custom' && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <FileText className="w-3 h-3 mr-1" />
+                          Modèle HelloFonty
+                        </span>
+                      )}
                     </div>
 
                     {(lease.status === 'pending_signature' || lease.status === 'signed') && (
@@ -732,7 +807,7 @@ export default function Leases() {
 
                   <div className="flex items-center space-x-2 ml-4">
                     <button
-                      onClick={() => handleViewContract(lease)}
+                      onClick={() => lease.lease_source === 'custom' ? handleDownloadCustomLease(lease) : handleViewContract(lease)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title={language === 'fr' ? 'Voir le bail' : 'View lease'}
                     >
@@ -750,7 +825,7 @@ export default function Leases() {
                     )}
 
                     <button
-                      onClick={() => handleDownloadContract(lease.id)}
+                      onClick={() => lease.lease_source === 'custom' ? handleDownloadCustomLease(lease) : handleDownloadContract(lease.id)}
                       className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title={language === 'fr' ? 'Télécharger le contrat' : 'Download contract'}
                     >
@@ -1005,6 +1080,45 @@ export default function Leases() {
                               État des lieux inclus
                             </label>
                           </div>
+
+                          {isCustomLeaseMode && (
+                            <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 bg-blue-50">
+                              <label className="block text-sm font-semibold text-blue-900 mb-2">
+                                Téléverser votre document de bail *
+                              </label>
+                              <p className="text-xs text-blue-700 mb-3">Formats acceptés : PDF, Word (.doc, .docx). Taille maximum : 20 Mo.</p>
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={handleCustomLeaseFileSelect}
+                                className="hidden"
+                              />
+                              {customLeaseFile ? (
+                                <div className="flex items-center justify-between bg-white rounded-lg p-3 border border-blue-200">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                    <span className="text-sm font-medium text-gray-800">{customLeaseFile.name}</span>
+                                    <span className="text-xs text-gray-500">({(customLeaseFile.size / 1024 / 1024).toFixed(2)} Mo)</span>
+                                  </div>
+                                  <button
+                                    onClick={() => setCustomLeaseFile(null)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="w-full flex flex-col items-center gap-2 py-6 text-blue-600 hover:text-blue-800 transition"
+                                >
+                                  <Upload className="w-8 h-8" />
+                                  <span className="text-sm font-medium">Cliquez pour sélectionner votre bail</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -1092,7 +1206,7 @@ export default function Leases() {
                     Fermer
                   </button>
                   <button
-                    onClick={() => selectedLease && handleDownloadContract(selectedLease.id)}
+                    onClick={() => selectedLease && (selectedLease.lease_source === 'custom' ? handleDownloadCustomLease(selectedLease) : handleDownloadContract(selectedLease.id))}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                   >
                     <Download className="w-4 h-4 mr-2" />

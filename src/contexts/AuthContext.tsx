@@ -137,6 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError;
 
+      if (userData.role === 'landlord') {
+        const { generateLeaseTypeTask } = await import('../utils/taskGenerator');
+        generateLeaseTypeTask(authData.user.id);
+      }
+
       return { error: null };
     } catch (error) {
       return { error: error as Error };

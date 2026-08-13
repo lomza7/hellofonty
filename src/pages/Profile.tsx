@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Camera, User, Mail, Phone, Globe, Shield, CheckCircle, AlertCircle, FileText, Save, CircleUser as UserCircle, Settings, Eye, Clock as ClockIcon } from 'lucide-react';
+import { Upload, Camera, User, Mail, Phone, Globe, Shield, CheckCircle, AlertCircle, FileText, Save, CircleUser as UserCircle, Settings, Eye, Clock as ClockIcon, FileCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +32,11 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [landlordDocuments, setLandlordDocuments] = useState<LandlordDocument[]>([]);
+  const [preferredLeaseType, setPreferredLeaseType] = useState<'hellofonty' | 'custom'>('hellofonty');
+  const [showLeasePreview, setShowLeasePreview] = useState(false);
+  const [leasePreviewHtml, setLeasePreviewHtml] = useState<string | null>(null);
+  const [loadingLeasePreview, setLoadingLeasePreview] = useState(false);
+  const [savingLeaseType, setSavingLeaseType] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const countries = [
@@ -62,6 +67,7 @@ export default function Profile() {
       }
 
       setPreferredLanguage(profile.preferred_language);
+      setPreferredLeaseType(profile.preferred_lease_type || 'hellofonty');
 
       if (profile.avatar_url) {
         setAvatarPreview(profile.avatar_url);
@@ -224,6 +230,43 @@ export default function Profile() {
       setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLeasePreview = async () => {
+    setLoadingLeasePreview(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Non authentifié');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-preview`,
+        { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      );
+      if (!response.ok) throw new Error('Erreur lors de la génération de l\'aperçu');
+      const html = await response.text();
+      setLeasePreviewHtml(html);
+      setShowLeasePreview(true);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'aperçu du bail');
+    } finally {
+      setLoadingLeasePreview(false);
+    }
+  };
+
+  const handleSaveLeaseType = async () => {
+    setSavingLeaseType(true);
+    setError('');
+    setSuccess('');
+    try {
+      const { error: updateError } = await updateProfile({ preferred_lease_type: preferredLeaseType });
+      if (updateError) throw updateError;
+      await refreshProfile();
+      setSuccess(preferredLanguage === 'fr' ? 'Préférence de bail enregistrée' : 'Lease preference saved');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'enregistrement');
+    } finally {
+      setSavingLeaseType(false);
     }
   };
 
@@ -711,6 +754,70 @@ export default function Profile() {
                     </div>
                   )}
 
+                  {profile.role === 'landlord' && (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-100 shadow-sm">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                        <FileCheck className="w-4 h-4" />
+                        {preferredLanguage === 'fr' ? 'Préférence de bail' : 'Lease preference'}
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPreferredLeaseType('hellofonty')}
+                            className={`text-left p-4 rounded-xl border-2 transition-all ${
+                              preferredLeaseType === 'hellofonty'
+                                ? 'border-rose-500 bg-rose-50'
+                                : 'border-gray-200 bg-white hover:border-rose-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className={`w-4 h-4 ${preferredLeaseType === 'hellofonty' ? 'text-rose-500' : 'text-gray-400'}`} />
+                              <span className="text-sm font-semibold text-gray-800">{preferredLanguage === 'fr' ? 'Modèle HelloFonty' : 'HelloFonty model'}</span>
+                            </div>
+                            <p className="text-xs text-gray-500">{preferredLanguage === 'fr' ? 'Contrat type généré automatiquement' : 'Auto-generated standard contract'}</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPreferredLeaseType('custom')}
+                            className={`text-left p-4 rounded-xl border-2 transition-all ${
+                              preferredLeaseType === 'custom'
+                                ? 'border-rose-500 bg-rose-50'
+                                : 'border-gray-200 bg-white hover:border-rose-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Upload className={`w-4 h-4 ${preferredLeaseType === 'custom' ? 'text-rose-500' : 'text-gray-400'}`} />
+                              <span className="text-sm font-semibold text-gray-800">{preferredLanguage === 'fr' ? 'Mon propre bail' : 'My own lease'}</span>
+                            </div>
+                            <p className="text-xs text-gray-500">{preferredLanguage === 'fr' ? 'Téléversez votre document (PDF/Word)' : 'Upload your document (PDF/Word)'}</p>
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleLeasePreview}
+                          disabled={loadingLeasePreview}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Eye className="w-4 h-4" />
+                          {loadingLeasePreview
+                            ? (preferredLanguage === 'fr' ? 'Génération...' : 'Loading...')
+                            : (preferredLanguage === 'fr' ? 'Voir le modèle HelloFonty' : 'View HelloFonty model')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveLeaseType}
+                          disabled={savingLeaseType}
+                          className="w-full py-2.5 bg-rose-500 text-white text-sm font-semibold rounded-xl hover:bg-rose-600 transition disabled:opacity-50"
+                        >
+                          {savingLeaseType
+                            ? (preferredLanguage === 'fr' ? 'Enregistrement...' : 'Saving...')
+                            : (preferredLanguage === 'fr' ? 'Enregistrer la préférence' : 'Save preference')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {profile.role === 'landlord' && landlordDocuments.length > 0 && (
                     <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-100 shadow-sm">
                       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -782,6 +889,21 @@ export default function Profile() {
                     ? (preferredLanguage === 'fr' ? 'Une photo de profil est obligatoire' : 'Profile photo is required')
                     : (preferredLanguage === 'fr' ? 'Veuillez télécharger votre attestation de scolarité pour continuer' : 'Please upload your school certificate to continue')}
                 </p>
+              )}
+              {showLeasePreview && leasePreviewHtml && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                      <h3 className="text-lg font-bold text-gray-900">{preferredLanguage === 'fr' ? 'Aperçu du modèle HelloFonty' : 'HelloFonty model preview'}</h3>
+                      <button onClick={() => setShowLeasePreview(false)} className="text-gray-400 hover:text-gray-600">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <iframe srcDoc={leasePreviewHtml} className="w-full h-full border-0" title="Aperçu bail" />
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </form>

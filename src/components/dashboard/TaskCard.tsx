@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LeaseTypeChooserModal from './LeaseTypeChooserModal';
 
 interface Task {
   id: string;
@@ -76,6 +77,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showLeaseTypeModal, setShowLeaseTypeModal] = useState(false);
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('+33');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -121,10 +123,14 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
 
   const isVerificationTask = task.title in verificationTaskActions;
   const verificationAction = verificationTaskActions[task.title];
+  const isLeaseTypeTask = task.title === 'Choisir le type de bail';
   const isCompleted = task.status === 'completed';
 
   const handleToggleComplete = async () => {
     if (isVerificationTask && !isCompleted) {
+      return;
+    }
+    if (isLeaseTypeTask && !isCompleted) {
       return;
     }
 
@@ -480,9 +486,9 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
         <div className="flex items-start gap-3">
           <button
             onClick={handleToggleComplete}
-            disabled={isUpdating || (isVerificationTask && !isCompleted)}
+            disabled={isUpdating || (isVerificationTask && !isCompleted) || (isLeaseTypeTask && !isCompleted)}
             className={`flex-shrink-0 mt-0.5 focus:outline-none transition-transform ${
-              isVerificationTask && !isCompleted
+              (isVerificationTask && !isCompleted) || (isLeaseTypeTask && !isCompleted)
                 ? 'cursor-not-allowed opacity-50'
                 : 'hover:scale-110'
             }`}
@@ -491,7 +497,7 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
               <CheckCircle2 className="h-6 w-6 text-green-600" />
             ) : (
               <Circle className={`h-6 w-6 ${
-                isVerificationTask
+                (isVerificationTask || isLeaseTypeTask) && !isCompleted
                   ? 'text-gray-300'
                   : 'text-gray-400 hover:text-rose-500'
               }`} />
@@ -546,6 +552,17 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
                   <ArrowRight className="h-4 w-4" />
                 </button>
               )}
+
+              {isLeaseTypeTask && !isCompleted && (
+                <button
+                  onClick={() => setShowLeaseTypeModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                >
+                  <FileText className="h-4 w-4" />
+                  Choisir
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -583,6 +600,16 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             {renderModalContent()}
           </div>
         </div>
+      )}
+
+      {showLeaseTypeModal && (
+        <LeaseTypeChooserModal
+          taskId={task.id}
+          onClose={() => setShowLeaseTypeModal(false)}
+          onComplete={() => {
+            if (onTaskUpdate) onTaskUpdate();
+          }}
+        />
       )}
     </>
   );

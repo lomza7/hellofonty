@@ -25,6 +25,7 @@ export type Profile = {
   verification_reviewed_at?: string | null;
   verification_rejection_reason?: string | null;
   preferred_language: 'fr' | 'en';
+  preferred_lease_type?: 'hellofonty' | 'custom';
   stripe_account_id?: string;
   stripe_onboarding_status?: 'not_connected' | 'pending' | 'complete';
   stripe_charges_enabled?: boolean;
