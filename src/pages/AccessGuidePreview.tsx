@@ -129,9 +129,9 @@ export default function AccessGuidePreview() {
               </div>
               <div className="bg-blue-50 rounded-xl p-4">
                 <p className="text-gray-800 font-medium">
-                  {guide.access_type === 'key_box' && '🔑 Boîte à clés'}
-                  {guide.access_type === 'in_person' && '👤 Remise en main propre'}
-                  {guide.access_type === 'other' && '🏠 Autre'}
+                  {guide.access_type === 'boite_a_cles' && '🔑 Boîte à clés'}
+                  {guide.access_type === 'remise_en_main_propre' && '👤 Remise en main propre'}
+                  {guide.access_type === 'autre' && '🏠 Autre'}
                 </p>
               </div>
             </div>

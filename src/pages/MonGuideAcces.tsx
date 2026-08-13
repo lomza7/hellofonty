@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Lock, KeyRound, Wifi, Car, Info } from 'lucide-react';
+import { MapPin, Lock, KeyRound, Wifi, Car, Info, Key } from 'lucide-react';
 
 type GuideRow = {
   listing_id: string;
@@ -78,6 +78,17 @@ export default function MonGuideAcces() {
       <p className="text-gray-600 mb-6 flex items-center gap-1">
         <MapPin className="w-4 h-4" /> {guide.listing_title} — {guide.listing_address}, {guide.listing_city}
       </p>
+
+      {guide.access_type && (
+        <div className="bg-white rounded-xl shadow p-6 mb-4">
+          <h2 className="font-semibold mb-2 flex items-center gap-2"><Key className="w-4 h-4" /> Type d'accès</h2>
+          <p className="text-gray-800 font-medium">
+            {guide.access_type === 'boite_a_cles' && '🔑 Boîte à clés'}
+            {guide.access_type === 'remise_en_main_propre' && '👤 Remise en main propre'}
+            {guide.access_type === 'autre' && '🏠 Autre'}
+          </p>
+        </div>
+      )}
 
       {guide.access_instructions && (
         <div className="bg-white rounded-xl shadow p-6 mb-4">

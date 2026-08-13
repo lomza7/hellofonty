@@ -138,6 +138,7 @@ export default function App() {
               <Route path="/tarifs" element={<Pricing />} />
               <Route path="/checkout/success" element={<CheckoutSuccess />} />
               <Route path="/fonctionnalites" element={<Features />} />
+              <Route path="/guide-acces" element={<AccessGuide />} />
               <Route path="/guide-acces/:listingId" element={<AccessGuide />} />
               <Route path="/guide-acces/preview/:token" element={<AccessGuidePreview />} />
               <Route path="/mon-guide/:bookingId" element={<MonGuideAcces />} />

@@ -724,7 +724,7 @@ export default function AccessGuide() {
                           Prévisualiser
                         </button>
                         <a
-                          href={`?share=${formData.share_token}`}
+                          href={`${window.location.origin}/partage/${formData.share_token}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
