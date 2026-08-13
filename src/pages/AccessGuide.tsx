@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock } from 'lucide-react';
+import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock, CalendarDays } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
 import BackButton from '../components/BackButton';
@@ -45,6 +45,11 @@ export default function AccessGuide() {
   const [copied, setCopied] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [_data, setData] = useState<any>(null);
+  const [bookings, setBookings] = useState<Array<{ id: string; student_name: string; start_date: string; end_date: string }>>([]);
+  const [selectedBooking, setSelectedBooking] = useState<string>('');
+  const [overrideUnlockDate, setOverrideUnlockDate] = useState<string | null>(null);
+  const [overrideValidUntilDate, setOverrideValidUntilDate] = useState<string | null>(null);
+  const [savingOverride, setSavingOverride] = useState(false);
 
   setData; // Mark _data as used
   const [formData, setFormData] = useState<AccessGuide>({
@@ -68,8 +73,111 @@ export default function AccessGuide() {
   useEffect(() => {
     if (selectedListing) {
       loadAccessGuide(selectedListing);
+      loadBookings(selectedListing);
+    } else {
+      setBookings([]);
+      setSelectedBooking('');
+      setOverrideUnlockDate(null);
+      setOverrideValidUntilDate(null);
     }
   }, [selectedListing]);
+
+  useEffect(() => {
+    if (selectedBooking) {
+      loadOverride(selectedBooking);
+    } else {
+      setOverrideUnlockDate(null);
+      setOverrideValidUntilDate(null);
+    }
+  }, [selectedBooking]);
+
+  const loadBookings = async (listingId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`id, start_date, end_date, student_id, profiles!bookings_student_id_fkey(first_name, last_name)`)
+        .eq('listing_id', listingId)
+        .eq('status', 'confirmed')
+        .gte('end_date', new Date().toISOString().split('T')[0])
+        .order('start_date', { ascending: true });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((b: any) => {
+        const name = b.profiles
+          ? `${b.profiles.first_name || ''} ${b.profiles.last_name || ''}`.trim()
+          : 'Locataire';
+        return {
+          id: b.id as string,
+          student_name: name,
+          start_date: b.start_date as string,
+          end_date: b.end_date as string,
+        };
+      });
+      setBookings(formatted);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+      setBookings([]);
+    }
+  };
+
+  const loadOverride = async (bookingId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('access_guide_unlock_overrides')
+        .select('unlock_date, valid_until_date')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      setOverrideUnlockDate(data?.unlock_date || null);
+      setOverrideValidUntilDate(data?.valid_until_date || null);
+    } catch (error) {
+      console.error('Error loading override:', error);
+      setOverrideUnlockDate(null);
+      setOverrideValidUntilDate(null);
+    }
+  };
+
+  const saveOverride = async () => {
+    if (!selectedBooking) return;
+    setSavingOverride(true);
+    try {
+      const payload = {
+        booking_id: selectedBooking,
+        unlock_date: overrideUnlockDate || null,
+        valid_until_date: overrideValidUntilDate || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: existing } = await supabase
+        .from('access_guide_unlock_overrides')
+        .select('id')
+        .eq('booking_id', selectedBooking)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('access_guide_unlock_overrides')
+          .update(payload)
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('access_guide_unlock_overrides')
+          .insert([payload]);
+        if (error) throw error;
+      }
+
+      alert('Dates de déverrouillage enregistrées pour cette réservation!');
+    } catch (error) {
+      console.error('Error saving override:', error);
+      alert('Erreur lors de l\'enregistrement des dates');
+    } finally {
+      setSavingOverride(false);
+    }
+  };
 
   const loadListings = async () => {
     if (!user) return;
@@ -693,12 +801,12 @@ export default function AccessGuide() {
                     Calendrier de déverrouillage
                   </h2>
                   <p className="text-sm text-gray-600 mb-4">
-                    Par défaut, le guide se déverrouille 24h avant la date d'arrivée. Si l'étudiant arrive plus tôt, choisissez une date antérieure.
+                    Par défaut, le guide se déverrouille 24h avant la date d'arrivée. Les dates ci-dessous s'appliquent à toutes les réservations sauf si vous choisissez des dates spécifiques par réservation plus bas.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date de déverrouillage (facultatif)
+                        Date de déverrouillage par défaut (facultatif)
                       </label>
                       <input
                         type="date"
@@ -712,7 +820,7 @@ export default function AccessGuide() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date d'expiration (facultatif)
+                        Date d'expiration par défaut (facultatif)
                       </label>
                       <input
                         type="date"
@@ -725,6 +833,78 @@ export default function AccessGuide() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Dates spécifiques par réservation */}
+                  {bookings.length > 0 && (
+                    <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5">
+                      <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+                        <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
+                        Dates spécifiques par réservation
+                      </h3>
+                      <p className="text-xs text-gray-600 mb-4">
+                        Si un locataire arrive plus tôt ou tard, vous pouvez définir des dates différentes pour sa réservation sans changer les autres.
+                      </p>
+                      <div className="mb-4">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Choisir une réservation
+                        </label>
+                        <select
+                          value={selectedBooking}
+                          onChange={(e) => setSelectedBooking(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                        >
+                          <option value="">— Sélectionner une réservation —</option>
+                          {bookings.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.student_name} — du {new Date(b.start_date).toLocaleDateString('fr-FR')} au {new Date(b.end_date).toLocaleDateString('fr-FR')}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {selectedBooking && (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Déverrouillage pour cette réservation
+                              </label>
+                              <input
+                                type="date"
+                                value={overrideUnlockDate || ''}
+                                onChange={(e) => setOverrideUnlockDate(e.target.value || null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Vide = utilise la date par défaut du logement.
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Expiration pour cette réservation
+                              </label>
+                              <input
+                                type="date"
+                                value={overrideValidUntilDate || ''}
+                                onChange={(e) => setOverrideValidUntilDate(e.target.value || null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Vide = utilise la date par défaut du logement.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={saveOverride}
+                            disabled={savingOverride}
+                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            {savingOverride ? 'Enregistrement...' : 'Enregistrer pour cette réservation'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Section Partage du lien */}
