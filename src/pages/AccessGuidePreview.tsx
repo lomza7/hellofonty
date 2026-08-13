@@ -3,6 +3,24 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { MapPin, Key, Wifi, Home, Image as ImageIcon, Video, AlertCircle } from 'lucide-react';
 
+function isYouTubeUrl(url: string): boolean {
+  return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
+}
+
+function getYouTubeEmbedUrl(url: string): string {
+  let videoId = '';
+  if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/watch')) {
+    videoId = new URL(url).searchParams.get('v') || '';
+  } else if (url.includes('youtube.com/embed/')) {
+    videoId = url.split('embed/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/shorts/')) {
+    videoId = url.split('shorts/')[1].split(/[?&]/)[0];
+  }
+  return `https://www.youtube.com/embed/${videoId}`;
+}
+
 interface AccessGuideRow {
   listing_id: string;
   access_type: string | null;
@@ -184,11 +202,23 @@ export default function AccessGuidePreview() {
                   <h2 className="text-xl font-bold text-gray-900">Vidéo du trajet</h2>
                 </div>
                 <div className="rounded-xl overflow-hidden shadow-md">
-                  <video
-                    src={guide.access_video}
-                    controls
-                    className="w-full"
-                  />
+                  {isYouTubeUrl(guide.access_video) ? (
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        src={getYouTubeEmbedUrl(guide.access_video)}
+                        title="Vidéo du trajet"
+                        className="absolute inset-0 w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <video
+                      src={guide.access_video}
+                      controls
+                      className="w-full"
+                    />
+                  )}
                 </div>
               </div>
             )}

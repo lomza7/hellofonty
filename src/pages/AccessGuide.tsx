@@ -6,6 +6,24 @@ import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
 import BackButton from '../components/BackButton';
 
+function isYouTubeUrl(url: string): boolean {
+  return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
+}
+
+function getYouTubeEmbedUrl(url: string): string {
+  let videoId = '';
+  if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/watch')) {
+    videoId = new URL(url).searchParams.get('v') || '';
+  } else if (url.includes('youtube.com/embed/')) {
+    videoId = url.split('embed/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/shorts/')) {
+    videoId = url.split('shorts/')[1].split(/[?&]/)[0];
+  }
+  return `https://www.youtube.com/embed/${videoId}`;
+}
+
 interface Listing {
   id: string;
   title: string;
@@ -48,6 +66,7 @@ export default function AccessGuide() {
   const [overrideUnlockDate, setOverrideUnlockDate] = useState<string | null>(null);
   const [overrideValidUntilDate, setOverrideValidUntilDate] = useState<string | null>(null);
   const [savingOverride, setSavingOverride] = useState(false);
+  const [youtubeLink, setYoutubeLink] = useState('');
 
   setData; // Mark _data as used
   const [formData, setFormData] = useState<AccessGuide>({
@@ -686,16 +705,28 @@ export default function AccessGuide() {
                       Vidéo d'accès
                     </label>
                     <p className="text-sm text-gray-500 mb-3">
-                      Filmez le trajet depuis l'entrée du bâtiment jusqu'au logement. Importez un fichier vidéo uniquement — les liens YouTube ou autres plateformes ne sont pas acceptés.
+                      Filmez le trajet depuis l'entrée du bâtiment jusqu'au logement. Vous pouvez importer un fichier vidéo ou coller un lien YouTube.
                     </p>
 
                     {formData.access_video && (
                       <div className="mb-4">
-                        <video
-                          src={formData.access_video}
-                          controls
-                          className="w-full rounded-lg"
-                        />
+                        {isYouTubeUrl(formData.access_video) ? (
+                          <div className="relative w-full rounded-lg overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+                            <iframe
+                              src={getYouTubeEmbedUrl(formData.access_video)}
+                              title="Vidéo d'accès"
+                              className="absolute inset-0 w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        ) : (
+                          <video
+                            src={formData.access_video}
+                            controls
+                            className="w-full rounded-lg"
+                          />
+                        )}
                         <button
                           onClick={() => setFormData(prev => ({ ...prev, access_video: '' }))}
                           className="mt-2 text-red-600 hover:text-red-700 text-sm"
@@ -705,19 +736,48 @@ export default function AccessGuide() {
                       </div>
                     )}
 
-                    <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                      <Upload className="w-5 h-5 mr-2 text-gray-600" />
-                      <span className="text-gray-600">
-                        {uploadingVideo ? 'Upload en cours...' : (formData.access_video ? 'Remplacer la vidéo' : 'Ajouter une vidéo')}
-                      </span>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        disabled={uploadingVideo}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={youtubeLink}
+                          onChange={(e) => setYoutubeLink(e.target.value)}
+                          placeholder="Coller un lien YouTube (https://www.youtube.com/watch?v=...)"
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (youtubeLink && isYouTubeUrl(youtubeLink)) {
+                              setFormData(prev => ({ ...prev, access_video: youtubeLink.trim() }));
+                              setYoutubeLink('');
+                            }
+                          }}
+                          disabled={!youtubeLink || !isYouTubeUrl(youtubeLink)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
+                        >
+                          Ajouter
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 border-t border-dashed border-gray-300" />
+                        <span className="text-xs text-gray-400">ou</span>
+                        <div className="flex-1 border-t border-dashed border-gray-300" />
+                      </div>
+                      <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                        <Upload className="w-5 h-5 mr-2 text-gray-600" />
+                        <span className="text-gray-600">
+                          {uploadingVideo ? 'Upload en cours...' : 'Importer un fichier vidéo'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={handleVideoUpload}
+                          disabled={uploadingVideo}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   {/* WiFi */}

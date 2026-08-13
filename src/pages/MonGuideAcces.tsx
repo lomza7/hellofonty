@@ -4,6 +4,24 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { MapPin, Lock, KeyRound, Wifi, Car, Info, Key } from 'lucide-react';
 
+function isYouTubeUrl(url: string): boolean {
+  return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
+}
+
+function getYouTubeEmbedUrl(url: string): string {
+  let videoId = '';
+  if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/watch')) {
+    videoId = new URL(url).searchParams.get('v') || '';
+  } else if (url.includes('youtube.com/embed/')) {
+    videoId = url.split('embed/')[1].split(/[?&]/)[0];
+  } else if (url.includes('youtube.com/shorts/')) {
+    videoId = url.split('shorts/')[1].split(/[?&]/)[0];
+  }
+  return `https://www.youtube.com/embed/${videoId}`;
+}
+
 type GuideRow = {
   listing_id: string;
   listing_title: string;
@@ -137,7 +155,19 @@ export default function MonGuideAcces() {
       {guide.access_video && (
         <div className="mb-4">
           <h2 className="text-xl font-semibold mb-3">Vidéo de l'accès</h2>
-          <video controls className="w-full rounded-xl shadow" src={guide.access_video} />
+          {isYouTubeUrl(guide.access_video) ? (
+            <div className="relative w-full rounded-xl overflow-hidden shadow" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                src={getYouTubeEmbedUrl(guide.access_video)}
+                title="Vidéo de l'accès"
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <video controls className="w-full rounded-xl shadow" src={guide.access_video} />
+          )}
         </div>
       )}
 
