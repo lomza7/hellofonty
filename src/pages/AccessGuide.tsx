@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock, CalendarDays } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
-import BackButton from '../components/BackButton';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
@@ -52,6 +53,8 @@ interface AccessGuide {
 
 export default function AccessGuide() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { language } = useLanguage();
   const [listings, setListings] = useState<ListingWithGuide[]>([]);
   const [selectedListing, setSelectedListing] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -440,7 +443,15 @@ export default function AccessGuide() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className={`${selectedListing ? 'max-w-4xl' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8`}>
-        <BackButton />
+        <button
+          onClick={() => navigate('/dashboard-proprietaire')}
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors group mb-6"
+        >
+          <span className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 bg-white shadow-sm group-hover:border-gray-400 group-hover:shadow transition-all">
+            <ArrowLeft className="w-4 h-4" />
+          </span>
+          <span>{language === 'fr' ? 'Retour' : 'Back'}</span>
+        </button>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8">
