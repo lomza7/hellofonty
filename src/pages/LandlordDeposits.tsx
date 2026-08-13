@@ -230,17 +230,18 @@ export default function LandlordDeposits() {
               <p>Aucune caution encaissée pour le moment.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <>
+              <div className="hidden md:block overflow-hidden">
+                <table className="w-full table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Étudiant</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Logement</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Montant</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Encaissée le</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Détails</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                    <th className="w-[14%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Étudiant</th>
+                    <th className="w-[28%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Logement</th>
+                    <th className="w-[12%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Montant</th>
+                    <th className="w-[13%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
+                    <th className="w-[12%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Encaissée le</th>
+                    <th className="w-[11%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Détails</th>
+                    <th className="w-[10%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -253,29 +254,29 @@ export default function LandlordDeposits() {
                     const Icon = cfg.icon;
                     return (
                       <tr key={deposit.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-sm font-medium text-gray-900">
+                        <td className="px-3 py-4 whitespace-nowrap overflow-hidden">
+                          <p className="truncate text-sm font-medium text-gray-900">
                             {deposit.student ? `${deposit.student.first_name} ${deposit.student.last_name}` : 'N/A'}
                           </p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-sm text-gray-700">{deposit.listing?.title || 'N/A'}</p>
+                        <td className="px-3 py-4 whitespace-nowrap overflow-hidden">
+                          <p className="truncate text-sm text-gray-700" title={deposit.listing?.title || 'N/A'}>{deposit.listing?.title || 'N/A'}</p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-4 whitespace-nowrap">
                           <p className="text-sm font-semibold text-gray-900">{deposit.deposit_amount.toFixed(2)} €</p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
                             <Icon className="w-3 h-3" />
                             {cfg.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-4 whitespace-nowrap">
                           <p className="text-sm text-gray-600">
                             {new Date(deposit.collected_at).toLocaleDateString('fr-FR')}
                           </p>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-4">
                           {deposit.status === 'retained' && (
                             <div className="text-xs text-gray-600">
                               <p>Retenu: {deposit.retained_amount.toFixed(2)} €</p>
@@ -293,11 +294,11 @@ export default function LandlordDeposits() {
                             <p className="text-xs text-yellow-600">Traitement en cours...</p>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-4 whitespace-nowrap">
                           {deposit.status === 'collected' && (
                             <button
                               onClick={() => openRefundModal(deposit)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors"
+                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                               Rembourser
@@ -308,8 +309,62 @@ export default function LandlordDeposits() {
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+              <div className="md:hidden divide-y divide-gray-200">
+                {deposits.map((deposit) => {
+                  const cfg = statusConfig[deposit.status] ?? {
+                    label: deposit.status || 'Inconnu',
+                    color: 'bg-gray-100 text-gray-700',
+                    icon: AlertTriangle,
+                  };
+                  const Icon = cfg.icon;
+                  return (
+                    <article key={deposit.id} className="p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">
+                            {deposit.student ? `${deposit.student.first_name} ${deposit.student.last_name}` : 'N/A'}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">{deposit.listing?.title || 'N/A'}</p>
+                        </div>
+                        <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
+                          <Icon className="w-3 h-3" />
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <dt className="text-gray-500">Montant</dt>
+                          <dd className="mt-1 font-semibold text-gray-900">{deposit.deposit_amount.toFixed(2)} €</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Encaissée le</dt>
+                          <dd className="mt-1 text-gray-700">{new Date(deposit.collected_at).toLocaleDateString('fr-FR')}</dd>
+                        </div>
+                      </dl>
+                      <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                        <div className="text-xs text-gray-500">
+                          {deposit.status === 'retained' && <p>Retenu: {deposit.retained_amount.toFixed(2)} €</p>}
+                          {deposit.status === 'refunded' && <p className="text-green-600">Remboursé le {deposit.refunded_at ? new Date(deposit.refunded_at).toLocaleDateString('fr-FR') : ''}</p>}
+                          {deposit.status === 'collected' && <p>En attente de remboursement</p>}
+                          {deposit.status === 'refunding' && <p className="text-yellow-600">Traitement en cours...</p>}
+                        </div>
+                        {deposit.status === 'collected' && (
+                          <button
+                            onClick={() => openRefundModal(deposit)}
+                            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Rembourser
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
