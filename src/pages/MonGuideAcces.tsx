@@ -19,6 +19,8 @@ type GuideRow = {
   access_photos: string[] | null;
   access_video: string | null;
   additional_info: string | null;
+  unlock_date: string | null;
+  valid_until_date: string | null;
 };
 
 // Guide d'accès de l'étudiant — verrouillé jusqu'à 24 h avant l'arrivée.
@@ -48,9 +50,11 @@ export default function MonGuideAcces() {
   );
 
   const arrival = new Date(guide.start_date + 'T00:00:00');
+  const unlockAt = guide.unlock_date
+    ? new Date(guide.unlock_date + 'T00:00:00')
+    : new Date(arrival.getTime() - 24 * 3600 * 1000);
 
   if (!guide.unlocked) {
-    const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <div className="bg-white rounded-2xl shadow p-10">
@@ -62,7 +66,7 @@ export default function MonGuideAcces() {
           <p className="text-gray-700">
             Il se déverrouillera automatiquement le{' '}
             <strong>{unlockAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>,
-            24 heures avant votre arrivée du {arrival.toLocaleDateString('fr-FR')}.
+            {guide.unlock_date ? ' à la date choisie par le propriétaire.' : ` 24 heures avant votre arrivée du ${arrival.toLocaleDateString('fr-FR')}.`}
           </p>
           <p className="text-sm text-gray-400 mt-4">Codes d'accès, WiFi, stationnement, photos et vidéo vous attendent ici.</p>
         </div>

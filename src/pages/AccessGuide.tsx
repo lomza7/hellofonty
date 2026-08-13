@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye } from 'lucide-react';
+import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
 import BackButton from '../components/BackButton';
@@ -30,6 +30,8 @@ interface AccessGuide {
   access_video: string;
   additional_info: string;
   share_token?: string;
+  unlock_date?: string | null;
+  valid_until_date?: string | null;
 }
 
 export default function AccessGuide() {
@@ -54,7 +56,9 @@ export default function AccessGuide() {
     parking_info: '',
     access_photos: [],
     access_video: '',
-    additional_info: ''
+    additional_info: '',
+    unlock_date: null,
+    valid_until_date: null
   });
 
   useEffect(() => {
@@ -140,7 +144,9 @@ export default function AccessGuide() {
           parking_info: data.parking_info || '',
           access_photos: data.access_photos || [],
           access_video: data.access_video || '',
-          additional_info: data.additional_info || ''
+          additional_info: data.additional_info || '',
+          unlock_date: data.unlock_date || null,
+          valid_until_date: data.valid_until_date || null
         });
       } else {
         setFormData({
@@ -152,7 +158,9 @@ export default function AccessGuide() {
           parking_info: '',
           access_photos: [],
           access_video: '',
-          additional_info: ''
+          additional_info: '',
+          unlock_date: null,
+          valid_until_date: null
         });
       }
     } catch (error) {
@@ -256,6 +264,8 @@ export default function AccessGuide() {
         access_video: formData.access_video,
         additional_info: formData.additional_info,
         share_token: shareToken,
+        unlock_date: formData.unlock_date || null,
+        valid_until_date: formData.valid_until_date || null,
         updated_at: new Date().toISOString()
       };
 
@@ -447,7 +457,9 @@ export default function AccessGuide() {
                       parking_info: '',
                       access_photos: [],
                       access_video: '',
-                      additional_info: ''
+                      additional_info: '',
+                      unlock_date: null,
+                      valid_until_date: null
                     });
                   }}
                   className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
@@ -671,6 +683,47 @@ export default function AccessGuide() {
                       placeholder="Autres informations utiles : interphone, code portail, consignes particulières, etc."
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     />
+                  </div>
+                </div>
+
+                {/* Section Calendrier de déverrouillage */}
+                <div className="border-t pt-8 mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                    <CalendarClock className="w-5 h-5 mr-2 text-blue-600" />
+                    Calendrier de déverrouillage
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Par défaut, le guide se déverrouille 24h avant la date d'arrivée. Si l'étudiant arrive plus tôt, choisissez une date antérieure.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date de déverrouillage (facultatif)
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.unlock_date || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, unlock_date: e.target.value || null }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Laissez vide pour la règle par défaut (24h avant l'arrivée).
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date d'expiration (facultatif)
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.valid_until_date || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, valid_until_date: e.target.value || null }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Laissez vide pour garder le guide valide jusqu'à la fin du séjour.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
