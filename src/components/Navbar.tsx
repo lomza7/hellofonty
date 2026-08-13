@@ -366,18 +366,17 @@ export default function Navbar() {
                                   <CreditCard className="h-3.5 w-3.5" />
                                   <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
                                 </Link>
+                                <Link
+                                  to="/proprietaire/cautions"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
+                                </Link>
                               </div>
                             )}
                           </div>
-
-                          <Link
-                            to="/proprietaire/cautions"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <ShieldCheck className="h-4 w-4" />
-                            <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
-                          </Link>
 
                           {/* Mes documents - collapsible submenu */}
                           <div>
