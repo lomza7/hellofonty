@@ -329,21 +329,54 @@ export default function Navbar() {
                             <Home className="h-4 w-4" />
                             <span>{t('nav.myListings')}</span>
                           </Link>
-                          <Link
-                            to="/mes-demandes"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <Calendar className="h-4 w-4" />
-                              <span>{t('nav.myBookingRequests')}</span>
-                            </div>
-                            {notificationCounts.bookingRequests > 0 && (
-                              <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
-                                {notificationCounts.bookingRequests > 9 ? '9+' : notificationCounts.bookingRequests}
-                              </span>
+                          {/* Mes réservations - collapsible submenu */}
+                          <div>
+                            <button
+                              onClick={() => setOpenSubmenu(openSubmenu === 'landlord-bookings' ? null : 'landlord-bookings')}
+                              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <Calendar className="h-4 w-4" />
+                                <span>{language === 'fr' ? 'Mes réservations' : 'My Bookings'}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {notificationCounts.bookingRequests > 0 && (
+                                  <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
+                                    {notificationCounts.bookingRequests > 9 ? '9+' : notificationCounts.bookingRequests}
+                                  </span>
+                                )}
+                                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'landlord-bookings' ? 'rotate-180' : ''}`} />
+                              </div>
+                            </button>
+                            {openSubmenu === 'landlord-bookings' && (
+                              <div className="bg-gray-50 border-l-2 border-gray-200 ml-2">
+                                <Link
+                                  to="/mes-demandes"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Demandes de réservation' : 'Booking Requests'}</span>
+                                </Link>
+                                <Link
+                                  to="/proprietaire/loyers"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <CreditCard className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
+                                </Link>
+                                <Link
+                                  to="/proprietaire/cautions"
+                                  onClick={() => setShowUserMenu(false)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                  <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
+                                </Link>
+                              </div>
                             )}
-                          </Link>
+                          </div>
 
                           {/* Mes documents - collapsible submenu */}
                           <div>
@@ -424,22 +457,6 @@ export default function Navbar() {
                                 >
                                   <Wallet className="h-3.5 w-3.5" />
                                   <span>{language === 'fr' ? 'Paiements' : 'Payouts'}</span>
-                                </Link>
-                                <Link
-                                  to="/proprietaire/loyers"
-                                  onClick={() => setShowUserMenu(false)}
-                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
-                                >
-                                  <CreditCard className="h-3.5 w-3.5" />
-                                  <span>{language === 'fr' ? 'Loyers mensuels' : 'Monthly Rents'}</span>
-                                </Link>
-                                <Link
-                                  to="/proprietaire/cautions"
-                                  onClick={() => setShowUserMenu(false)}
-                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 flex items-center space-x-3"
-                                >
-                                  <ShieldCheck className="h-3.5 w-3.5" />
-                                  <span>{language === 'fr' ? 'Mes cautions' : 'My Deposits'}</span>
                                 </Link>
                               </div>
                             )}
