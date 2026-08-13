@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, X, Home, MapPin, Sparkles, Camera, Check, Euro, Plus, Trash2, Info, Shield } from 'lucide-react';
+import { Upload, X, Home, MapPin, Sparkles, Camera, Check, Euro, Plus, Trash2, Info, Shield, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -118,11 +118,58 @@ export default function AddEditListing() {
   const [additionalRules, setAdditionalRules] = useState('');
   const [minimumStay, setMinimumStay] = useState('0.5');
 
+  // Stripe account selection
+  interface StripeAccount {
+    id: string;
+    stripe_account_id: string;
+    label: string;
+    is_default: boolean;
+    stripe_onboarding_status: string;
+  }
+  const [stripeAccounts, setStripeAccounts] = useState<StripeAccount[]>([]);
+  const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string>('');
+
   useEffect(() => {
     if (listingId) {
       loadListing();
     }
   }, [listingId]);
+
+  // Fetch landlord's Stripe accounts
+  useEffect(() => {
+    const fetchStripeAccounts = async () => {
+      if (!profile || profile.role !== 'landlord') return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-manage-landlord-account`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'list' }),
+          }
+        );
+
+        const data = await response.json();
+        if (data.success && data.accounts) {
+          setStripeAccounts(data.accounts);
+          // Set default account as selected by default
+          const defaultAcc = data.accounts.find((a: StripeAccount) => a.is_default);
+          if (defaultAcc) {
+            setSelectedStripeAccountId(defaultAcc.stripe_account_id);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching Stripe accounts:', err);
+      }
+    };
+    fetchStripeAccounts();
+  }, [profile]);
 
   const loadListing = async () => {
     const { data, error } = await supabase
@@ -195,6 +242,7 @@ export default function AddEditListing() {
       if (data.quiet_hours_end) setQuietHoursEnd(data.quiet_hours_end);
       if (data.additional_rules) setAdditionalRules(data.additional_rules);
       if (data.minimum_stay) setMinimumStay(data.minimum_stay.toString());
+      if (data.stripe_account_id) setSelectedStripeAccountId(data.stripe_account_id);
     }
   };
 
@@ -520,6 +568,7 @@ export default function AddEditListing() {
         quiet_hours_end: quietHoursEnd,
         additional_rules: additionalRules || null,
         minimum_stay: minimumStay ? parseFloat(minimumStay) : 0.5,
+        stripe_account_id: selectedStripeAccountId || null,
       };
 
       if (listingId) {
@@ -1557,6 +1606,38 @@ export default function AddEditListing() {
                 </p>
               </div>
             </div>
+
+            {/* Stripe account selector */}
+            {stripeAccounts.length > 0 && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-300 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {language === 'fr' ? 'Compte de versement' : 'Payout account'}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {language === 'fr'
+                        ? 'Choisissez vers quel compte Stripe les paiements de cet appartement seront envoyés'
+                        : 'Choose which Stripe account receives payments for this listing'}
+                    </p>
+                  </div>
+                </div>
+                <select
+                  value={selectedStripeAccountId}
+                  onChange={(e) => setSelectedStripeAccountId(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-blue-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm font-semibold text-gray-900"
+                >
+                  {stripeAccounts.map((account) => (
+                    <option key={account.id} value={account.stripe_account_id}>
+                      {account.label}{account.is_default ? ' (par défaut)' : ''}{account.stripe_onboarding_status !== 'complete' ? ' — en attente de configuration' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Total */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border-2 border-emerald-400 shadow-md">

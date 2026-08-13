@@ -40,24 +40,40 @@ Deno.serve(async (req: Request) => {
       throw new Error('Origin manquant');
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, stripe_account_id')
-      .eq('id', user.id)
-      .maybeSingle();
+    // Look up the account in landlord_stripe_accounts table first
+    let stripeAccountId: string | null = null;
 
-    if (profileError || !profile) {
-      throw new Error('Profil non trouvé');
+    if (accountId) {
+      // Verify the account belongs to this landlord
+      const { data: lsaAccount, error: lsaError } = await supabase
+        .from('landlord_stripe_accounts')
+        .select('stripe_account_id')
+        .eq('id', accountId)
+        .eq('landlord_id', user.id)
+        .maybeSingle();
+
+      if (lsaError || !lsaAccount) {
+        throw new Error('Ce compte Stripe ne vous appartient pas');
+      }
+
+      stripeAccountId = lsaAccount.stripe_account_id;
+    } else {
+      // Fall back to profile-level stripe_account_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('stripe_account_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        throw new Error('Profil non trouvé');
+      }
+
+      stripeAccountId = profile.stripe_account_id;
     }
-
-    const stripeAccountId = accountId || profile.stripe_account_id;
 
     if (!stripeAccountId) {
       throw new Error('Aucun compte Stripe Connect trouvé. Veuillez d\'abord créer un compte.');
-    }
-
-    if (profile.stripe_account_id && profile.stripe_account_id !== stripeAccountId) {
-      throw new Error('Ce compte Stripe ne vous appartient pas');
     }
 
     const stripe = new Stripe(stripeSecretKey, {
@@ -72,26 +88,26 @@ Deno.serve(async (req: Request) => {
     });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        url: accountLink.url 
+      JSON.stringify({
+        success: true,
+        url: accountLink.url
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
     console.error('Erreur stripe-create-onboarding-link:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Erreur lors de la création du lien d\'onboarding' 
+      JSON.stringify({
+        success: false,
+        error: error.message || 'Erreur lors de la création du lien d\'onboarding'
       }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

@@ -15,7 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  ExternalLink
+  ExternalLink,
+  CreditCard
 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -33,6 +34,7 @@ interface RentPayment {
   listing: {
     title: string;
     address: string;
+    stripe_account_id: string | null;
   };
 }
 
@@ -65,12 +67,18 @@ interface PaymentStats {
   payments_count: number;
 }
 
+interface StripeAccountInfo {
+  stripe_account_id: string;
+  label: string;
+}
+
 export default function LandlordRentPayments() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [payments, setPayments] = useState<RentPayment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<RentPayment[]>([]);
   const [pendingBookings, setPendingBookings] = useState<PendingBooking[]>([]);
+  const [stripeAccounts, setStripeAccounts] = useState<Record<string, StripeAccountInfo>>({});
   const [stats, setStats] = useState<PaymentStats>({
     total_received: 0,
     total_pending: 0,
@@ -217,7 +225,8 @@ export default function LandlordRentPayments() {
           booking:bookings(
             listing:listings(
               title,
-              address
+              address,
+              stripe_account_id
             ),
             student:profiles!student_id(
               first_name,
@@ -337,8 +346,37 @@ export default function LandlordRentPayments() {
         listing: {
           title: payment.booking.listing.title,
           address: payment.booking.listing.address,
+          stripe_account_id: payment.booking.listing.stripe_account_id || null,
         },
       }));
+
+      // Fetch Stripe account labels for display
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-manage-landlord-account`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ action: 'list' }),
+            }
+          );
+          const accountsData = await response.json();
+          if (accountsData.success && accountsData.accounts) {
+            const accountsMap: Record<string, StripeAccountInfo> = {};
+            for (const acc of accountsData.accounts) {
+              accountsMap[acc.stripe_account_id] = { stripe_account_id: acc.stripe_account_id, label: acc.label };
+            }
+            setStripeAccounts(accountsMap);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching Stripe accounts:', e);
+      }
 
       const now = new Date();
       const updatedPayments = formattedPayments.map((payment: RentPayment) => {
@@ -884,6 +922,12 @@ export default function LandlordRentPayments() {
                               <p className="text-xs text-gray-500 mt-0.5">
                                 {payment.listing.address}
                               </p>
+                              {payment.listing.stripe_account_id && stripeAccounts[payment.listing.stripe_account_id] && (
+                                <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                  <CreditCard className="w-3 h-3" />
+                                  {stripeAccounts[payment.listing.stripe_account_id].label}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -1030,6 +1074,14 @@ export default function LandlordRentPayments() {
                                       {payment.listing.address}
                                     </p>
                                   </div>
+                                  {payment.listing.stripe_account_id && stripeAccounts[payment.listing.stripe_account_id] && (
+                                    <div>
+                                      <p className="text-xs text-gray-600 mb-1">Compte de versement :</p>
+                                      <p className="text-sm font-medium text-blue-600">
+                                        {stripeAccounts[payment.listing.stripe_account_id].label}
+                                      </p>
+                                    </div>
+                                  )}
                                   <div className="mt-3 pt-3 border-t border-gray-200">
                                     <button
                                       onClick={() => navigate(`/messages?booking=${payment.booking_id}`)}

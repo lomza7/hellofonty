@@ -50,6 +50,7 @@ Deno.serve(async (req: Request) => {
           title,
           address,
           landlord_id,
+          stripe_account_id,
           landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
         )
       `)
@@ -82,7 +83,36 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le délai de paiement a expiré');
     }
 
-    if (!booking.listing?.landlord?.stripe_account_id || !booking.listing?.landlord?.stripe_charges_enabled) {
+    // Resolve the Stripe account: listing-level first, then landlord profile fallback
+    const listingStripeAccountId = booking.listing?.stripe_account_id;
+    const landlordStripeAccountId = booking.listing?.landlord?.stripe_account_id;
+    const landlordChargesEnabled = booking.listing?.landlord?.stripe_charges_enabled;
+
+    let stripeAccountId: string | null = null;
+
+    if (listingStripeAccountId) {
+      // Verify the listing-level account is enabled via landlord_stripe_accounts
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      const { data: lsaAccount } = await supabaseAdmin
+        .from('landlord_stripe_accounts')
+        .select('stripe_charges_enabled')
+        .eq('stripe_account_id', listingStripeAccountId)
+        .eq('landlord_id', booking.listing.landlord_id)
+        .maybeSingle();
+
+      if (lsaAccount?.stripe_charges_enabled) {
+        stripeAccountId = listingStripeAccountId;
+      } else {
+        throw new Error('Le compte de versement associé à cet appartement n\'est pas encore activé');
+      }
+    } else if (landlordStripeAccountId && landlordChargesEnabled) {
+      stripeAccountId = landlordStripeAccountId;
+    }
+
+    if (!stripeAccountId) {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
     }
 
@@ -161,7 +191,7 @@ Deno.serve(async (req: Request) => {
       },
       payment_intent_data: {
         application_fee_amount: platformFee,
-        on_behalf_of: booking.listing.landlord.stripe_account_id,
+        on_behalf_of: stripeAccountId,
         metadata: {
           booking_id: booking_id,
           type: 'first_rent_payment',
