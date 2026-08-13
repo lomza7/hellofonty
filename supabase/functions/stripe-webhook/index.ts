@@ -175,17 +175,67 @@ async function handleEvent(event: Stripe.Event) {
       console.info(`Processing first rent payment for booking: ${session.metadata.booking_id}`);
 
       try {
-        const { error } = await supabase
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+
+        const { data: booking, error: bookingQueryError } = await supabase
+          .from('bookings')
+          .select('id, listing_id, student_id, deposit_amount, stripe_payment_intent_id')
+          .eq('id', session.metadata.booking_id)
+          .maybeSingle();
+
+        if (bookingQueryError || !booking) {
+          console.error('Booking not found:', session.metadata.booking_id);
+          return;
+        }
+
+        const { error: bookingUpdateError } = await supabase
           .from('bookings')
           .update({
             payment_status: 'completed',
+            ...(paymentIntentId && !booking.stripe_payment_intent_id
+              ? { stripe_payment_intent_id: paymentIntentId }
+              : {}),
           })
           .eq('id', session.metadata.booking_id);
 
-        if (error) {
-          console.error('Error updating booking payment status:', error);
+        if (bookingUpdateError) {
+          console.error('Error updating booking payment status:', bookingUpdateError);
         } else {
           console.info(`Successfully updated payment status for booking: ${session.metadata.booking_id}`);
+        }
+
+        if (booking.deposit_amount && parseFloat(booking.deposit_amount) > 0 && paymentIntentId) {
+          const { data: listing } = await supabase
+            .from('listings')
+            .select('landlord_id')
+            .eq('id', booking.listing_id)
+            .maybeSingle();
+
+          if (listing?.landlord_id) {
+            const { error: depositError } = await supabase
+              .from('deposit_transactions')
+              .upsert(
+                {
+                  booking_id: booking.id,
+                  listing_id: booking.listing_id,
+                  landlord_id: listing.landlord_id,
+                  student_id: booking.student_id,
+                  deposit_amount: parseFloat(booking.deposit_amount),
+                  status: 'collected',
+                  stripe_payment_intent_id: paymentIntentId,
+                  collected_at: new Date().toISOString(),
+                },
+                { onConflict: 'booking_id' }
+              );
+
+            if (depositError) {
+              console.error('Error upserting deposit_transaction:', depositError);
+            } else {
+              console.info(`Successfully upserted deposit_transaction for booking: ${booking.id}`);
+            }
+          }
         }
       } catch (error) {
         console.error('Error processing first rent payment:', error);
