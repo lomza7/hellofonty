@@ -161,9 +161,7 @@ Deno.serve(async (req: Request) => {
       },
       payment_intent_data: {
         application_fee_amount: platformFee,
-        transfer_data: {
-          destination: booking.listing.landlord.stripe_account_id,
-        },
+        on_behalf_of: booking.listing.landlord.stripe_account_id,
         metadata: {
           booking_id: booking_id,
           type: 'first_rent_payment',

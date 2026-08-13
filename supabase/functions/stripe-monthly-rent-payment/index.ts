@@ -118,9 +118,7 @@ Deno.serve(async (req: Request) => {
         month_year: payment.month_year,
       },
       payment_intent_data: {
-        transfer_data: {
-          destination: payment.booking.listing.landlord.stripe_account_id,
-        },
+        on_behalf_of: payment.booking.listing.landlord.stripe_account_id,
         metadata: {
           payment_id: payment_id,
           booking_id: payment.booking_id,
