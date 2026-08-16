@@ -12,14 +12,16 @@ interface TranslateRequest {
   to?: string;
 }
 
-async function translateText(text: string, from = 'fr', to = 'en'): Promise<string> {
+async function translateText(text: string, from = 'auto', to = 'en'): Promise<string> {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data && data[0] && data[0][0] && data[0][0][0]) {
-      return data[0][0][0];
+    if (data && data[0] && Array.isArray(data[0])) {
+      return data[0]
+        .map((chunk: any[]) => chunk && chunk[0] ? chunk[0] : '')
+        .join('');
     }
 
     return text;
@@ -38,7 +40,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { text, from = 'fr', to = 'en' }: TranslateRequest = await req.json();
+    const { text, from = 'auto', to = 'en' }: TranslateRequest = await req.json();
 
     if (!text) {
       return new Response(

@@ -45,6 +45,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const lastTranslatedConvKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
         if (lastTranslatedConvKey.current !== selectedConversation) {
           setTranslatedMessages({});
           setShowTranslation(false);
+          setTranslationError(null);
           lastTranslatedConvKey.current = selectedConversation;
         }
         loadMessages(conv.otherUserId, conv.listingId);
@@ -428,6 +430,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     const texts = userMessages.map(m => m.content);
     const targetLang = language === 'fr' ? 'fr' : 'en';
 
+    setTranslationError(null);
     setIsTranslating(true);
     try {
       const response = await fetch(
@@ -438,9 +441,17 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
             'Content-Type': 'application/json',
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ text: texts, to: targetLang }),
+          body: JSON.stringify({ text: texts, from: 'auto', to: targetLang }),
         }
       );
+
+      if (!response.ok) {
+        setTranslationError(language === 'fr'
+          ? 'La traduction a échoué. Réessayez.'
+          : 'Translation failed. Try again.');
+        return;
+      }
+
       const data = await response.json();
 
       if (data.translations && Array.isArray(data.translations)) {
@@ -450,9 +461,16 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
         });
         setTranslatedMessages(map);
         setShowTranslation(true);
+      } else {
+        setTranslationError(language === 'fr'
+          ? 'La traduction a échoué. Réessayez.'
+          : 'Translation failed. Try again.');
       }
     } catch (err) {
       console.error('Translation error:', err);
+      setTranslationError(language === 'fr'
+        ? 'La traduction a échoué. Réessayez.'
+        : 'Translation failed. Try again.');
     } finally {
       setIsTranslating(false);
     }
@@ -574,6 +592,12 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                       ? 'Conversation traduite en français'
                       : 'Conversation translated to English'}
                   </p>
+                </div>
+              )}
+
+              {translationError && !showTranslation && (
+                <div className="px-3 sm:px-6 py-1.5 bg-red-50 border-b border-red-100">
+                  <p className="text-xs text-red-700 font-medium">{translationError}</p>
                 </div>
               )}
 
