@@ -433,39 +433,26 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     setTranslationError(null);
     setIsTranslating(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ text: texts, from: 'auto', to: targetLang }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke<{
+        translations?: string[];
+        error?: string;
+      }>('translate-text', {
+        body: { text: texts, from: 'auto', to: targetLang },
+      });
 
-      if (!response.ok) {
+      if (error || !data?.translations || data.translations.length !== userMessages.length) {
         setTranslationError(language === 'fr'
           ? 'La traduction a échoué. Réessayez.'
           : 'Translation failed. Try again.');
         return;
       }
 
-      const data = await response.json();
-
-      if (data.translations && Array.isArray(data.translations)) {
-        const map: Record<string, string> = {};
-        userMessages.forEach((msg, i) => {
-          map[msg.id] = data.translations[i] || msg.content;
-        });
-        setTranslatedMessages(map);
-        setShowTranslation(true);
-      } else {
-        setTranslationError(language === 'fr'
-          ? 'La traduction a échoué. Réessayez.'
-          : 'Translation failed. Try again.');
-      }
+      const map: Record<string, string> = {};
+      userMessages.forEach((msg, i) => {
+        map[msg.id] = data.translations![i] || msg.content;
+      });
+      setTranslatedMessages(map);
+      setShowTranslation(true);
     } catch (err) {
       console.error('Translation error:', err);
       setTranslationError(language === 'fr'
