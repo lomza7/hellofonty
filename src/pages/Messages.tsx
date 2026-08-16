@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Send, User, CheckCircle, XCircle, Shield, Key, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, User, CheckCircle, XCircle, Shield, Key, ArrowLeft, Languages, Loader2 } from 'lucide-react';
 import { supabase, Message } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +23,7 @@ type MessagesProps = {
 };
 
 export default function Messages({ selectedUserId }: MessagesProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { profile } = useAuth();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -42,6 +42,10 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const [attemptsCount, setAttemptsCount] = useState(0);
   const [accessGuides, setAccessGuides] = useState<any[]>([]);
   const [showGuideMenu, setShowGuideMenu] = useState(false);
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const lastTranslatedConvKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -107,6 +111,11 @@ export default function Messages({ selectedUserId }: MessagesProps) {
     if (selectedConversation) {
       const conv = getSelectedConv();
       if (conv) {
+        if (lastTranslatedConvKey.current !== selectedConversation) {
+          setTranslatedMessages({});
+          setShowTranslation(false);
+          lastTranslatedConvKey.current = selectedConversation;
+        }
         loadMessages(conv.otherUserId, conv.listingId);
         markAsRead(conv.otherUserId, conv.listingId);
         checkContactPermission(conv.otherUserId);
@@ -404,6 +413,51 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     }
   };
 
+  const handleTranslate = async () => {
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+
+    const conv = getSelectedConv();
+    if (!conv || conv.otherUserId === 'system' || messages.length === 0) return;
+
+    const userMessages = messages.filter(m => m.sender_id !== null);
+    if (userMessages.length === 0) return;
+
+    const texts = userMessages.map(m => m.content);
+    const targetLang = language === 'fr' ? 'fr' : 'en';
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-text`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ text: texts, to: targetLang }),
+        }
+      );
+      const data = await response.json();
+
+      if (data.translations && Array.isArray(data.translations)) {
+        const map: Record<string, string> = {};
+        userMessages.forEach((msg, i) => {
+          map[msg.id] = data.translations[i] || msg.content;
+        });
+        setTranslatedMessages(map);
+        setShowTranslation(true);
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] bg-gray-50">
       <div className="max-w-7xl mx-auto h-full flex">
@@ -468,7 +522,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                 >
                   <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
                 </button>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                     {(() => {
                       const conv = getSelectedConv();
@@ -482,7 +536,46 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                     ) : null;
                   })()}
                 </div>
+                {(() => {
+                  const conv = getSelectedConv();
+                  if (!conv || conv.otherUserId === 'system') return null;
+                  return (
+                    <button
+                      onClick={handleTranslate}
+                      disabled={isTranslating || messages.filter(m => m.sender_id !== null).length === 0}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition flex-shrink-0 ${
+                        showTranslation
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={showTranslation
+                        ? (language === 'fr' ? 'Voir l\'original' : 'Show original')
+                        : (language === 'fr' ? 'Traduire la conversation' : 'Translate conversation')}
+                    >
+                      {isTranslating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Languages className="w-4 h-4" />
+                      )}
+                      <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                        {showTranslation
+                          ? (language === 'fr' ? 'Original' : 'Original')
+                          : (language === 'fr' ? 'Traduire' : 'Translate')}
+                      </span>
+                    </button>
+                  );
+                })()}
               </div>
+
+              {showTranslation && (
+                <div className="px-3 sm:px-6 py-1.5 bg-blue-50 border-b border-blue-100">
+                  <p className="text-xs text-blue-700 font-medium">
+                    {language === 'fr'
+                      ? 'Conversation traduite en français'
+                      : 'Conversation translated to English'}
+                  </p>
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
                 {messages.map((msg) => {
@@ -520,7 +613,11 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                             : 'bg-gray-100 text-gray-900'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words text-sm sm:text-base">{msg.content}</p>
+                        <p className="whitespace-pre-wrap break-words text-sm sm:text-base">
+                          {showTranslation && translatedMessages[msg.id] && !isSystemMessage
+                            ? translatedMessages[msg.id]
+                            : msg.content}
+                        </p>
                         <p
                           className={`text-[10px] sm:text-xs mt-1 ${
                             isSystemMessage
