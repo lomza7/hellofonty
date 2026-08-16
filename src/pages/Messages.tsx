@@ -42,7 +42,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const [attemptsCount, setAttemptsCount] = useState(0);
   const [accessGuides, setAccessGuides] = useState<any[]>([]);
   const [showGuideMenu, setShowGuideMenu] = useState(false);
-  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
+  const [translatedMessages, setTranslatedMessages] = useState<string[]>([]);
   const [isTranslating, setIsTranslating] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
@@ -115,7 +115,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
       const conv = getSelectedConv();
       if (conv) {
         if (lastTranslatedConvKey.current !== selectedConversation) {
-          setTranslatedMessages({});
+          setTranslatedMessages([]);
           setShowTranslation(false);
           setTranslationError(null);
           setShowTranslateMenu(false);
@@ -489,12 +489,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
         return;
       }
 
-      const map: Record<string, string> = {};
-      userMessages.forEach((msg, i) => {
-        map[msg.id] = data.translations[i] || msg.content;
-      });
-      console.log('[Translate] Mapped translations for', Object.keys(map).length, 'messages');
-      setTranslatedMessages(map);
+      const translations = userMessages.map((msg, i) => data.translations[i] || msg.content);
+      console.log('[Translate] Received translations for', translations.length, 'messages');
+      setTranslatedMessages(translations);
       setShowTranslation(true);
     } catch (err) {
       console.error('[Translate] Network/parse error:', err);
@@ -661,8 +658,15 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               )}
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
-                {messages.map((msg) => {
+                {messages.map((msg, messageIndex) => {
                   const isSystemMessage = msg.sender_id === null;
+                  const translatedMessageIndex = messages
+                    .slice(0, messageIndex)
+                    .filter(message => message.sender_id !== null)
+                    .length;
+                  const displayedContent = showTranslation && !isSystemMessage
+                    ? translatedMessages[translatedMessageIndex] || msg.content
+                    : msg.content;
 
                   return (
                   <div
@@ -697,9 +701,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                         }`}
                       >
                         <p className="whitespace-pre-wrap break-words text-sm sm:text-base">
-                          {showTranslation && translatedMessages[msg.id] && !isSystemMessage
-                            ? translatedMessages[msg.id]
-                            : msg.content}
+                          {displayedContent}
                         </p>
                         <p
                           className={`text-[10px] sm:text-xs mt-1 ${
