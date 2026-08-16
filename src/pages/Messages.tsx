@@ -46,6 +46,8 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+  const [showTranslateMenu, setShowTranslateMenu] = useState(false);
+  const [translateTargetLang, setTranslateTargetLang] = useState<'fr' | 'en' | null>(null);
   const lastTranslatedConvKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -116,6 +118,8 @@ export default function Messages({ selectedUserId }: MessagesProps) {
           setTranslatedMessages({});
           setShowTranslation(false);
           setTranslationError(null);
+          setShowTranslateMenu(false);
+          setTranslateTargetLang(null);
           lastTranslatedConvKey.current = selectedConversation;
         }
         loadMessages(conv.otherUserId, conv.listingId);
@@ -415,9 +419,12 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     }
   };
 
-  const handleTranslate = async () => {
-    if (showTranslation) {
+  const handleTranslate = async (targetLang: 'fr' | 'en') => {
+    setShowTranslateMenu(false);
+
+    if (showTranslation && translateTargetLang === targetLang) {
       setShowTranslation(false);
+      setTranslateTargetLang(null);
       return;
     }
 
@@ -428,9 +435,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     if (userMessages.length === 0) return;
 
     const texts = userMessages.map(m => m.content);
-    const targetLang = language === 'fr' ? 'fr' : 'en';
 
     setTranslationError(null);
+    setTranslateTargetLang(targetLang);
     setIsTranslating(true);
     try {
       const { data, error } = await supabase.functions.invoke<{
@@ -544,30 +551,59 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                 {(() => {
                   const conv = getSelectedConv();
                   if (!conv || conv.otherUserId === 'system') return null;
+                  const hasUserMessages = messages.filter(m => m.sender_id !== null).length > 0;
                   return (
-                    <button
-                      onClick={handleTranslate}
-                      disabled={isTranslating || messages.filter(m => m.sender_id !== null).length === 0}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition flex-shrink-0 ${
-                        showTranslation
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={showTranslation
-                        ? (language === 'fr' ? 'Voir l\'original' : 'Show original')
-                        : (language === 'fr' ? 'Traduire la conversation' : 'Translate conversation')}
-                    >
-                      {isTranslating ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Languages className="w-4 h-4" />
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          if (showTranslation) {
+                            setShowTranslation(false);
+                            setTranslateTargetLang(null);
+                          } else {
+                            setShowTranslateMenu(!showTranslateMenu);
+                          }
+                        }}
+                        disabled={isTranslating || !hasUserMessages}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition ${
+                          showTranslation
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={showTranslation
+                          ? (language === 'fr' ? 'Voir l\'original' : 'Show original')
+                          : (language === 'fr' ? 'Traduire la conversation' : 'Translate conversation')}
+                      >
+                        {isTranslating ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Languages className="w-4 h-4" />
+                        )}
+                        <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                          {showTranslation
+                            ? (language === 'fr' ? 'Original' : 'Original')
+                            : (language === 'fr' ? 'Traduire' : 'Translate')}
+                        </span>
+                      </button>
+
+                      {showTranslateMenu && !showTranslation && (
+                        <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[180px] z-20">
+                          <button
+                            onClick={() => handleTranslate('fr')}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition text-left"
+                          >
+                            <span className="text-lg">🇫🇷</span>
+                            <span className="text-sm font-medium text-gray-700">Français</span>
+                          </button>
+                          <button
+                            onClick={() => handleTranslate('en')}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition text-left"
+                          >
+                            <span className="text-lg">🇬🇧</span>
+                            <span className="text-sm font-medium text-gray-700">English</span>
+                          </button>
+                        </div>
                       )}
-                      <span className="text-xs sm:text-sm font-medium hidden sm:inline">
-                        {showTranslation
-                          ? (language === 'fr' ? 'Original' : 'Original')
-                          : (language === 'fr' ? 'Traduire' : 'Translate')}
-                      </span>
-                    </button>
+                    </div>
                   );
                 })()}
               </div>
@@ -575,9 +611,9 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
               {showTranslation && (
                 <div className="px-3 sm:px-6 py-1.5 bg-blue-50 border-b border-blue-100">
                   <p className="text-xs text-blue-700 font-medium">
-                    {language === 'fr'
-                      ? 'Conversation traduite en français'
-                      : 'Conversation translated to English'}
+                    {translateTargetLang === 'fr'
+                      ? (language === 'fr' ? 'Conversation traduite en français' : 'Conversation translated to French')
+                      : (language === 'fr' ? 'Conversation traduite en anglais' : 'Conversation translated to English')}
                   </p>
                 </div>
               )}
