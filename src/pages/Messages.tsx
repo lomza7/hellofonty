@@ -440,14 +440,49 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     setTranslateTargetLang(targetLang);
     setIsTranslating(true);
     try {
-      const { data, error } = await supabase.functions.invoke<{
-        translations?: string[];
-        error?: string;
-      }>('translate-text', {
-        body: { text: texts, from: 'auto', to: targetLang },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      console.log('[Translate] Sending request:', {
+        messageCount: texts.length,
+        targetLang,
+        url: `${supabaseUrl}/functions/v1/translate-text`,
       });
 
-      if (error || !data?.translations || data.translations.length !== userMessages.length) {
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/translate-text`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({ text: texts, from: 'auto', to: targetLang }),
+        }
+      );
+
+      console.log('[Translate] Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Translate] HTTP error:', response.status, errorText);
+        setTranslationError(language === 'fr'
+          ? 'La traduction a échoué. Réessayez.'
+          : 'Translation failed. Try again.');
+        return;
+      }
+
+      const data = await response.json();
+
+      console.log('[Translate] Response data:', {
+        hasTranslations: !!data.translations,
+        translationsLength: data.translations?.length,
+        expectedLength: userMessages.length,
+      });
+
+      if (!data.translations || !Array.isArray(data.translations) || data.translations.length !== userMessages.length) {
+        console.error('[Translate] Invalid response shape:', data);
         setTranslationError(language === 'fr'
           ? 'La traduction a échoué. Réessayez.'
           : 'Translation failed. Try again.');
@@ -456,12 +491,13 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
 
       const map: Record<string, string> = {};
       userMessages.forEach((msg, i) => {
-        map[msg.id] = data.translations![i] || msg.content;
+        map[msg.id] = data.translations[i] || msg.content;
       });
+      console.log('[Translate] Mapped translations for', Object.keys(map).length, 'messages');
       setTranslatedMessages(map);
       setShowTranslation(true);
     } catch (err) {
-      console.error('Translation error:', err);
+      console.error('[Translate] Network/parse error:', err);
       setTranslationError(language === 'fr'
         ? 'La traduction a échoué. Réessayez.'
         : 'Translation failed. Try again.');
