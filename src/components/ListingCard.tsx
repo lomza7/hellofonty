@@ -15,6 +15,11 @@ type ListingCardProps = {
     city: string;
     property_type: string;
     price_per_month: number;
+    base_rent?: number | null;
+    electricity_cost?: number | null;
+    heating_cost?: number | null;
+    water_cost?: number | null;
+    custom_charges?: { name: string; amount: string }[] | null;
     bedrooms: number;
     bathrooms: number;
     image_url?: string;
@@ -158,13 +163,27 @@ function ListingCard({
           </div>
         )}
 
-        <div className="flex items-baseline justify-between mt-auto">
-          <div>
-            <span className="text-xl font-bold text-gray-900">
-              {listing.price_per_month.toLocaleString()}€
-            </span>
-            <span className="text-gray-600 text-xs ml-1">{t('listing.perMonth')}</span>
-          </div>
+        <div className="mt-auto pt-2">
+          {(() => {
+            const charges = (listing.electricity_cost || 0) + (listing.heating_cost || 0) + (listing.water_cost || 0) + (listing.custom_charges?.reduce((s: number, c) => s + (parseFloat(c.amount) || 0), 0) || 0);
+            const baseRent = listing.base_rent != null && listing.base_rent > 0 ? listing.base_rent : Math.max(0, listing.price_per_month - charges);
+            const hasCharges = charges > 0;
+            return (
+              <div>
+                <div className="flex items-baseline">
+                  <span className="text-xl font-bold text-gray-900">
+                    {Number(baseRent).toLocaleString()}€
+                  </span>
+                  <span className="text-gray-600 text-xs ml-1">{t('listing.perMonth')}</span>
+                </div>
+                {hasCharges && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {language === 'fr' ? '+ ' : '+ '}{Number(charges).toLocaleString()}€ {language === 'fr' ? 'de charges / mois' : 'charges / month'}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

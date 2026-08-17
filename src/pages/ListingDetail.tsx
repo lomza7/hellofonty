@@ -398,6 +398,38 @@ En attente de votre confirmation.`;
               )}
             </div>
 
+            <div className="mb-6 bg-gray-50 rounded-2xl p-5 border border-gray-200">
+              {(() => {
+                const charges = (listing.electricity_cost || 0) + (listing.heating_cost || 0) + (listing.water_cost || 0) + (listing.custom_charges?.reduce((s: number, c) => s + (parseFloat(c.amount) || 0), 0) || 0);
+                const baseRent = listing.base_rent != null && listing.base_rent > 0 ? listing.base_rent : Math.max(0, listing.price_per_month - charges);
+                const hasCharges = charges > 0;
+                return (
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div>
+                      <span className="text-3xl font-bold text-gray-900">{Number(baseRent).toLocaleString()}€</span>
+                      <span className="text-gray-600 text-sm ml-1">{language === 'fr' ? '/ mois' : '/ month'}</span>
+                      <p className="text-xs text-gray-500 mt-1">{language === 'fr' ? 'Loyer hors charges' : 'Rent excluding charges'}</p>
+                    </div>
+                    {hasCharges && (
+                      <>
+                        <div className="text-gray-300 text-2xl font-light">+</div>
+                        <div>
+                          <span className="text-xl font-semibold text-gray-700">{Number(charges).toLocaleString()}€</span>
+                          <span className="text-gray-500 text-sm ml-1">{language === 'fr' ? '/ mois' : '/ month'}</span>
+                          <p className="text-xs text-gray-500 mt-1">{language === 'fr' ? 'Charges' : 'Charges'}</p>
+                        </div>
+                        <div className="ml-auto text-right">
+                          <span className="text-lg font-bold text-emerald-700">{Number(listing.price_per_month).toLocaleString()}€</span>
+                          <span className="text-gray-500 text-xs ml-1">{language === 'fr' ? '/ mois' : '/ month'}</span>
+                          <p className="text-xs text-gray-500 mt-1">{language === 'fr' ? 'Total mensuel' : 'Monthly total'}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
 {listing.video_url && (() => {
               const getEmbedUrl = (url: string) => {
                 try {
