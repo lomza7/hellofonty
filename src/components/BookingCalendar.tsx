@@ -13,6 +13,7 @@ type BookingCalendarProps = {
   pricePerMonth: number;
   charges: number;
   minimumStayMonths?: number;
+  maximumStayMonths?: number;
   existingBookings?: Array<{ start_date: string; end_date: string }>;
   blockedDates?: string[];
   chargeDetails?: ChargeDetail;
@@ -23,6 +24,7 @@ export default function BookingCalendar({
   pricePerMonth,
   charges = 0,
   minimumStayMonths = 1,
+  maximumStayMonths = 6,
   existingBookings = [],
   blockedDates = [],
   chargeDetails,
@@ -34,6 +36,7 @@ export default function BookingCalendar({
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [minimumStayError, setMinimumStayError] = useState<string | null>(null);
+  const [maximumStayError, setMaximumStayError] = useState<string | null>(null);
   const [showChargesModal, setShowChargesModal] = useState(false);
 
   const computedCharges = (() => {
@@ -48,6 +51,7 @@ export default function BookingCalendar({
   const baseRentMonthly = Math.max(0, pricePerMonth - computedCharges);
   const dailyRentRate = baseRentMonthly / 30;
   const minimumStayDays = minimumStayMonths < 1 ? 14 : minimumStayMonths * 30;
+  const maximumStayDays = maximumStayMonths * 30;
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -87,6 +91,7 @@ export default function BookingCalendar({
       setSelectedStartDate(null);
       setSelectedEndDate(null);
       setMinimumStayError(null);
+      setMaximumStayError(null);
       return;
     }
 
@@ -94,6 +99,7 @@ export default function BookingCalendar({
     if (selectedEndDate && clickedDate.getTime() === selectedEndDate.getTime()) {
       setSelectedEndDate(null);
       setMinimumStayError(null);
+      setMaximumStayError(null);
       return;
     }
 
@@ -101,13 +107,25 @@ export default function BookingCalendar({
       setSelectedStartDate(clickedDate);
       setSelectedEndDate(null);
       setMinimumStayError(null);
+      setMaximumStayError(null);
     } else if (!selectedEndDate) {
       if (clickedDate > selectedStartDate) {
         const daysDiff = Math.ceil((clickedDate.getTime() - selectedStartDate.getTime()) / (1000 * 60 * 60 * 24));
 
+        if (daysDiff > maximumStayDays) {
+          const maxLabel = `${maximumStayMonths} ${language === 'fr' ? 'mois' : (maximumStayMonths > 1 ? 'months' : 'month')}`;
+          setMaximumStayError(
+            language === 'fr'
+              ? `Séjour maximum de ${maxLabel}. Veuillez sélectionner une date de fin plus proche.`
+              : `Maximum stay of ${maxLabel}. Please select an earlier end date.`
+          );
+          return;
+        }
+
         if (daysDiff >= minimumStayDays) {
           setSelectedEndDate(clickedDate);
           setMinimumStayError(null);
+          setMaximumStayError(null);
         } else {
           const nightsNeeded = minimumStayDays - daysDiff;
           const minLabel = minimumStayMonths < 1
@@ -123,11 +141,13 @@ export default function BookingCalendar({
         setSelectedStartDate(clickedDate);
         setSelectedEndDate(null);
         setMinimumStayError(null);
+        setMaximumStayError(null);
       }
     } else {
       setSelectedStartDate(clickedDate);
       setSelectedEndDate(null);
       setMinimumStayError(null);
+      setMaximumStayError(null);
     }
   };
 
@@ -336,12 +356,21 @@ export default function BookingCalendar({
                   {minimumStayError}
                 </p>
               </div>
+            ) : maximumStayError ? (
+              <div className="mt-3 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+                <p className="text-rose-700 text-xs font-medium">
+                  {maximumStayError}
+                </p>
+              </div>
             ) : (
               <p className="mt-3 text-gray-500">
                 <strong>{language === 'fr' ? 'Séjour minimum' : 'Minimum stay'} :</strong>{' '}
                 {minimumStayMonths < 1
                   ? (language === 'fr' ? '2 semaines (14 jours)' : '2 weeks (14 days)')
                   : `${minimumStayMonths} ${language === 'fr' ? 'mois' : (minimumStayMonths > 1 ? 'months' : 'month')} (${minimumStayDays} ${language === 'fr' ? 'jours' : 'days'})`}
+                <br />
+                <strong>{language === 'fr' ? 'Séjour maximum' : 'Maximum stay'} :</strong>{' '}
+                {maximumStayMonths} {language === 'fr' ? 'mois' : (maximumStayMonths > 1 ? 'months' : 'month')} ({maximumStayDays} {language === 'fr' ? 'jours' : 'days'})
               </p>
             )}
           </div>

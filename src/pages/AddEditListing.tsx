@@ -117,6 +117,7 @@ export default function AddEditListing() {
   const [quietHoursEnd, setQuietHoursEnd] = useState('08:00');
   const [additionalRules, setAdditionalRules] = useState('');
   const [minimumStay, setMinimumStay] = useState('0.5');
+  const [maxStay, setMaxStay] = useState('6');
 
   // Stripe account selection
   interface StripeAccount {
@@ -242,6 +243,7 @@ export default function AddEditListing() {
       if (data.quiet_hours_end) setQuietHoursEnd(data.quiet_hours_end);
       if (data.additional_rules) setAdditionalRules(data.additional_rules);
       if (data.minimum_stay) setMinimumStay(data.minimum_stay.toString());
+      if (data.max_stay) setMaxStay(data.max_stay.toString());
       if (data.stripe_account_id) setSelectedStripeAccountId(data.stripe_account_id);
     }
   };
@@ -568,6 +570,7 @@ export default function AddEditListing() {
         quiet_hours_end: quietHoursEnd,
         additional_rules: additionalRules || null,
         minimum_stay: minimumStay ? parseFloat(minimumStay) : 0.5,
+        max_stay: maxStay ? parseFloat(maxStay) : 6,
         stripe_account_id: selectedStripeAccountId || null,
       };
 
@@ -1373,6 +1376,32 @@ export default function AddEditListing() {
                 {language === 'fr'
                   ? 'Définissez la durée minimale de location pour votre logement'
                   : 'Set the minimum rental duration for your property'}
+              </p>
+            </div>
+
+            {/* Séjour maximum */}
+            <div className="bg-rose-50 rounded-xl p-4 sm:p-6 border-2 border-rose-200">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {language === 'fr' ? 'Durée de séjour maximum' : 'Maximum stay duration'}
+              </h3>
+              <select
+                value={maxStay}
+                onChange={(e) => setMaxStay(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent transition text-lg font-semibold bg-white"
+              >
+                <option value="3">3 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="4">4 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="5">5 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="6">6 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="9">9 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="12">12 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="18">18 {language === 'fr' ? 'mois' : 'months'}</option>
+                <option value="24">24 {language === 'fr' ? 'mois' : 'months'}</option>
+              </select>
+              <p className="text-sm text-gray-600 mt-3">
+                {language === 'fr'
+                  ? 'Définissez la durée maximale de location pour votre logement (6 mois par défaut)'
+                  : 'Set the maximum rental duration for your property (6 months by default)'}
               </p>
             </div>
 
