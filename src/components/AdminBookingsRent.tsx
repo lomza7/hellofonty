@@ -82,6 +82,7 @@ export default function AdminBookingsRent() {
             platform_fee, total_amount, payment_date, month_year, status,
             last_reminder_sent_at, auto_reminder_enabled)
         `)
+        .eq('status', 'confirmed')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -122,8 +123,6 @@ export default function AdminBookingsRent() {
         if (!b.rent_payments?.some(p => p.status === 'overdue')) return false;
       } else if (statusFilter === 'has_pending') {
         if (!b.rent_payments?.some(p => p.status === 'pending')) return false;
-      } else {
-        if (b.status !== statusFilter) return false;
       }
     }
     if (monthFilter !== 'all') {
@@ -136,7 +135,7 @@ export default function AdminBookingsRent() {
   const totalPaid = allPayments.filter(p => p.status === 'paid').length;
   const totalPending = allPayments.filter(p => p.status === 'pending').length;
   const totalOverdue = allPayments.filter(p => p.status === 'overdue').length;
-  const totalConfirmed = bookings.filter(b => b.status === 'confirmed').length;
+
   const totalAmountPaid = allPayments.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.total_amount), 0);
   const totalAmountPending = allPayments.filter(p => p.status === 'pending' || p.status === 'overdue').reduce((s, p) => s + Number(p.total_amount), 0);
 
@@ -265,7 +264,7 @@ export default function AdminBookingsRent() {
         <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
           <p className="text-xs text-gray-600">Réservations</p>
           <p className="text-lg font-bold text-gray-900 mt-1">{bookings.length}</p>
-          <p className="text-xs text-gray-400 mt-1">{totalConfirmed} confirmées</p>
+          <p className="text-xs text-gray-400 mt-1">réservations confirmées</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
           <p className="text-xs text-gray-600">Loyers payés</p>
@@ -327,10 +326,7 @@ export default function AdminBookingsRent() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
         >
-          <option value="all">Tous les statuts</option>
-          <option value="confirmed">Confirmées</option>
-          <option value="pending">En attente</option>
-          <option value="cancelled">Annulées</option>
+          <option value="all">Tous</option>
           <option value="has_pending">Avec loyers en attente</option>
           <option value="has_overdue">Avec loyers en retard</option>
         </select>

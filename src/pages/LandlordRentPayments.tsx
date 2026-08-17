@@ -16,7 +16,10 @@ import {
   ChevronUp,
   FileText,
   ExternalLink,
-  CreditCard
+  CreditCard,
+  Bell,
+  BellOff,
+  Send
 } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -31,6 +34,8 @@ interface RentPayment {
   month_year: string;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   paid_at: string | null;
+  auto_reminder_enabled: boolean;
+  last_reminder_sent_at: string | null;
   listing: {
     title: string;
     address: string;
@@ -93,6 +98,9 @@ export default function LandlordRentPayments() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [stripeLoginLoading, setStripeLoginLoading] = useState(false);
+  const [reminding, setReminding] = useState<string | null>(null);
+  const [reminderMsg, setReminderMsg] = useState<string | null>(null);
+  const [togglingAuto, setTogglingAuto] = useState<string | null>(null);
 
   const openStripeDashboard = async () => {
     if (!profile?.stripe_account_id) return;
@@ -343,6 +351,8 @@ export default function LandlordRentPayments() {
         month_year: payment.month_year,
         status: payment.status,
         paid_at: payment.paid_at,
+        auto_reminder_enabled: payment.auto_reminder_enabled ?? true,
+        last_reminder_sent_at: payment.last_reminder_sent_at,
         listing: {
           title: payment.booking.listing.title,
           address: payment.booking.listing.address,
@@ -474,6 +484,62 @@ export default function LandlordRentPayments() {
     });
   };
 
+  const sendManualReminder = async (paymentId: string) => {
+    setReminding(paymentId);
+    setReminderMsg(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setReminderMsg('Session expirée. Reconnectez-vous.');
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-rent-reminder`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ payment_id: paymentId }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Erreur ${response.status}`);
+      }
+
+      const result = await response.json();
+      setReminderMsg(`Relance envoyée à l'étudiant (${result.sent || 1} email(s))`);
+      await loadPayments();
+    } catch (err) {
+      setReminderMsg(err instanceof Error ? err.message : 'Erreur lors de l\'envoi');
+    } finally {
+      setReminding(null);
+      setTimeout(() => setReminderMsg(null), 4000);
+    }
+  };
+
+  const togglePaymentAutoReminder = async (payment: RentPayment) => {
+    setTogglingAuto(payment.id);
+    try {
+      const newValue = !payment.auto_reminder_enabled;
+      const { error } = await supabase
+        .from('rent_payments')
+        .update({ auto_reminder_enabled: newValue })
+        .eq('id', payment.id);
+      if (error) throw error;
+
+      setPayments(prev => prev.map(p =>
+        p.id === payment.id ? { ...p, auto_reminder_enabled: newValue } : p
+      ));
+    } catch (err) {
+      console.error('Error toggling auto reminder:', err);
+    } finally {
+      setTogglingAuto(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -495,6 +561,13 @@ export default function LandlordRentPayments() {
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <BackButton />
+
+        {reminderMsg && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-3 text-sm">
+            {reminderMsg}
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -893,6 +966,9 @@ export default function LandlordRentPayments() {
                       Statut
                     </th>
                     <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Relance auto
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -964,27 +1040,55 @@ export default function LandlordRentPayments() {
 
                         <td className="px-6 py-4 text-center">
                           <button
-                            onClick={() => toggleRowExpansion(payment.id)}
-                            className="inline-flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 font-medium"
+                            onClick={() => togglePaymentAutoReminder(payment)}
+                            disabled={togglingAuto === payment.id}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              payment.auto_reminder_enabled
+                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                            title={payment.auto_reminder_enabled ? 'Relance auto activée' : 'Relance auto désactivée'}
                           >
-                            {expandedRows.has(payment.id) ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" />
-                                Masquer
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="w-4 h-4" />
-                                Détails
-                              </>
-                            )}
+                            {payment.auto_reminder_enabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                            {togglingAuto === payment.id ? '...' : payment.auto_reminder_enabled ? 'Oui' : 'Non'}
                           </button>
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {(payment.status === 'pending' || payment.status === 'overdue') && (
+                              <button
+                                onClick={() => sendManualReminder(payment.id)}
+                                disabled={reminding === payment.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                              >
+                                <Send className="w-3 h-3" />
+                                {reminding === payment.id ? 'Envoi...' : 'Relancer'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => toggleRowExpansion(payment.id)}
+                              className="inline-flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 font-medium"
+                            >
+                              {expandedRows.has(payment.id) ? (
+                                <>
+                                  <ChevronUp className="w-4 h-4" />
+                                  Masquer
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="w-4 h-4" />
+                                  Détails
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
                       {expandedRows.has(payment.id) && (
                         <tr className="bg-gray-50">
-                          <td colSpan={7} className="px-6 py-6">
+                          <td colSpan={8} className="px-6 py-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               <div className="bg-white rounded-lg p-4 border border-gray-200">
                                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
