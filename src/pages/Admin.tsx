@@ -15,6 +15,7 @@ import PartnerOffersManager from '../components/PartnerOffersManager';
 import ContractTemplateEditor from '../components/ContractTemplateEditor';
 import ManagersManager from '../components/ManagersManager';
 import AdminDeposits from '../components/AdminDeposits';
+import AdminBookingsRent from '../components/AdminBookingsRent';
 import { getDetectionTypeLabel, getDetectionTypeBadgeColor } from '../utils/messageDetection';
 import BackButton from '../components/BackButton';
 
@@ -171,7 +172,7 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'partner-offers' | 'contract' | 'managers' | 'deposits'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'verifications' | 'analytics' | 'messaging' | 'finance' | 'pricing' | 'listings' | 'carousel' | 'stripe' | 'partner-offers' | 'contract' | 'managers' | 'deposits' | 'bookings-rent'>('users');
   const [pendingVerifications, _setPendingVerifications] = useState<UserData[]>([]);
   const [selectedUser, _setSelectedUser] = useState<UserData | null>(null);
   const [verificationDocument, _setVerificationDocument] = useState<string | null>(null);
@@ -1020,6 +1021,17 @@ export default function Admin() {
             >
               <Shield className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Cautions</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('bookings-rent')}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-lg font-medium md:font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'bookings-rent'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-sm md:text-base">Réservations & Loyers</span>
             </button>
             <button
               onClick={() => navigate('/admin/support')}
@@ -3066,6 +3078,10 @@ export default function Admin() {
 
         {activeTab === 'deposits' && (
           <AdminDeposits />
+        )}
+
+        {activeTab === 'bookings-rent' && (
+          <AdminBookingsRent />
         )}
 
       </div>
