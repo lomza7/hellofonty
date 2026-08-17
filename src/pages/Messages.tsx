@@ -440,61 +440,28 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
     setTranslateTargetLang(targetLang);
     setIsTranslating(true);
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      console.log('[Translate] Sending request:', {
-        messageCount: texts.length,
-        targetLang,
-        url: `${supabaseUrl}/functions/v1/translate-text`,
-      });
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/translate-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'apikey': supabaseAnonKey,
-          },
-          body: JSON.stringify({ text: texts, from: 'auto', to: targetLang }),
-        }
+      const translations = await Promise.all(
+        texts.map(async (text) => {
+          try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (data && data[0] && Array.isArray(data[0])) {
+              return data[0]
+                .map((chunk: any[]) => chunk && chunk[0] ? chunk[0] : '')
+                .join('');
+            }
+            return text;
+          } catch {
+            return text;
+          }
+        })
       );
 
-      console.log('[Translate] Response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Translate] HTTP error:', response.status, errorText);
-        setTranslationError(language === 'fr'
-          ? 'La traduction a échoué. Réessayez.'
-          : 'Translation failed. Try again.');
-        return;
-      }
-
-      const data = await response.json();
-
-      console.log('[Translate] Response data:', {
-        hasTranslations: !!data.translations,
-        translationsLength: data.translations?.length,
-        expectedLength: userMessages.length,
-      });
-
-      if (!data.translations || !Array.isArray(data.translations) || data.translations.length !== userMessages.length) {
-        console.error('[Translate] Invalid response shape:', data);
-        setTranslationError(language === 'fr'
-          ? 'La traduction a échoué. Réessayez.'
-          : 'Translation failed. Try again.');
-        return;
-      }
-
-      const translations = userMessages.map((msg, i) => data.translations[i] || msg.content);
-      console.log('[Translate] Received translations for', translations.length, 'messages');
       setTranslatedMessages(translations);
       setShowTranslation(true);
     } catch (err) {
-      console.error('[Translate] Network/parse error:', err);
       setTranslationError(language === 'fr'
         ? 'La traduction a échoué. Réessayez.'
         : 'Translation failed. Try again.');
