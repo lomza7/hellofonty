@@ -74,19 +74,19 @@ export default function MyDocuments() {
       labelEn: 'Accommodation Certificate',
       descriptionFr: 'Document attestant de votre hébergement actuel ou précédent',
       descriptionEn: 'Document certifying your current or previous accommodation',
-      required: true,
+      required: false,
       acceptedFormats: 'PDF (max 5MB)',
-      category: 'required',
+      category: 'insurance',
     },
     {
       id: 'insurance_certificate',
       labelFr: 'Attestation d\'assurance habitation',
       labelEn: 'Home Insurance Certificate',
-      descriptionFr: 'À fournir après validation de la réservation et paiement',
-      descriptionEn: 'To be provided after booking confirmation and payment',
-      required: false,
+      descriptionFr: 'Document obligatoire pour toute réservation',
+      descriptionEn: 'Mandatory document for any booking',
+      required: true,
       acceptedFormats: 'PDF (max 5MB)',
-      category: 'insurance',
+      category: 'required',
     },
     {
       id: 'lease_copy',
@@ -591,12 +591,12 @@ export default function MyDocuments() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {language === 'fr' ? 'Assurance habitation' : 'Home Insurance'}
+                  {language === 'fr' ? 'Documents complémentaires' : 'Additional Documents'}
                 </h2>
                 <p className="text-sm text-gray-600">
                   {language === 'fr'
-                    ? 'À fournir après confirmation de réservation'
-                    : 'To be provided after booking confirmation'}
+                    ? 'Documents non obligatoires mais utiles'
+                    : 'Non-mandatory but useful documents'}
                 </p>
               </div>
             </div>

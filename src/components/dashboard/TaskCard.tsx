@@ -28,7 +28,7 @@ interface VerificationTaskAction {
   route: string;
   icon: typeof Upload | typeof UserIcon | typeof Phone;
   actionType: 'upload_avatar' | 'add_phone' | 'upload_document' | 'navigate';
-  documentType?: 'insead_attestation' | 'id_document' | 'property_tax';
+  documentType?: 'insead_attestation' | 'id_document' | 'property_tax' | 'insurance_certificate';
 }
 
 const verificationTaskActions: Record<string, VerificationTaskAction> = {
@@ -64,6 +64,13 @@ const verificationTaskActions: Record<string, VerificationTaskAction> = {
     icon: Upload,
     actionType: 'upload_document',
     documentType: 'insead_attestation'
+  },
+  'Télécharger votre assurance habitation': {
+    label: 'Télécharger le document',
+    route: '/mes-documents',
+    icon: Upload,
+    actionType: 'upload_document',
+    documentType: 'insurance_certificate'
   },
   'Configurer votre compte de paiement Stripe': {
     label: 'Configurer Stripe',
@@ -266,6 +273,35 @@ export default function TaskCard({ task, onTaskUpdate }: TaskCardProps) {
             const { error: insertErr } = await supabase.from('student_documents').insert({
               student_id: profile.id,
               document_type: 'insead_attestation',
+              file_url: storagePath,
+              file_name: selectedFile.name,
+              status: 'pending',
+            });
+            if (insertErr) throw insertErr;
+          }
+        } else if (verificationAction.documentType === 'insurance_certificate') {
+          const existingDoc = await supabase
+            .from('student_documents')
+            .select('id')
+            .eq('student_id', profile.id)
+            .eq('document_type', 'insurance_certificate')
+            .maybeSingle();
+
+          if (existingDoc.data) {
+            const { error: updateErr } = await supabase
+              .from('student_documents')
+              .update({
+                file_url: storagePath,
+                file_name: selectedFile.name,
+                status: 'pending',
+                uploaded_at: new Date().toISOString(),
+              })
+              .eq('id', existingDoc.data.id);
+            if (updateErr) throw updateErr;
+          } else {
+            const { error: insertErr } = await supabase.from('student_documents').insert({
+              student_id: profile.id,
+              document_type: 'insurance_certificate',
               file_url: storagePath,
               file_name: selectedFile.name,
               status: 'pending',
