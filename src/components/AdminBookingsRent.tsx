@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  Calendar, Euro, CheckCircle, Clock, AlertTriangle, Search,
-  Bell, BellOff, Send, ChevronDown, ChevronRight, Home, User
+  Calendar, Search,
+  Bell, BellOff, Send, ChevronDown, ChevronRight, Home
 } from 'lucide-react';
 
 interface RentPayment {
@@ -30,9 +30,14 @@ interface BookingRow {
   status: string;
   payment_status: string;
   created_at: string;
+  auto_reminder_enabled: boolean;
   student: { first_name: string; last_name: string } | null;
-  landlord: { first_name: string; last_name: string } | null;
-  listing: { title: string; city: string; address: string } | null;
+  listing: {
+    title: string;
+    city: string;
+    address: string;
+    landlord: { first_name: string; last_name: string } | null;
+  } | null;
   rent_payments: RentPayment[];
 }
 
@@ -61,6 +66,7 @@ export default function AdminBookingsRent() {
   const [reminding, setReminding] = useState<string | null>(null);
   const [reminderMsg, setReminderMsg] = useState<string | null>(null);
   const [togglingAuto, setTogglingAuto] = useState<string | null>(null);
+  const [togglingBookingAuto, setTogglingBookingAuto] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -69,10 +75,9 @@ export default function AdminBookingsRent() {
         .from('bookings')
         .select(`
           id, listing_id, student_id, start_date, end_date, total_price,
-          status, payment_status, created_at,
+          status, payment_status, created_at, auto_reminder_enabled,
           student:profiles!student_id(first_name, last_name),
-          landlord:profiles!landlord_id(first_name, last_name),
-          listing:listings!listing_id(title, city, address),
+          listing:listings!listing_id(title, city, address, landlord:profiles!landlord_id(first_name, last_name)),
           rent_payments(id, booking_id, student_id, landlord_id, rent_amount,
             platform_fee, total_amount, payment_date, month_year, status,
             last_reminder_sent_at, auto_reminder_enabled)
@@ -82,7 +87,6 @@ export default function AdminBookingsRent() {
       if (error) throw error;
       setBookings((data || []) as unknown as BookingRow[]);
 
-      // Load global setting
       const { data: settings } = await supabase
         .from('rent_reminder_settings')
         .select('auto_reminder_enabled')
@@ -99,19 +103,17 @@ export default function AdminBookingsRent() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Collect all unique months
   const allMonths = new Set<string>();
   bookings.forEach(b => {
     b.rent_payments?.forEach(p => allMonths.add(p.month_year));
   });
   const sortedMonths = Array.from(allMonths).sort().reverse();
 
-  // Filter
   const filtered = bookings.filter(b => {
     if (search) {
       const q = search.toLowerCase();
       const sName = b.student ? `${b.student.first_name} ${b.student.last_name}`.toLowerCase() : '';
-      const lName = b.landlord ? `${b.landlord.first_name} ${b.landlord.last_name}`.toLowerCase() : '';
+      const lName = b.listing?.landlord ? `${b.listing.landlord.first_name} ${b.listing.landlord.last_name}`.toLowerCase() : '';
       const title = b.listing?.title?.toLowerCase() ?? '';
       if (!sName.includes(q) && !lName.includes(q) && !title.includes(q)) return false;
     }
@@ -130,7 +132,6 @@ export default function AdminBookingsRent() {
     return true;
   });
 
-  // Stats
   const allPayments = bookings.flatMap(b => b.rent_payments || []);
   const totalPaid = allPayments.filter(p => p.status === 'paid').length;
   const totalPending = allPayments.filter(p => p.status === 'pending').length;
@@ -162,6 +163,26 @@ export default function AdminBookingsRent() {
       console.error('Error updating settings:', err);
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const toggleBookingAutoReminder = async (booking: BookingRow) => {
+    setTogglingBookingAuto(booking.id);
+    try {
+      const newValue = !booking.auto_reminder_enabled;
+      const { error } = await supabase
+        .from('bookings')
+        .update({ auto_reminder_enabled: newValue })
+        .eq('id', booking.id);
+      if (error) throw error;
+
+      setBookings(prev => prev.map(b =>
+        b.id === booking.id ? { ...b, auto_reminder_enabled: newValue } : b
+      ));
+    } catch (err) {
+      console.error('Error toggling booking auto reminder:', err);
+    } finally {
+      setTogglingBookingAuto(null);
     }
   };
 
@@ -262,7 +283,7 @@ export default function AdminBookingsRent() {
           <p className="text-xs text-gray-400 mt-1">à relancer</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-          <p className="text-xs text-gray-600">Relance auto</p>
+          <p className="text-xs text-gray-600">Relance auto (global)</p>
           <button
             onClick={toggleGlobalAutoReminder}
             disabled={settingsLoading}
@@ -342,6 +363,7 @@ export default function AdminBookingsRent() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Période</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Loyers</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Relance auto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -362,7 +384,7 @@ export default function AdminBookingsRent() {
                           {booking.student ? `${booking.student.first_name} ${booking.student.last_name}` : 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
-                          {booking.landlord ? `${booking.landlord.first_name} ${booking.landlord.last_name}` : 'N/A'}
+                          {booking.listing?.landlord ? `${booking.listing.landlord.first_name} ${booking.listing.landlord.last_name}` : 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           <div className="flex items-center gap-1">
@@ -386,10 +408,25 @@ export default function AdminBookingsRent() {
                             {payments.length === 0 && <span className="text-gray-400">Aucun loyer</span>}
                           </div>
                         </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => toggleBookingAutoReminder(booking)}
+                            disabled={togglingBookingAuto === booking.id}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              booking.auto_reminder_enabled
+                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                            title={booking.auto_reminder_enabled ? 'Relance auto activée pour cette réservation' : 'Relance auto désactivée pour cette réservation'}
+                          >
+                            {booking.auto_reminder_enabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                            {togglingBookingAuto === booking.id ? '...' : booking.auto_reminder_enabled ? 'Oui' : 'Non'}
+                          </button>
+                        </td>
                       </tr>
                       {isExpanded && payments.length > 0 && (
                         <tr key={`${booking.id}-detail`} className="bg-gray-50">
-                          <td colSpan={7} className="px-8 py-4">
+                          <td colSpan={8} className="px-8 py-4">
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
@@ -400,7 +437,7 @@ export default function AdminBookingsRent() {
                                     <th className="text-left py-2 px-3">Frais</th>
                                     <th className="text-left py-2 px-3">Total</th>
                                     <th className="text-left py-2 px-3">Statut</th>
-                                    <th className="text-left py-2 px-3">Relance auto</th>
+                                    <th className="text-left py-2 px-3">Relance auto (loyer)</th>
                                     <th className="text-left py-2 px-3">Dernière relance</th>
                                     <th className="text-left py-2 px-3">Action</th>
                                   </tr>
@@ -431,7 +468,7 @@ export default function AdminBookingsRent() {
                                                   ? 'bg-green-50 text-green-700 hover:bg-green-100'
                                                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                               }`}
-                                              title={p.auto_reminder_enabled ? 'Relance auto activée' : 'Relance auto désactivée'}
+                                              title={p.auto_reminder_enabled ? 'Relance auto activée pour ce loyer' : 'Relance auto désactivée pour ce loyer'}
                                             >
                                               {p.auto_reminder_enabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
                                               {togglingAuto === p.id ? '...' : p.auto_reminder_enabled ? 'Oui' : 'Non'}

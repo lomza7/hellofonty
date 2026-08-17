@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
         auto_reminder_enabled,
         student:profiles!student_id(first_name, last_name),
         landlord:profiles!landlord_id(first_name, last_name),
-        booking:bookings!booking_id(listing_id, start_date, end_date, listing:listings!listing_id(title, city, address))
+        booking:bookings!booking_id(listing_id, start_date, end_date, auto_reminder_enabled, listing:listings!listing_id(title, city, address))
       `)
       .eq("status", "pending");
 
@@ -71,6 +71,11 @@ Deno.serve(async (req: Request) => {
     let overdueCount = 0;
 
     for (const payment of paymentsList) {
+      // Skip if booking-level auto reminder is disabled (for auto mode only)
+      if (!isManual && payment.booking && !payment.booking.auto_reminder_enabled) {
+        continue;
+      }
+
       const student = payment.student;
       const landlord = payment.landlord;
       const listing = payment.booking?.listing;
