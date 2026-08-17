@@ -44,7 +44,9 @@ export default function BookingCalendar({
       (chargeDetails.waterCost || 0) +
       (chargeDetails.customCharges?.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) || 0);
   })();
-  const dailyRentRate = pricePerMonth / 30;
+  // price_per_month already includes charges, so the base rent is the difference
+  const baseRentMonthly = Math.max(0, pricePerMonth - computedCharges);
+  const dailyRentRate = baseRentMonthly / 30;
   const minimumStayDays = minimumStayMonths < 1 ? 14 : minimumStayMonths * 30;
 
   const getDaysInMonth = (date: Date) => {
@@ -134,7 +136,7 @@ export default function BookingCalendar({
     const months = Math.floor(days / 30);
     const extraDays = days % 30;
 
-    const rentMonthsPrice = months * pricePerMonth;
+    const rentMonthsPrice = months * baseRentMonthly;
     const rentExtraDaysPrice = extraDays * dailyRentRate;
     const rentTotal = rentMonthsPrice + rentExtraDaysPrice;
 
@@ -210,7 +212,7 @@ export default function BookingCalendar({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600 underline">
-                  {pricePerMonth.toFixed(0)}€ × {priceDetails.months} mois
+                  {baseRentMonthly.toFixed(0)}€ × {priceDetails.months} {language === 'fr' ? 'mois' : 'month'}
                 </span>
                 <span className="text-gray-900">{priceDetails.rentMonthsPrice.toFixed(0)}€</span>
               </div>
