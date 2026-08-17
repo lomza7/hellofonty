@@ -44,8 +44,7 @@ export default function BookingCalendar({
       (chargeDetails.waterCost || 0) +
       (chargeDetails.customCharges?.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) || 0);
   })();
-  const monthlyTotal = pricePerMonth + computedCharges;
-  const dailyRate = monthlyTotal / 30;
+  const dailyRentRate = pricePerMonth / 30;
   const minimumStayDays = minimumStayMonths < 1 ? 14 : minimumStayMonths * 30;
 
   const getDaysInMonth = (date: Date) => {
@@ -135,16 +134,22 @@ export default function BookingCalendar({
     const months = Math.floor(days / 30);
     const extraDays = days % 30;
 
-    const monthsPrice = months * monthlyTotal;
-    const extraDaysPrice = extraDays * dailyRate;
+    const rentMonthsPrice = months * pricePerMonth;
+    const rentExtraDaysPrice = extraDays * dailyRentRate;
+    const rentTotal = rentMonthsPrice + rentExtraDaysPrice;
+
+    const dailyChargesRate = computedCharges / 30;
+    const chargesTotal = dailyChargesRate * days;
 
     return {
       totalDays: days,
       months,
       extraDays,
-      monthsPrice,
-      extraDaysPrice,
-      totalPrice: monthsPrice + extraDaysPrice
+      rentMonthsPrice,
+      rentExtraDaysPrice,
+      rentTotal,
+      chargesTotal,
+      totalPrice: rentTotal + chargesTotal
     };
   };
 
@@ -207,15 +212,15 @@ export default function BookingCalendar({
                 <span className="text-gray-600 underline">
                   {pricePerMonth.toFixed(0)}€ × {priceDetails.months} mois
                 </span>
-                <span className="text-gray-900">{priceDetails.monthsPrice.toFixed(0)}€</span>
+                <span className="text-gray-900">{priceDetails.rentMonthsPrice.toFixed(0)}€</span>
               </div>
 
               {priceDetails.extraDays > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 underline">
-                    {dailyRate.toFixed(0)}€ × {priceDetails.extraDays} jours
+                    {dailyRentRate.toFixed(0)}€ × {priceDetails.extraDays} {language === 'fr' ? 'jours' : 'days'}
                   </span>
-                  <span className="text-gray-900">{priceDetails.extraDaysPrice.toFixed(0)}€</span>
+                  <span className="text-gray-900">{priceDetails.rentExtraDaysPrice.toFixed(0)}€</span>
                 </div>
               )}
 
@@ -225,9 +230,9 @@ export default function BookingCalendar({
                   onClick={() => setShowChargesModal(true)}
                   className="text-gray-600 underline cursor-pointer hover:text-gray-900 transition-colors text-left"
                 >
-                  {language === 'fr' ? 'Charges mensuelles' : 'Monthly charges'}
+                  {language === 'fr' ? `Charges (${priceDetails.totalDays} ${language === 'fr' ? 'jours' : 'days'})` : `Charges (${priceDetails.totalDays} days)`}
                 </button>
-                <span className="text-gray-900">{(computedCharges * priceDetails.months).toFixed(0)}€</span>
+                <span className="text-gray-900">{priceDetails.chargesTotal.toFixed(0)}€</span>
               </div>
 
               <div className="flex justify-between pt-3 border-t border-gray-200 font-semibold">
@@ -452,15 +457,15 @@ export default function BookingCalendar({
                     </span>
                     <span className="text-lg font-bold text-gray-900">{displayTotal.toFixed(0)}€ / {language === 'fr' ? 'mois' : 'mo'}</span>
                   </div>
-                  {priceDetails && priceDetails.months > 1 && (
+                  {priceDetails && (
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {language === 'fr'
-                          ? `Prorata sur ${priceDetails.months} mois`
-                          : `Prorated over ${priceDetails.months} months`}
+                          ? `Prorata sur ${priceDetails.totalDays} jours`
+                          : `Prorated over ${priceDetails.totalDays} days`}
                       </span>
                       <span className="text-sm font-semibold text-gray-700">
-                        {(displayTotal * priceDetails.months).toFixed(0)}€
+                        {priceDetails.chargesTotal.toFixed(0)}€
                       </span>
                     </div>
                   )}
