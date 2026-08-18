@@ -135,8 +135,12 @@ export default function ContractTemplateEditor() {
     const activeSections = sections.filter(s => s.is_active);
     const sampleData: Record<string, string> = {
       '{{landlord_name}}': 'Jean DUPONT',
+      '{{landlord_address}}': '12 rue du Marche, 77000 Melun',
+      '{{landlord_email}}': 'jean.dupont@email.fr',
       '{{tenant_name}}': 'Marie MARTIN',
+      '{{tenant_email}}': 'marie.martin@email.com',
       '{{tenant_phone}}': '<p><strong>Telephone :</strong> +33 6 12 34 56 78</p>',
+      '{{tenant_permanent_address}}': '45 avenue des Lilas, 69000 Lyon',
       '{{listing_address}}': '15 rue de la Paix, 77300 Fontainebleau',
       '{{listing_title}}': 'Studio meuble proche INSEAD',
       '{{start_date}}': '01/09/2026',
