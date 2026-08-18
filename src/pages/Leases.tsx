@@ -73,6 +73,7 @@ export default function Leases() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [contractHtml, setContractHtml] = useState<string>('');
   const [loadingContract, setLoadingContract] = useState(false);
+  const [contractLang, setContractLang] = useState<'fr' | 'en'>('fr');
 
   const [formData, setFormData] = useState({
     booking_id: '',
@@ -440,7 +441,7 @@ export default function Leases() {
     }
   };
 
-  const loadContractHtml = async (leaseId: string) => {
+  const loadContractHtml = async (leaseId: string, lang: 'fr' | 'en' = 'fr') => {
     setLoadingContract(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -450,7 +451,7 @@ export default function Leases() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -472,7 +473,7 @@ export default function Leases() {
     }
   };
 
-  const handleDownloadContract = async (leaseId: string) => {
+  const handleDownloadContract = async (leaseId: string, lang: 'fr' | 'en' = 'fr') => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -481,7 +482,7 @@ export default function Leases() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -498,7 +499,10 @@ export default function Leases() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Contrat_Location_${new Date().toISOString().split('T')[0]}.html`;
+      const fileName = lang === 'fr'
+        ? `Contrat_Location_FR_${new Date().toISOString().split('T')[0]}.html`
+        : `Lease_Contract_EN_${new Date().toISOString().split('T')[0]}.html`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -557,7 +561,14 @@ export default function Leases() {
   const handleViewContract = async (lease: Lease) => {
     setSelectedLease(lease);
     setShowViewModal(true);
-    await loadContractHtml(lease.id);
+    await loadContractHtml(lease.id, contractLang);
+  };
+
+  const handleContractLangChange = async (lang: 'fr' | 'en') => {
+    setContractLang(lang);
+    if (selectedLease) {
+      await loadContractHtml(selectedLease.id, lang);
+    }
   };
 
   const handleEditLease = (lease: Lease) => {
@@ -824,13 +835,32 @@ export default function Leases() {
                       </button>
                     )}
 
-                    <button
-                      onClick={() => lease.lease_source === 'custom' ? handleDownloadCustomLease(lease) : handleDownloadContract(lease.id)}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      title={language === 'fr' ? 'Télécharger le contrat' : 'Download contract'}
-                    >
-                      <Download className="w-5 h-5" />
-                    </button>
+                    {lease.lease_source === 'custom' ? (
+                      <button
+                        onClick={() => handleDownloadCustomLease(lease)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title={language === 'fr' ? 'Télécharger le bail' : 'Download lease'}
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDownloadContract(lease.id, 'fr')}
+                          className="px-2 py-1 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors"
+                          title={language === 'fr' ? 'Télécharger en français' : 'Download in French'}
+                        >
+                          FR
+                        </button>
+                        <button
+                          onClick={() => handleDownloadContract(lease.id, 'en')}
+                          className="px-2 py-1 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors"
+                          title={language === 'fr' ? 'Télécharger en anglais' : 'Download in English'}
+                        >
+                          EN
+                        </button>
+                      </div>
+                    )}
 
                     {isLandlord && lease.status === 'draft' && (
                       <button
@@ -1195,23 +1225,49 @@ export default function Leases() {
                   )}
                 </div>
 
-                <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowViewModal(false);
-                      setContractHtml('');
-                    }}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    Fermer
-                  </button>
-                  <button
-                    onClick={() => selectedLease && (selectedLease.lease_source === 'custom' ? handleDownloadCustomLease(selectedLease) : handleDownloadContract(selectedLease.id))}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Télécharger
-                  </button>
+                <div className="bg-gray-50 px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleContractLangChange('fr')}
+                      className={`px-3 py-1.5 text-sm font-bold rounded-md transition-colors ${contractLang === 'fr' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+                    >
+                      FR
+                    </button>
+                    <button
+                      onClick={() => handleContractLangChange('en')}
+                      className={`px-3 py-1.5 text-sm font-bold rounded-md transition-colors ${contractLang === 'en' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+                    >
+                      EN
+                    </button>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowViewModal(false);
+                        setContractHtml('');
+                      }}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Fermer
+                    </button>
+                    {selectedLease && selectedLease.lease_source === 'custom' ? (
+                      <button
+                        onClick={() => handleDownloadCustomLease(selectedLease)}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Télécharger
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => selectedLease && handleDownloadContract(selectedLease.id, contractLang)}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Télécharger {contractLang === 'fr' ? 'FR' : 'EN'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

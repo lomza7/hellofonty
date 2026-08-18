@@ -486,8 +486,8 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                             <p className="font-medium">{language === 'fr' ? 'Delai de paiement depasse' : 'Payment deadline passed'}</p>
                             <p className="text-xs mt-1 text-red-600">
                               {language === 'fr'
-                                ? 'Le proprietaire peut relancer votre paiement ou annuler la reservation. Contactez-le via la messagerie.'
-                                : 'The landlord can extend your payment or cancel the booking. Contact them via messaging.'}
+                                ? 'Le proprietaire peut annuler la reservation. Pour prolonger, contactez hellofonty.'
+                                : 'The landlord can cancel the booking. To extend, contact hellofonty.'}
                             </p>
                           </div>
                         )}

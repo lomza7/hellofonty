@@ -98,10 +98,6 @@ ${signatureBlock}
 <div class="footer">
   <p><strong>HelloFonty - Plateforme de Mise en Relation</strong></p>
   <p>Document genere le ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-  <p style="margin-top: 10px; font-size: 8pt; color: #94a3b8;">
-    Ce contrat a ete genere conformement a la loi n 89-462 du 6 juillet 1989 et a la loi ALUR du 24 mars 2014.<br>
-    Il est recommande de consulter un professionnel du droit pour toute question juridique.
-  </p>
 </div>
 </body>
 </html>`;
@@ -134,6 +130,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('Missing lease ID');
     }
 
+    const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'fr';
+
     const { data: lease, error: leaseError } = await supabase
       .from('leases')
       .select(`
@@ -150,17 +148,26 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
+    // Validation: durée < 8 mois
+    const durationDays = Math.round(
+      (new Date(lease.end_date).getTime() - new Date(lease.start_date).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (durationDays >= 240) {
+      throw new Error('La durée du bail dépasse la limite de 8 mois.');
+    }
+
     const { data: landlord } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', lease.landlord_id)
       .single();
 
-    // Fetch template sections from database
+    // Fetch template sections from database (filtered by language)
     const { data: templateSections, error: templateError } = await supabase
       .from('contract_template_sections')
       .select('*')
       .eq('is_active', true)
+      .eq('language', lang)
       .order('display_order', { ascending: true });
 
     const listing = lease.listing;
@@ -173,13 +180,6 @@ Deno.serve(async (req: Request) => {
       (new Date(lease.end_date).getTime() - new Date(lease.start_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
     ).toString();
 
-    const leaseTypeLabel = lease.lease_type === 'furnished' ? 'Meuble' :
-                          lease.lease_type === 'unfurnished' ? 'Non meuble' :
-                          'Etudiant (Meuble)';
-
-    const bailType = lease.lease_type === 'student' ? 'Bail etudiant (9 mois)' : 'Bail de courte duree (1 a 10 mois)';
-    const bailTypeShort = lease.lease_type === 'student' ? 'bail etudiant' : 'bail de courte duree';
-
     const depositClause = lease.security_deposit > 0
       ? `Un depot de garantie d'un montant de ${lease.security_deposit.toFixed(2)} EUR est verse a la signature du present contrat. Ce depot sera restitue dans un delai d'un mois apres la remise des cles, deduction faite, le cas echeant, des sommes dues au bailleur.`
       : `Un depot de garantie d'un montant equivalent a un mois de loyer hors charges est verse a la signature du present contrat. Ce depot sera restitue dans un delai d'un mois apres la remise des cles, deduction faite, le cas echeant, des sommes dues au bailleur.`;
@@ -190,12 +190,33 @@ Deno.serve(async (req: Request) => {
 
     const customClauses = lease.terms_and_conditions
       ? lease.terms_and_conditions.split('\n').map((c: string) => `<p>${c}</p>`).join('')
-      : '<p>Aucune clause particuliere.</p>';
+      : lang === 'fr' ? '<p>Aucune clause particuliere.</p>' : '<p>No special clauses.</p>';
+
+    // Récupérer l'email du bailleur via la fonction get_user_email
+    let landlordEmail = '';
+    try {
+      const { data: emailData } = await supabase.rpc('get_user_email', { user_id: lease.landlord_id });
+      landlordEmail = emailData || '';
+    } catch { /* ignore */ }
+
+    // Récupérer l'email du locataire
+    let tenantEmail = '';
+    try {
+      const { data: emailData } = await supabase.rpc('get_user_email', { user_id: lease.tenant_id });
+      tenantEmail = emailData || '';
+    } catch { /* ignore */ }
+
+    const landlordAddress = landlord.address || '';
+    const tenantPermanentAddress = tenant.address || '';
 
     const vars: Record<string, string> = {
       '{{landlord_name}}': `${landlord.first_name} ${landlord.last_name}`,
+      '{{landlord_address}}': landlordAddress,
+      '{{landlord_email}}': landlordEmail,
       '{{tenant_name}}': `${tenant.first_name} ${tenant.last_name}`,
-      '{{tenant_phone}}': tenant.phone ? `<p><strong>Telephone :</strong> ${tenant.phone}</p>` : '',
+      '{{tenant_phone}}': tenant.phone ? `<p><strong>${lang === 'fr' ? 'Téléphone' : 'Phone'}:</strong> ${tenant.phone}</p>` : '',
+      '{{tenant_email}}': tenantEmail,
+      '{{tenant_permanent_address}}': tenantPermanentAddress,
       '{{listing_address}}': listing.address || '',
       '{{listing_title}}': listing.title || '',
       '{{start_date}}': startDate,
@@ -205,9 +226,6 @@ Deno.serve(async (req: Request) => {
       '{{charges}}': lease.charges.toFixed(2),
       '{{total_monthly}}': (lease.monthly_rent + lease.charges).toFixed(2),
       '{{security_deposit}}': lease.security_deposit.toFixed(2),
-      '{{lease_type_label}}': leaseTypeLabel,
-      '{{bail_type}}': bailType,
-      '{{bail_type_short}}': bailTypeShort,
       '{{deposit_clause}}': depositClause,
       '{{house_rules_section}}': houseRulesSection,
       '{{custom_clauses}}': customClauses,
@@ -217,12 +235,11 @@ Deno.serve(async (req: Request) => {
     let html: string;
 
     if (templateSections && templateSections.length > 0 && !templateError) {
-      // Use database template
       html = buildContractHTML(templateSections, vars, lease.landlord_signature as SignatureData | null, lease.tenant_signature as SignatureData | null);
     } else {
       // Fallback: generate basic contract if no template found
       const fallbackSections = [
-        { content: `<h1>Contrat de Location</h1><div class="subtitle">${leaseTypeLabel} - Usage d'habitation</div>` },
+        { content: `<h1>Contrat de Location</h1><div class="subtitle">Meuble - Usage d'habitation</div>` },
         { content: `<h2>I. Designation des parties</h2><p><strong>Bailleur :</strong> ${vars['{{landlord_name}}']}</p><p><strong>Locataire :</strong> ${vars['{{tenant_name}}']}</p>` },
         { content: `<h2>II. Objet</h2><p><strong>Adresse :</strong> ${vars['{{listing_address}}']}</p><p>${vars['{{listing_title}}']}</p>` },
         { content: `<h2>III. Duree</h2><p>Du ${startDate} au ${endDate} (${durationMonths} mois)</p>` },

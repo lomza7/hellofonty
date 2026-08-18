@@ -225,19 +225,8 @@ export default function MyBookingRequests() {
     }
   };
 
-  const handleExtendDeadline = async (bookingId: string) => {
-    const newDeadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-    const { error } = await supabase
-      .from('bookings')
-      .update({ payment_deadline: newDeadline, payment_status: 'pending' })
-      .eq('id', bookingId);
-
-    if (!error) {
-      loadBookings();
-      alert(language === 'fr' ? 'Delai de paiement prolonge de 72h.' : 'Payment deadline extended by 72h.');
-    } else {
-      alert(language === 'fr' ? 'Erreur lors de la prolongation.' : 'Error extending deadline.');
-    }
+  const handleContactHellofonty = () => {
+    window.location.href = '/messages';
   };
 
   const handleCancelExpiredBooking = async (bookingId: string) => {

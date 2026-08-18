@@ -54,7 +54,7 @@ function buildContractHTML(sections: Array<{ content: string }>, vars: Record<st
 </head>
 <body>
 <div class="preview-banner">
-  APERCU - Ceci est un exemple du modèle de bail HelloFonty avec des données fictives. Le contrat réel sera rempli automatiquement avec les informations de votre réservation.
+  APERCU - Ceci est un exemple du modele de bail HelloFonty avec des donnees fictives. Le contrat reel sera rempli automatiquement avec les informations de votre reservation.
 </div>
 ${bodyContent}
 
@@ -76,11 +76,7 @@ ${bodyContent}
 
 <div class="footer">
   <p><strong>HelloFonty - Plateforme de Mise en Relation</strong></p>
-  <p>Document généré le ${new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-  <p style="margin-top: 10px; font-size: 8pt; color: #94a3b8;">
-    Ce contrat a été généré conformément à la loi n 89-462 du 6 juillet 1989 et à la loi ALUR du 24 mars 2014.<br>
-    Il est recommandé de consulter un professionnel du droit pour toute question juridique.
-  </p>
+  <p>Document genere le ${new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
 </div>
 </body>
 </html>`;
@@ -107,36 +103,41 @@ Deno.serve(async (req: Request) => {
       throw new Error("Invalid token");
     }
 
-    // Fetch template sections from database
+    const url = new URL(req.url);
+    const lang = url.searchParams.get("lang") === "en" ? "en" : "fr";
+
+    // Fetch template sections from database (filtered by language)
     const { data: templateSections, error: templateError } = await supabase
       .from("contract_template_sections")
       .select("*")
       .eq("is_active", true)
+      .eq("language", lang)
       .order("display_order", { ascending: true });
 
-    // Fictitious data for preview
+    // Fictitious data for preview (5 months, under 8-month limit)
     const startDate = "1 septembre 2026";
-    const endDate = "31 août 2027";
+    const endDate = "31 janvier 2027";
     const today = new Date().toLocaleDateString("fr-FR");
-    const durationMonths = "12";
+    const durationMonths = "5";
 
     const vars: Record<string, string> = {
       "{{landlord_name}}": "Jean Dupont",
+      "{{landlord_address}}": "12 rue de Fontainebleau, 77300 Fontainebleau, France",
+      "{{landlord_email}}": "jean.dupont@example.com",
       "{{tenant_name}}": "Marie Martin",
       "{{tenant_phone}}": "<p><strong>Téléphone :</strong> 06 12 34 56 78</p>",
+      "{{tenant_email}}": "marie.martin@example.com",
+      "{{tenant_permanent_address}}": "25 avenue des Champs-Élysées, 75008 Paris, France",
       "{{listing_address}}": "12 rue de Fontainebleau, 77300 Fontainebleau",
       "{{listing_title}}": "Appartement T2 meublé proche INSEAD",
       "{{start_date}}": startDate,
       "{{end_date}}": endDate,
       "{{duration_months}}": durationMonths,
-      "{{monthly_rent}}": "850.00",
-      "{{charges}}": "80.00",
-      "{{total_monthly}}": "930.00",
-      "{{security_deposit}}": "850.00",
-      "{{lease_type_label}}": "Meublé",
-      "{{bail_type}}": "Bail de courte durée (1 à 10 mois)",
-      "{{bail_type_short}}": "bail de courte durée",
-      "{{deposit_clause}}": "Un dépôt de garantie d'un montant de 850.00 EUR est versé à la signature du présent contrat. Ce dépôt sera restitué dans un délai d'un mois après la remise des clés, déduction faite, le cas échéant, des sommes dues au bailleur.",
+      "{{monthly_rent}}": "800.00",
+      "{{charges}}": "100.00",
+      "{{total_monthly}}": "900.00",
+      "{{security_deposit}}": "800.00",
+      "{{deposit_clause}}": "Un dépôt de garantie d'un montant de 800.00 EUR est versé à la signature du présent contrat. Ce dépôt sera restitué dans un délai d'un mois après la remise des clés, déduction faite, le cas échéant, des sommes dues au bailleur.",
       "{{house_rules_section}}": "<h3>C. Règlement intérieur et règles d'usage</h3><p>Le locataire s'engage à respecter les règles suivantes :</p><ul><li>Pas de fêtes bruyantes après 22h</li><li>Animaux de compagnie non autorisés</li><li>Fumeur interdit dans le logement</li></ul>",
       "{{custom_clauses}}": "<p>Le locataire s'engage à souscrire une assurance habitation couvrant les risques locatifs. Une attestation devra être fournie au bailleur avant l'entrée dans les lieux.</p>",
       "{{today}}": today,
@@ -152,7 +153,7 @@ Deno.serve(async (req: Request) => {
         { content: `<h2>I. Désignation des parties</h2><p><strong>Bailleur :</strong> Jean Dupont</p><p><strong>Locataire :</strong> Marie Martin</p>` },
         { content: `<h2>II. Objet</h2><p><strong>Adresse :</strong> 12 rue de Fontainebleau, 77300 Fontainebleau</p><p>Appartement T2 meublé proche INSEAD</p>` },
         { content: `<h2>III. Durée</h2><p>Du ${startDate} au ${endDate} (${durationMonths} mois)</p>` },
-        { content: `<h2>IV. Loyer</h2><p>Loyer : 850.00 EUR | Charges : 80.00 EUR | Total : 930.00 EUR</p>` },
+        { content: `<h2>IV. Loyer</h2><p>Loyer : 800.00 EUR | Charges : 100.00 EUR | Total : 900.00 EUR</p>` },
       ];
       html = buildContractHTML(fallbackSections, vars);
     }

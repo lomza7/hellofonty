@@ -24,7 +24,7 @@ export default function BookingCalendar({
   pricePerMonth,
   charges = 0,
   minimumStayMonths = 1,
-  maximumStayMonths = 6,
+  maximumStayMonths = 8,
   existingBookings = [],
   blockedDates = [],
   chargeDetails,
@@ -52,6 +52,17 @@ export default function BookingCalendar({
   const dailyRentRate = baseRentMonthly / 30;
   const minimumStayDays = minimumStayMonths < 1 ? 14 : minimumStayMonths * 30;
   const maximumStayDays = maximumStayMonths * 30;
+
+  const getMaxEndDate = (start: Date): Date => {
+    const maxEnd = new Date(start.getFullYear(), start.getMonth() + maximumStayMonths, 0);
+    return maxEnd;
+  };
+
+  const isDateBeyondMaxStay = (date: Date): boolean => {
+    if (!selectedStartDate) return false;
+    const maxEnd = getMaxEndDate(selectedStartDate);
+    return date > maxEnd;
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -113,11 +124,10 @@ export default function BookingCalendar({
         const daysDiff = Math.ceil((clickedDate.getTime() - selectedStartDate.getTime()) / (1000 * 60 * 60 * 24));
 
         if (daysDiff > maximumStayDays) {
-          const maxLabel = `${maximumStayMonths} ${language === 'fr' ? 'mois' : (maximumStayMonths > 1 ? 'months' : 'month')}`;
           setMaximumStayError(
             language === 'fr'
-              ? `Séjour maximum de ${maxLabel}. Veuillez sélectionner une date de fin plus proche.`
-              : `Maximum stay of ${maxLabel}. Please select an earlier end date.`
+              ? 'Les séjours hellofonty sont limités à moins de 8 mois. Pour un séjour plus long, contactez-nous.'
+              : 'Hellofonty stays are limited to less than 8 months. For a longer stay, contact us.'
           );
           return;
         }
@@ -306,7 +316,8 @@ export default function BookingCalendar({
             const isPast = isDateInPast(date);
             const isSelected = isDateSelected(day);
             const inRange = isDateInRange(day);
-            const isDisabled = isBooked || isBlocked || isPast;
+            const isBeyondMaxStay = isDateBeyondMaxStay(date);
+    const isDisabled = isBooked || isBlocked || isPast || isBeyondMaxStay;
 
             return (
               <button
@@ -319,6 +330,7 @@ export default function BookingCalendar({
                   h-10 rounded-full text-sm font-normal transition flex items-center justify-center relative
                   ${isBlocked ? 'bg-red-500 text-white cursor-not-allowed' : ''}
                   ${isBooked || isPast ? 'text-gray-300 cursor-not-allowed line-through' : ''}
+                  ${isBeyondMaxStay ? 'text-gray-300 cursor-not-allowed' : ''}
                   ${isSelected ? 'bg-gray-900 text-white font-semibold' : ''}
                   ${inRange ? 'bg-gray-100' : ''}
                   ${!isDisabled && !isSelected && !inRange ? 'hover:border hover:border-gray-900 text-gray-700' : ''}
@@ -370,7 +382,7 @@ export default function BookingCalendar({
                   : `${minimumStayMonths} ${language === 'fr' ? 'mois' : (minimumStayMonths > 1 ? 'months' : 'month')} (${minimumStayDays} ${language === 'fr' ? 'jours' : 'days'})`}
                 <br />
                 <strong>{language === 'fr' ? 'Séjour maximum' : 'Maximum stay'} :</strong>{' '}
-                {maximumStayMonths} {language === 'fr' ? 'mois' : (maximumStayMonths > 1 ? 'months' : 'month')} ({maximumStayDays} {language === 'fr' ? 'jours' : 'days'})
+                {language === 'fr' ? 'Moins de 8 mois' : 'Less than 8 months'}
               </p>
             )}
           </div>

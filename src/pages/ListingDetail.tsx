@@ -502,7 +502,7 @@ En attente de votre confirmation.`;
                 pricePerMonth={listing.price_per_month}
                 charges={listing.charges || 0}
                 minimumStayMonths={listing.minimum_stay || 0.5}
-                maximumStayMonths={listing.max_stay || 6}
+                maximumStayMonths={8}
                 existingBookings={existingBookings}
                 blockedDates={blockedDates}
                 chargeDetails={{
