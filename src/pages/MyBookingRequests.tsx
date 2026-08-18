@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, X, User, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building, RefreshCw, Ban } from 'lucide-react';
+import { Calendar, Check, X, User, Clock, Euro, MessageCircle, CreditCard, CheckCircle, AlertCircle, Timer, Building, Ban } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -580,11 +580,11 @@ export default function MyBookingRequests() {
                         {booking.status === 'confirmed' && booking.payment_status !== 'completed' && booking.payment_deadline && new Date(booking.payment_deadline) <= new Date() && (
                           <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <button
-                              onClick={() => handleExtendDeadline(booking.id)}
+                              onClick={handleContactHellofonty}
                               className="flex items-center justify-center space-x-2 px-5 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex-1"
                             >
-                              <RefreshCw className="w-5 h-5" />
-                              <span>{language === 'fr' ? 'Relancer le paiement (72h)' : 'Extend payment (72h)'}</span>
+                              <MessageCircle className="w-5 h-5" />
+                              <span>{language === 'fr' ? 'Contacter hellofonty' : 'Contact hellofonty'}</span>
                             </button>
                             <button
                               onClick={() => handleCancelExpiredBooking(booking.id)}
