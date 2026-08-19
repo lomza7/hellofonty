@@ -22,6 +22,11 @@ function getYouTubeEmbedUrl(url: string): string {
   return `https://www.youtube.com/embed/${videoId}`;
 }
 
+type AccessCodeEntry = {
+  type: string;
+  code: string;
+};
+
 type GuideRow = {
   listing_id: string;
   listing_title: string;
@@ -37,6 +42,7 @@ type GuideRow = {
   access_photos: string[] | null;
   access_video: string | null;
   additional_info: string | null;
+  access_codes: AccessCodeEntry[] | null;
   unlock_date: string | null;
   valid_until_date: string | null;
 };
@@ -109,6 +115,20 @@ export default function MonGuideAcces() {
             {guide.access_type === 'remise_en_main_propre' && '👤 Remise en main propre'}
             {guide.access_type === 'autre' && '🏠 Autre'}
           </p>
+        </div>
+      )}
+
+      {guide.access_codes && guide.access_codes.length > 0 && (
+        <div className="bg-white rounded-xl shadow p-6 mb-4">
+          <h2 className="font-semibold mb-3 flex items-center gap-2"><KeyRound className="w-4 h-4 text-amber-600" /> Codes d'accès</h2>
+          <div className="space-y-2">
+            {guide.access_codes.map((entry, index) => (
+              <div key={index} className="flex items-center justify-between bg-amber-50 rounded-lg px-4 py-3">
+                <span className="text-sm text-gray-600 capitalize">{entry.type === 'boite_a_cles' ? 'Boîte à clés' : entry.type === 'autre' ? 'Autre' : entry.type}</span>
+                <span className="text-lg font-semibold text-gray-900 font-mono">{entry.code}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock, CalendarDays } from 'lucide-react';
+import { Home, Upload, Wifi, Car, Video, Image as ImageIcon, Key, User, Save, Trash2, Share2, Copy, Check, ExternalLink, Eye, CalendarClock, CalendarDays, Plus, KeyRound } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import AccessGuidePreviewModal from '../components/AccessGuidePreviewModal';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +37,19 @@ interface ListingWithGuide extends Listing {
   shareToken?: string;
 }
 
+interface AccessCodeEntry {
+  type: string;
+  code: string;
+}
+
+const ACCESS_CODE_TYPES: { value: string; label: string }[] = [
+  { value: 'digicode', label: 'Digicode' },
+  { value: 'boite_a_cles', label: 'Boîte à clés' },
+  { value: 'portail', label: 'Portail' },
+  { value: 'interphone', label: 'Interphone' },
+  { value: 'autre', label: 'Autre' },
+];
+
 interface AccessGuide {
   id?: string;
   listing_id: string;
@@ -48,6 +61,7 @@ interface AccessGuide {
   access_photos: string[];
   access_video: string;
   additional_info: string;
+  access_codes: AccessCodeEntry[];
   share_token?: string;
 }
 
@@ -81,7 +95,8 @@ export default function AccessGuide() {
     parking_info: '',
     access_photos: [],
     access_video: '',
-    additional_info: ''
+    additional_info: '',
+    access_codes: []
   });
 
   useEffect(() => {
@@ -270,7 +285,8 @@ export default function AccessGuide() {
           parking_info: data.parking_info || '',
           access_photos: data.access_photos || [],
           access_video: data.access_video || '',
-          additional_info: data.additional_info || ''
+          additional_info: data.additional_info || '',
+          access_codes: Array.isArray(data.access_codes) ? data.access_codes : []
         });
       } else {
         setFormData({
@@ -282,7 +298,8 @@ export default function AccessGuide() {
           parking_info: '',
           access_photos: [],
           access_video: '',
-          additional_info: ''
+          additional_info: '',
+          access_codes: []
         });
       }
     } catch (error) {
@@ -375,6 +392,8 @@ export default function AccessGuide() {
     try {
       const shareToken = formData.share_token || generateToken();
 
+      const cleanedCodes = formData.access_codes.filter(c => c.type && c.code.trim());
+
       const dataToSave = {
         listing_id: selectedListing,
         access_type: formData.access_type,
@@ -385,6 +404,7 @@ export default function AccessGuide() {
         access_photos: formData.access_photos,
         access_video: formData.access_video,
         additional_info: formData.additional_info,
+        access_codes: cleanedCodes,
         share_token: shareToken,
         updated_at: new Date().toISOString()
       };
@@ -588,7 +608,8 @@ export default function AccessGuide() {
                       parking_info: '',
                       access_photos: [],
                       access_video: '',
-                      additional_info: ''
+                      additional_info: '',
+                      access_codes: []
                     });
                   }}
                   className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
@@ -651,6 +672,74 @@ export default function AccessGuide() {
                       </label>
                     </div>
                   </div>
+
+                  {/* Codes d'accès */}
+                  {formData.access_type === 'boite_a_cles' && (
+                    <div className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl">
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <KeyRound className="inline-block w-5 h-5 mr-2 text-amber-600" />
+                        Codes d'accès
+                      </label>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Ajoutez chaque code nécessaire pour entrer dans le logement (boîte à clés, digicode, portail, etc.).
+                      </p>
+
+                      <div className="space-y-3">
+                        {formData.access_codes.map((entry, index) => (
+                          <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-white rounded-lg p-3 shadow-sm">
+                            <select
+                              value={entry.type}
+                              onChange={(e) => {
+                                const newCodes = [...formData.access_codes];
+                                newCodes[index] = { ...newCodes[index], type: e.target.value };
+                                setFormData(prev => ({ ...prev, access_codes: newCodes }));
+                              }}
+                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm sm:w-44"
+                            >
+                              <option value="">Type de code…</option>
+                              {ACCESS_CODE_TYPES.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={entry.code}
+                              onChange={(e) => {
+                                const newCodes = [...formData.access_codes];
+                                newCodes[index] = { ...newCodes[index], code: e.target.value };
+                                setFormData(prev => ({ ...prev, access_codes: newCodes }));
+                              }}
+                              placeholder="Code (ex : 1234A)"
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm font-mono"
+                            />
+                            <button
+                              onClick={() => {
+                                const newCodes = formData.access_codes.filter((_, i) => i !== index);
+                                setFormData(prev => ({ ...prev, access_codes: newCodes }));
+                              }}
+                              className="flex items-center justify-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                              aria-label="Supprimer ce code"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            access_codes: [...prev.access_codes, { type: '', code: '' }]
+                          }));
+                        }}
+                        className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Ajouter un code d'accès
+                      </button>
+                    </div>
+                  )}
 
                   {/* Instructions d'accès */}
                   <div className="mb-6">

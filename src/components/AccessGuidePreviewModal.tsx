@@ -1,4 +1,4 @@
-import { X, MapPin, Key, Wifi, Home, Image as ImageIcon, Video } from 'lucide-react';
+import { X, MapPin, Key, Wifi, Home, Image as ImageIcon, Video, KeyRound } from 'lucide-react';
 
 function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
@@ -18,6 +18,11 @@ function getYouTubeEmbedUrl(url: string): string {
   return `https://www.youtube.com/embed/${videoId}`;
 }
 
+interface AccessCodeEntry {
+  type: string;
+  code: string;
+}
+
 interface AccessGuide {
   access_type: 'boite_a_cles' | 'remise_en_main_propre' | 'autre';
   access_instructions: string;
@@ -27,6 +32,7 @@ interface AccessGuide {
   access_photos: string[];
   access_video: string;
   additional_info: string;
+  access_codes?: AccessCodeEntry[];
 }
 
 interface AccessGuidePreviewModalProps {
@@ -92,6 +98,25 @@ export default function AccessGuidePreviewModal({
                       {guide.access_type === 'remise_en_main_propre' && '👤 Remise en main propre'}
                       {guide.access_type === 'autre' && '🏠 Autre'}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {guide.access_codes && guide.access_codes.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
+                      <KeyRound className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">Codes d'accès</h3>
+                  </div>
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 space-y-2">
+                    {guide.access_codes.map((entry, index) => (
+                      <div key={index} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
+                        <span className="text-sm text-gray-600 capitalize">{entry.type === 'boite_a_cles' ? 'Boîte à clés' : entry.type === 'autre' ? 'Autre' : entry.type}</span>
+                        <span className="text-lg font-semibold text-gray-900 font-mono">{entry.code}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

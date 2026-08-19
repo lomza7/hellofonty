@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { MapPin, Key, Wifi, Home, Image as ImageIcon, Video, AlertCircle } from 'lucide-react';
+import { MapPin, Key, Wifi, Home, Image as ImageIcon, Video, AlertCircle, KeyRound } from 'lucide-react';
 
 function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
@@ -21,6 +21,11 @@ function getYouTubeEmbedUrl(url: string): string {
   return `https://www.youtube.com/embed/${videoId}`;
 }
 
+interface AccessCodeEntry {
+  type: string;
+  code: string;
+}
+
 interface AccessGuideRow {
   listing_id: string;
   access_type: string | null;
@@ -31,6 +36,7 @@ interface AccessGuideRow {
   access_photos: string[] | null;
   access_video: string | null;
   additional_info: string | null;
+  access_codes: AccessCodeEntry[] | null;
 }
 
 interface ListingInfo {
@@ -153,6 +159,26 @@ export default function AccessGuidePreview() {
                 </p>
               </div>
             </div>
+
+            {/* Codes d'accès */}
+            {guide.access_codes && guide.access_codes.length > 0 && (
+              <div>
+                <div className="flex items-center mb-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
+                    <KeyRound className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Codes d'accès</h2>
+                </div>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 space-y-2">
+                  {guide.access_codes.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
+                      <span className="text-sm text-gray-600 capitalize">{entry.type === 'boite_a_cles' ? 'Boîte à clés' : entry.type === 'autre' ? 'Autre' : entry.type}</span>
+                      <span className="text-lg font-semibold text-gray-900 font-mono">{entry.code}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Instructions détaillées */}
             <div>
