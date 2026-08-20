@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Lock, KeyRound, Wifi, Car, Info, Key } from 'lucide-react';
+import { MapPin, Lock, KeyRound, Wifi, Car, Info, Key, CreditCard } from 'lucide-react';
 
 function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(url);
@@ -45,6 +45,7 @@ type GuideRow = {
   access_codes: AccessCodeEntry[] | null;
   unlock_date: string | null;
   valid_until_date: string | null;
+  payment_status: string | null;
 };
 
 // Guide d'accès de l'étudiant — verrouillé jusqu'à 24 h avant l'arrivée.
@@ -78,6 +79,8 @@ export default function MonGuideAcces() {
     ? new Date(guide.unlock_date + 'T00:00:00')
     : new Date(arrival.getTime() - 24 * 3600 * 1000);
 
+  const paymentPending = guide.payment_status !== 'completed';
+
   if (!guide.unlocked) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
@@ -87,12 +90,32 @@ export default function MonGuideAcces() {
           <p className="text-gray-600 mb-4">
             {guide.listing_title} — {guide.listing_address}, {guide.listing_city}
           </p>
-          <p className="text-gray-700">
-            Il se déverrouillera automatiquement le{' '}
-            <strong>{unlockAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>,
-            {guide.unlock_date ? ' à la date choisie par le propriétaire.' : ` 24 heures avant votre arrivée du ${arrival.toLocaleDateString('fr-FR')}.`}
-          </p>
-          <p className="text-sm text-gray-400 mt-4">Codes d'accès, WiFi, stationnement, photos et vidéo vous attendent ici.</p>
+          {paymentPending ? (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <CreditCard className="w-6 h-6 mx-auto text-amber-600 mb-2" />
+                <p className="text-gray-800 font-medium mb-1">Paiement requis</p>
+                <p className="text-sm text-gray-600">
+                  Votre guide d'accès sera disponible après le paiement de votre premier loyer et 24 heures avant votre arrivée.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/mes-reservations')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-lg font-medium hover:bg-rose-700 transition-colors"
+              >
+                <CreditCard className="w-4 h-4" /> Payer mon premier loyer
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-700">
+              Il se déverrouillera automatiquement le{' '}
+              <strong>{unlockAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>,
+              {guide.unlock_date ? ' à la date choisie par le propriétaire.' : ` 24 heures avant votre arrivée du ${arrival.toLocaleDateString('fr-FR')}.`}
+            </p>
+          )}
+          {!paymentPending && (
+            <p className="text-sm text-gray-400 mt-4">Codes d'accès, WiFi, stationnement, photos et vidéo vous attendent ici.</p>
+          )}
         </div>
       </div>
     );
