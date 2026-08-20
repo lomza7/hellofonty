@@ -79,9 +79,7 @@ export default function Payouts() {
     if (profile) {
       setStripeStatus(profile.stripe_onboarding_status || 'not_connected');
 
-      if (profile.stripe_account_id && profile.stripe_onboarding_status !== 'complete') {
-        syncStripeStatus();
-      }
+      syncStripeStatus();
 
       if ((profile as any).stripe_migration_needed) {
         setShowMigrationNotice(true);
@@ -497,6 +495,15 @@ export default function Payouts() {
             </div>
           ) : (
             <div className="space-y-3">
+              <div className="flex justify-end">
+                <button
+                  onClick={syncStripeStatus}
+                  className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1.5 font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  {language === 'fr' ? 'Synchroniser les statuts' : 'Sync statuses'}
+                </button>
+              </div>
               {accounts.map((account) => (
                 <div
                   key={account.id}

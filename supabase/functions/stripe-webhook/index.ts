@@ -66,17 +66,6 @@ async function handleEvent(event: Stripe.Event) {
     console.info(`Processing account.updated for: ${account.id}`);
 
     try {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, stripe_onboarding_status')
-        .eq('stripe_account_id', account.id)
-        .maybeSingle();
-
-      if (profileError || !profile) {
-        console.error('No profile found for Stripe account:', account.id);
-        return;
-      }
-
       const detailsSubmitted = account.details_submitted || false;
       const chargesEnabled = account.charges_enabled || false;
       const payoutsEnabled = account.payouts_enabled || false;
@@ -88,21 +77,74 @@ async function handleEvent(event: Stripe.Event) {
         onboardingStatus = 'not_connected';
       }
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          stripe_details_submitted: detailsSubmitted,
-          stripe_charges_enabled: chargesEnabled,
-          stripe_payouts_enabled: payoutsEnabled,
-          stripe_onboarding_status: onboardingStatus,
-          stripe_onboarding_updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
+      const nowIso = new Date().toISOString();
 
-      if (updateError) {
-        console.error('Error updating Stripe Connect status:', updateError);
-      } else {
-        console.info(`Updated Stripe Connect status for user ${profile.id}: ${onboardingStatus}`);
+      // 1) Update landlord_stripe_accounts (handles secondary/multi accounts)
+      const { data: lsaRows, error: lsaError } = await supabase
+        .from('landlord_stripe_accounts')
+        .select('id, landlord_id, is_default')
+        .eq('stripe_account_id', account.id);
+
+      if (lsaError) {
+        console.error('Error querying landlord_stripe_accounts:', lsaError);
+      }
+
+      let defaultLandlordId: string | null = null;
+
+      if (lsaRows && lsaRows.length > 0) {
+        for (const row of lsaRows) {
+          const { error: lsaUpdateError } = await supabase
+            .from('landlord_stripe_accounts')
+            .update({
+              stripe_details_submitted: detailsSubmitted,
+              stripe_charges_enabled: chargesEnabled,
+              stripe_payouts_enabled: payoutsEnabled,
+              stripe_onboarding_status: onboardingStatus,
+              stripe_onboarding_updated_at: nowIso,
+              updated_at: nowIso,
+            })
+            .eq('id', row.id);
+
+          if (lsaUpdateError) {
+            console.error(`Error updating landlord_stripe_accounts ${row.id}:`, lsaUpdateError);
+          } else {
+            console.info(`Updated landlord_stripe_accounts ${row.id} -> ${onboardingStatus}`);
+          }
+
+          if (row.is_default) {
+            defaultLandlordId = row.landlord_id;
+          }
+        }
+      }
+
+      // 2) Update profiles for backward compatibility (default account or legacy single account)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('stripe_account_id', account.id)
+        .maybeSingle();
+
+      const profileId = defaultLandlordId || profile?.id;
+
+      if (profileId) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            stripe_details_submitted: detailsSubmitted,
+            stripe_charges_enabled: chargesEnabled,
+            stripe_payouts_enabled: payoutsEnabled,
+            stripe_onboarding_status: onboardingStatus,
+            stripe_onboarding_updated_at: nowIso,
+          })
+          .eq('id', profileId);
+
+        if (updateError) {
+          console.error('Error updating Stripe Connect status on profile:', updateError);
+        } else {
+          console.info(`Updated profile ${profileId} -> ${onboardingStatus}`);
+        }
+      } else if (!lsaRows || lsaRows.length === 0) {
+        console.error('No profile or landlord_stripe_accounts found for Stripe account:', account.id);
       }
     } catch (error) {
       console.error('Error processing account.updated:', error);
