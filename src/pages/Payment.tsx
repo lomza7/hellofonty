@@ -191,13 +191,11 @@ export default function Payment() {
 
       window.location.href = data.url;
     } catch (err: any) {
-      console.error('Erreur:', err);
-      const msg = err.message || '';
-      if (msg.includes('Stripe') || msg.includes('configuré')) {
-        setPaymentError('Le paiement en ligne n\'est pas encore activé par le propriétaire. Veuillez réessayer dans quelques heures.');
-      } else if (msg.includes('expiré')) {
+      console.error('Erreur paiement:', err);
+      const msg = (err.message || '').trim();
+      if (msg.includes('expiré')) {
         setPaymentError('Le délai de paiement pour cette réservation a expiré.');
-      } else if (msg.trim()) {
+      } else if (msg) {
         setPaymentError(msg);
       } else {
         setPaymentError('Une erreur inattendue est survenue. Veuillez réessayer. Si le problème persiste, contactez le support.');

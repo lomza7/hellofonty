@@ -88,6 +88,14 @@ Deno.serve(async (req: Request) => {
     const landlordStripeAccountId = booking.listing?.landlord?.stripe_account_id;
     const landlordChargesEnabled = booking.listing?.landlord?.stripe_charges_enabled;
 
+    console.log('stripe-booking-payment: resolving account for booking', booking_id, {
+      listing_id: booking.listing_id,
+      landlord_id: booking.listing?.landlord_id,
+      listingStripeAccountId,
+      landlordStripeAccountId,
+      landlordChargesEnabled,
+    });
+
     let stripeAccountId: string | null = null;
 
     if (listingStripeAccountId) {
@@ -96,25 +104,29 @@ Deno.serve(async (req: Request) => {
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
-      const { data: lsaAccount } = await supabaseAdmin
+      const { data: lsaAccount, error: lsaError } = await supabaseAdmin
         .from('landlord_stripe_accounts')
-        .select('stripe_charges_enabled')
+        .select('stripe_charges_enabled, stripe_onboarding_status')
         .eq('stripe_account_id', listingStripeAccountId)
         .eq('landlord_id', booking.listing.landlord_id)
         .maybeSingle();
 
+      console.log('stripe-booking-payment: landlord_stripe_accounts lookup', { lsaAccount, lsaError });
+
       if (lsaAccount?.stripe_charges_enabled) {
         stripeAccountId = listingStripeAccountId;
       } else {
-        throw new Error('Le compte de versement associé à cet appartement n\'est pas encore activé');
+        throw new Error('Le compte de versement associé à cet appartement n\'est pas encore activé (statut: ' + (lsaAccount?.stripe_onboarding_status || 'introuvable') + ')');
       }
     } else if (landlordStripeAccountId && landlordChargesEnabled) {
       stripeAccountId = landlordStripeAccountId;
     }
 
     if (!stripeAccountId) {
-      throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
+      throw new Error('Le propriétaire n\'a pas configuré son compte Stripe pour recevoir les paiements.');
     }
+
+    console.log('stripe-booking-payment: using stripe account', stripeAccountId);
 
     const { data: platformSettings } = await supabaseClient
       .from('platform_settings')
@@ -216,7 +228,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error: any) {
-    console.error('Erreur:', error);
+    console.error('stripe-booking-payment error:', error.message, error.type, error.code, error.stack);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
