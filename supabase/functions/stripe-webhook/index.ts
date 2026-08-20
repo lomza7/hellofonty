@@ -213,6 +213,11 @@ async function handleEvent(event: Stripe.Event) {
   if (event.type === 'checkout.session.completed') {
     const session = stripeData as Stripe.Checkout.Session;
 
+    if (session.payment_status === 'unpaid' || session.payment_status === 'canceled') {
+      console.info(`Checkout session ${session.id} has payment_status ${session.payment_status}, skipping booking update`);
+      return;
+    }
+
     if (session.metadata?.payment_type === 'first_payment' && session.metadata?.booking_id) {
       console.info(`Processing first rent payment for booking: ${session.metadata.booking_id}`);
 
@@ -332,6 +337,31 @@ async function handleEvent(event: Stripe.Event) {
 
       return;
     }
+  }
+
+  if (event.type === 'checkout.session.async_payment_failed') {
+    const session = stripeData as Stripe.Checkout.Session;
+    console.info(`Processing async payment failure for session: ${session.id}`);
+
+    try {
+      if (session.metadata?.payment_type === 'first_payment' && session.metadata?.booking_id) {
+        await supabase
+          .from('bookings')
+          .update({ payment_status: 'failed' })
+          .eq('id', session.metadata.booking_id);
+        console.info(`Marked booking ${session.metadata.booking_id} as failed`);
+      } else if (session.metadata?.payment_type === 'monthly_rent' && session.metadata?.payment_id) {
+        await supabase
+          .from('rent_payments')
+          .update({ status: 'failed' })
+          .eq('id', session.metadata.payment_id);
+        console.info(`Marked rent payment ${session.metadata.payment_id} as failed`);
+      }
+    } catch (error) {
+      console.error('Error processing async payment failure:', error);
+    }
+
+    return;
   }
 
   if (!('customer' in stripeData)) {

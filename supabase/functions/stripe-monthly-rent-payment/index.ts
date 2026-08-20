@@ -110,7 +110,17 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
     }
 
-    const rentAmount = Math.round(payment.rent_amount * 100);
+    if (!payment.rent_amount || isNaN(parseFloat(payment.rent_amount)) || parseFloat(payment.rent_amount) <= 0) {
+      throw new Error('Le montant du loyer est invalide. Veuillez contacter le support.');
+    }
+
+    const rentAmountRaw = parseFloat(payment.rent_amount);
+
+    if (rentAmountRaw <= 0 || isNaN(rentAmountRaw)) {
+      throw new Error('Le montant du loyer est invalide.');
+    }
+
+    const rentAmount = Math.round(rentAmountRaw * 100);
 
     const monthDate = new Date(payment.payment_date);
     const monthName = monthDate.toLocaleDateString('fr-FR', {

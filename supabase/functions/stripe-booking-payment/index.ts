@@ -128,6 +128,17 @@ Deno.serve(async (req: Request) => {
 
     console.log('stripe-booking-payment: using stripe account', stripeAccountId);
 
+    if (!booking.rent_amount || isNaN(parseFloat(booking.rent_amount)) || parseFloat(booking.rent_amount) <= 0) {
+      throw new Error('Le montant du loyer est invalide. Veuillez contacter le support.');
+    }
+
+    const rentAmountRaw = parseFloat(booking.rent_amount);
+    const depositAmountRaw = booking.deposit_amount ? parseFloat(booking.deposit_amount) : 0;
+
+    if (rentAmountRaw <= 0 || isNaN(rentAmountRaw)) {
+      throw new Error('Le montant du loyer est invalide.');
+    }
+
     const { data: platformSettings } = await supabaseClient
       .from('platform_settings')
       .select('setting_value')
@@ -136,8 +147,8 @@ Deno.serve(async (req: Request) => {
 
     const platformFeeAmount = platformSettings?.setting_value ? parseFloat(platformSettings.setting_value) : 299;
 
-    const rentAmount = Math.round(booking.rent_amount * 100);
-    const depositAmount = Math.round((booking.deposit_amount || 0) * 100);
+    const rentAmount = Math.round(rentAmountRaw * 100);
+    const depositAmount = Math.round(depositAmountRaw * 100);
     const platformFee = Math.round(platformFeeAmount * 100);
 
     const landlordAmount = rentAmount + depositAmount;

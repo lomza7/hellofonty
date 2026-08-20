@@ -222,6 +222,20 @@ export default function ListingDetail() {
       return;
     }
 
+    // Vérifier que le propriétaire peut recevoir des paiements
+    const listingStripeId = listing.stripe_account_id;
+    const landlordStripeId = listing.landlord?.stripe_account_id;
+    const landlordChargesEnabled = listing.landlord?.stripe_charges_enabled;
+
+    if (!listingStripeId && !(landlordStripeId && landlordChargesEnabled)) {
+      alert(
+        profile.preferred_language === 'fr'
+          ? "⚠️ Ce propriétaire n'a pas encore configuré son compte de paiement. Vous ne pouvez pas réserver pour le moment."
+          : "⚠️ This landlord hasn't set up their payment account yet. You cannot book at this time."
+      );
+      return;
+    }
+
     const days = Math.ceil((bookingData.endDate!.getTime() - bookingData.startDate!.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const { data: bookingResult, error: bookingError } = await supabase
