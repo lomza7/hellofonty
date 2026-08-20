@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -142,28 +142,18 @@ export default function LandlordRentPayments() {
   }, [user]);
 
   useEffect(() => {
-    console.log('=== Début du filtrage ===');
-    console.log('Nombre total de paiements:', payments.length);
-    console.log('Filtres actifs:', { filterStatus, filterYear, filterMonth, sortBy, sortOrder });
-
     let filtered = [...payments];
 
     if (filterStatus !== 'all') {
-      console.log('Filtrage par statut:', filterStatus);
       filtered = filtered.filter(p => p.status === filterStatus);
-      console.log('Après filtre statut:', filtered.length);
     }
 
     if (filterYear !== 'all') {
-      console.log('Filtrage par année:', filterYear);
       filtered = filtered.filter(p => p.month_year.startsWith(filterYear));
-      console.log('Après filtre année:', filtered.length);
     }
 
     if (filterMonth !== 'all') {
-      console.log('Filtrage par mois:', filterMonth);
       filtered = filtered.filter(p => p.month_year.endsWith(`-${filterMonth}`));
-      console.log('Après filtre mois:', filtered.length);
     }
 
     filtered.sort((a, b) => {
@@ -181,9 +171,6 @@ export default function LandlordRentPayments() {
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-
-    console.log('Résultat final après tri:', filtered.length, 'paiements');
-    console.log('=== Fin du filtrage ===\n');
 
     setFilteredPayments(filtered);
   }, [payments, filterStatus, filterYear, filterMonth, sortBy, sortOrder]);
@@ -256,7 +243,7 @@ export default function LandlordRentPayments() {
       if (listingsError) throw listingsError;
 
       const listingIds = (allListings || []).map(l => l.id);
-      console.log('Listings du propriétaire:', listingIds);
+
 
       let bookingsData = null;
       let bookingsError = null;
@@ -302,17 +289,12 @@ export default function LandlordRentPayments() {
         }
       }
 
-      console.log('Toutes les réservations confirmées:', bookingsData);
-      console.log('Nombre de réservations:', bookingsData?.length);
-
       // Filtrer uniquement celles en attente de paiement
       const pendingBookingsData = (bookingsData || []).filter((booking: any) =>
         booking.payment_status === 'pending' ||
         booking.payment_status === 'awaiting_payment' ||
         !booking.payment_status
       );
-
-      console.log('Réservations en attente de paiement:', pendingBookingsData);
 
       const formattedBookings = pendingBookingsData.map((booking: any) => ({
         id: booking.id,
@@ -336,7 +318,7 @@ export default function LandlordRentPayments() {
         },
       }));
 
-      console.log('Réservations formatées:', formattedBookings);
+
 
       setPendingBookings(formattedBookings);
 
@@ -344,9 +326,9 @@ export default function LandlordRentPayments() {
         id: payment.id,
         booking_id: payment.booking_id,
         student_name: `${payment.booking.student.first_name} ${payment.booking.student.last_name}`,
-        rent_amount: payment.rent_amount,
-        platform_fee: payment.platform_fee,
-        total_amount: payment.total_amount,
+        rent_amount: Number(payment.rent_amount) || 0,
+        platform_fee: Number(payment.platform_fee) || 0,
+        total_amount: Number(payment.total_amount) || 0,
         payment_date: payment.payment_date,
         month_year: payment.month_year,
         status: payment.status,
@@ -411,11 +393,11 @@ export default function LandlordRentPayments() {
         .reduce((sum: number, p: RentPayment) => sum + p.rent_amount, 0);
 
       formattedBookings.forEach((booking: any) => {
-        const deadline = new Date(booking.payment_deadline);
-        const amount = booking.payment_amount || booking.total_price || 0;
-        if (deadline < now) {
+        const deadline = booking.payment_deadline ? new Date(booking.payment_deadline) : null;
+        const amount = Number(booking.payment_amount) || Number(booking.total_price) || 0;
+        if (deadline && deadline < now) {
           totalOverdue += amount;
-        } else {
+        } else if (deadline) {
           totalPending += amount;
         }
       });
@@ -975,9 +957,8 @@ export default function LandlordRentPayments() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredPayments.map((payment) => (
-                    <>
+                    <Fragment key={payment.id}>
                       <tr
-                        key={payment.id}
                         className={`hover:bg-gray-50 transition-colors ${
                           payment.status === 'overdue' ? 'bg-red-50' :
                           payment.status === 'pending' ? 'bg-yellow-50' : ''
@@ -1088,7 +1069,7 @@ export default function LandlordRentPayments() {
 
                       {expandedRows.has(payment.id) && (
                         <tr className="bg-gray-50">
-                          <td colSpan={8} className="px-6 py-6">
+                          <td colSpan={7} className="px-6 py-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               <div className="bg-white rounded-lg p-4 border border-gray-200">
                                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1200,7 +1181,7 @@ export default function LandlordRentPayments() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

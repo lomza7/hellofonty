@@ -140,7 +140,13 @@ export default function Payment() {
         return;
       }
 
-      setBooking(data);
+      setBooking({
+        ...data,
+        rent_amount: Number(data.rent_amount) || 0,
+        deposit_amount: Number(data.deposit_amount) || 0,
+        payment_amount: Number(data.payment_amount) || 0,
+        platform_fee: Number(data.platform_fee) || 0,
+      });
     } catch (err: any) {
       console.error('Erreur lors du chargement:', err);
       setPageError(err.message || 'Une erreur est survenue lors du chargement de la réservation.');

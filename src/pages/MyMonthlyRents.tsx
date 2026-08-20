@@ -52,7 +52,11 @@ interface Booking {
   deposit_amount: number;
   platform_fee: number;
   service_fee: number;
-  listing: BookingListing;
+  listing: BookingListing & {
+    landlord?: {
+      stripe_charges_enabled: boolean | null;
+    };
+  };
 }
 
 interface ScheduledPayment {
@@ -573,7 +577,19 @@ export default function MyMonthlyRents() {
 
       const bookingsWithSchedules = await Promise.all(
         (data || []).map(async (booking: any) => {
-          const schedule = await generatePaymentSchedule(booking);
+          const schedule = await generatePaymentSchedule({
+            ...booking,
+            rent_amount: Number(booking.rent_amount) || 0,
+            deposit_amount: Number(booking.deposit_amount) || 0,
+            payment_amount: Number(booking.payment_amount) || 0,
+            platform_fee: Number(booking.platform_fee) || 0,
+            service_fee: Number(booking.service_fee) || 0,
+            listing: {
+              ...booking.listing,
+              price_per_month: Number(booking.listing?.price_per_month) || 0,
+              landlord: booking.listing?.landlord || null,
+            },
+          });
           return { ...booking, schedule };
         })
       );
