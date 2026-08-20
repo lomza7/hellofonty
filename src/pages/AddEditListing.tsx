@@ -243,7 +243,7 @@ export default function AddEditListing() {
       if (data.quiet_hours_end) setQuietHoursEnd(data.quiet_hours_end);
       if (data.additional_rules) setAdditionalRules(data.additional_rules);
       if (data.minimum_stay) setMinimumStay(data.minimum_stay.toString());
-      if (data.max_stay) setMaxStay(data.max_stay.toString());
+      if (data.max_stay_months) setMaxStay(data.max_stay_months.toString());
       if (data.stripe_account_id) setSelectedStripeAccountId(data.stripe_account_id);
     }
   };
@@ -570,7 +570,7 @@ export default function AddEditListing() {
         quiet_hours_end: quietHoursEnd,
         additional_rules: additionalRules || null,
         minimum_stay: minimumStay ? parseFloat(minimumStay) : 0.5,
-        max_stay: maxStay ? parseFloat(maxStay) : 6,
+        max_stay_months: maxStay ? parseFloat(maxStay) : 6,
         stripe_account_id: selectedStripeAccountId || null,
       };
 
