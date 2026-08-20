@@ -76,7 +76,7 @@ export default function DashboardStudent() {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/connexion');
       return;
     }
 
@@ -143,7 +143,7 @@ export default function DashboardStudent() {
         supabase
           .from('favorites')
           .select('id')
-          .eq('user_id', user.id),
+          .eq('student_id', user.id),
 
         supabase
           .from('messages')

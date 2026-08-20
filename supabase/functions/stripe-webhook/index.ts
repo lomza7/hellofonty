@@ -369,6 +369,13 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  // Only process subscription sync / one-time order insertion for checkout.session.completed events
+  // that were NOT already handled above (first_payment / monthly_rent return early).
+  // Other event types (charge.refunded, payment_intent.*, etc.) should not fall through here.
+  if (event.type !== 'checkout.session.completed') {
+    return;
+  }
+
   if (!('customer' in stripeData)) {
     return;
   }

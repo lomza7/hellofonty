@@ -218,6 +218,8 @@ Deno.serve(async (req: Request) => {
           type: 'first_rent_payment',
         },
       },
+    }, {
+      idempotencyKey: `booking_${booking_id}_first_payment`,
     });
 
     const paymentIntentId = typeof session.payment_intent === 'string'

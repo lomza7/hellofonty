@@ -166,6 +166,8 @@ Deno.serve(async (req: Request) => {
           month_year: payment.month_year,
         },
       },
+    }, {
+      idempotencyKey: `rent_payment_${payment_id}_checkout`,
     });
 
     const paymentIntentId = typeof session.payment_intent === 'string'

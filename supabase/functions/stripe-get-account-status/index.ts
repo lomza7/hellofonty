@@ -38,25 +38,57 @@ Deno.serve(async (req: Request) => {
       throw new Error('Non authentifié');
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, stripe_account_id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profileError || !profile) {
-      throw new Error('Profil non trouvé');
+    let body: { account_id?: string; target_user_id?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body or invalid JSON — continue with caller's own account
     }
 
-    if (!profile.stripe_account_id) {
-      throw new Error('Aucun compte Stripe Connect trouvé');
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    let targetStripeAccountId: string;
+    let targetUserId: string;
+
+    if (body.target_user_id && body.account_id) {
+      // Admin mode: refresh another user's account
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!adminProfile || adminProfile.role !== 'admin') {
+        throw new Error('Accès refusé - administrateur uniquement');
+      }
+
+      targetStripeAccountId = body.account_id;
+      targetUserId = body.target_user_id;
+    } else {
+      // Self mode: refresh own account
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, stripe_account_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        throw new Error('Profil non trouvé');
+      }
+
+      if (!profile.stripe_account_id) {
+        throw new Error('Aucun compte Stripe Connect trouvé');
+      }
+
+      targetStripeAccountId = profile.stripe_account_id;
+      targetUserId = profile.id;
     }
 
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     });
 
-    const account = await stripe.accounts.retrieve(profile.stripe_account_id);
+    const account = await stripe.accounts.retrieve(targetStripeAccountId);
 
     const detailsSubmitted = account.details_submitted || false;
     const chargesEnabled = account.charges_enabled || false;
@@ -69,7 +101,6 @@ Deno.serve(async (req: Request) => {
       onboardingStatus = 'pending';
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -79,7 +110,7 @@ Deno.serve(async (req: Request) => {
         stripe_onboarding_status: onboardingStatus,
         stripe_onboarding_updated_at: new Date().toISOString(),
       })
-      .eq('id', user.id);
+      .eq('id', targetUserId);
 
     if (updateError) {
       console.error('Erreur mise à jour statut:', updateError);

@@ -56,7 +56,7 @@ export default function StripeConnectAdmin() {
     }
   };
 
-  const handleRefreshStatus = async (landlordId: string, _stripeAccountId: string) => {
+  const handleRefreshStatus = async (landlordId: string, stripeAccountId: string) => {
     setRefreshingId(landlordId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -70,13 +70,16 @@ export default function StripeConnectAdmin() {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ account_id: stripeAccountId, target_user_id: landlordId }),
         }
       );
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (result.success) {
         await loadLandlords();
+      } else {
+        console.error('Erreur refresh statut:', result.error || 'Réponse inattendue');
       }
     } catch (error) {
       console.error('Erreur refresh statut:', error);

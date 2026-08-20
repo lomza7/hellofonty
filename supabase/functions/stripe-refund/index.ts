@@ -98,6 +98,7 @@ Deno.serve(async (req: Request) => {
 
     let refundAmount: number;
     let refundDescription: string;
+    let isPlatformFeeRefund = false;
 
     if (refund_type === 'platform_fee') {
       const fee = booking.platform_fee || 0;
@@ -106,6 +107,7 @@ Deno.serve(async (req: Request) => {
       }
       refundAmount = Math.round(fee * 100);
       refundDescription = 'Remboursement des frais de plateforme Hellofonty';
+      isPlatformFeeRefund = true;
     } else if (refund_type === 'full') {
       refundAmount = Math.round(Number(booking.payment_amount) * 100);
       refundDescription = 'Remboursement total de la réservation';
@@ -119,23 +121,60 @@ Deno.serve(async (req: Request) => {
       throw new Error('Type de remboursement invalide');
     }
 
-    const refund = await stripe.refunds.create({
-      charge: chargeId,
-      amount: refundAmount,
-      metadata: {
-        booking_id: booking_id,
-        refund_type: refund_type,
-        admin_id: user.id,
-        description: refundDescription,
-      },
-    });
+    let refundId: string;
+    let refundStatus: string;
+
+    if (isPlatformFeeRefund) {
+      // For platform fee refunds, we need to refund the application fee, not the charge.
+      // Refunding the charge would reduce the landlord's payout, not the platform's fee.
+      const charge = await stripe.charges.retrieve(chargeId);
+      const applicationFeeId = charge.application_fee?.id;
+      if (!applicationFeeId) {
+        throw new Error('Aucune application fee trouvée sur cette charge');
+      }
+      const feeRefund = await stripe.applicationFees.refund(
+        applicationFeeId,
+        {
+          amount: refundAmount,
+          metadata: {
+            booking_id: booking_id,
+            refund_type: refund_type,
+            admin_id: user.id,
+            description: refundDescription,
+          },
+        },
+        {
+          idempotencyKey: `booking_${booking_id}_platform_fee_refund`,
+        }
+      );
+      refundId = feeRefund.id;
+      refundStatus = feeRefund.status;
+    } else {
+      const refund = await stripe.refunds.create(
+        {
+          charge: chargeId,
+          amount: refundAmount,
+          metadata: {
+            booking_id: booking_id,
+            refund_type: refund_type,
+            admin_id: user.id,
+            description: refundDescription,
+          },
+        },
+        {
+          idempotencyKey: `booking_${booking_id}_${refund_type}_refund`,
+        }
+      );
+      refundId = refund.id;
+      refundStatus = refund.status;
+    }
 
     const refundRecord = {
       booking_id: booking_id,
       student_id: booking.student_id,
       amount: refundAmount / 100,
       refund_type: refund_type,
-      stripe_refund_id: refund.id,
+      stripe_refund_id: refundId,
       admin_id: user.id,
       created_at: new Date().toISOString(),
     };
@@ -162,9 +201,9 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        refund_id: refund.id,
+        refund_id: refundId,
         amount: refundAmount / 100,
-        status: refund.status,
+        status: refundStatus,
       }),
       {
         status: 200,

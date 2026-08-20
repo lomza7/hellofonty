@@ -30,6 +30,7 @@ export default function CheckoutButton({
       window.location.href = url;
     } catch (err: any) {
       setError(err.message ?? 'Une erreur est survenue.');
+    } finally {
       setLoading(false);
     }
   }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Home, MessageCircle } from 'lucide-react';
+import { CheckCircle, Home, MessageCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import BackButton from '../components/BackButton';
 
@@ -11,10 +11,14 @@ export default function PaymentSuccess() {
 
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<any>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (bookingId) {
       loadBooking();
+    } else {
+      setLoading(false);
+      setLoadError(true);
     }
   }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -31,9 +35,12 @@ export default function PaymentSuccess() {
 
       if (!error && data) {
         setBooking(data);
+      } else {
+        setLoadError(true);
       }
     } catch (err) {
       console.error('Erreur:', err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -45,6 +52,43 @@ export default function PaymentSuccess() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Vérification du paiement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !booking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <BackButton />
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-orange-600 p-8 text-white text-center">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-12 h-12 text-red-600" />
+              </div>
+              <h1 className="text-3xl font-bold mb-2">Réservation introuvable</h1>
+              <p className="text-red-100 text-lg">
+                Impossible de trouver les détails de cette réservation.
+              </p>
+            </div>
+            <div className="p-8 flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => navigate('/mes-reservations')}
+                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Mes réservations</span>
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+              >
+                <Home className="w-5 h-5" />
+                <span>Retour à l'accueil</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

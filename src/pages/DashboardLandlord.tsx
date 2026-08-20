@@ -70,12 +70,12 @@ export default function DashboardLandlord() {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/connexion');
       return;
     }
 
     if (profile?.role !== 'landlord') {
-      navigate('/dashboard');
+      navigate('/dashboard-etudiant');
       return;
     }
 

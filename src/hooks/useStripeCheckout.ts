@@ -41,8 +41,8 @@ export function useStripeCheckout() {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to create checkout session');
       }
 
       const data = await response.json();
@@ -55,8 +55,9 @@ export function useStripeCheckout() {
     } catch (err: any) {
       console.error('Checkout error:', err);
       setError(err.message || 'An error occurred during checkout');
-      setLoading(false);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 

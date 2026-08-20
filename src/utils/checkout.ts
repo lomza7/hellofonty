@@ -32,7 +32,7 @@ export async function createCheckoutSession(options: CheckoutOptions): Promise<s
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message ?? 'Erreur lors de la création de la session de paiement.');
+    throw new Error(error.error || error.message || 'Erreur lors de la création de la session de paiement.');
   }
 
   const data = await response.json();

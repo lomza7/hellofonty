@@ -130,6 +130,8 @@ Deno.serve(async (req: Request) => {
         retained_amount: retainAmt.toString(),
         type: 'deposit_refund',
       },
+    }, {
+      idempotencyKey: `deposit_${deposit_id}_refund`,
     });
 
     const newStatus = retainAmt > 0 ? 'retained' : 'refunded';

@@ -90,13 +90,23 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              <button
-                onClick={() => navigate('/recherche')}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-              >
-                <Search className="w-4 h-4" />
-                {fr ? 'Trouver un logement' : 'Find a listing'}
-              </button>
+              {profile && profile.role === 'student' ? (
+                <CheckoutButton
+                  product={STRIPE_PRODUCTS.MISE_EN_RELATION}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  {fr ? 'Trouver un logement' : 'Find a listing'}
+                </CheckoutButton>
+              ) : (
+                <button
+                  onClick={() => navigate('/inscription')}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  {fr ? 'Trouver un logement' : 'Find a listing'}
+                </button>
+              )}
             </div>
           </div>
         </div>
