@@ -110,15 +110,17 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
     }
 
-    if (!payment.rent_amount || isNaN(parseFloat(payment.rent_amount)) || parseFloat(payment.rent_amount) <= 0) {
-      throw new Error('Le montant du loyer est invalide. Veuillez contacter le support.');
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      Deno.env.get('APP_URL') || '',
+    ].filter(Boolean);
+    const origin = req.headers.get('origin');
+    if (!origin || !allowedOrigins.includes(origin)) {
+      throw new Error('Origine non autorisée');
     }
 
     const rentAmountRaw = parseFloat(payment.rent_amount);
-
-    if (rentAmountRaw <= 0 || isNaN(rentAmountRaw)) {
-      throw new Error('Le montant du loyer est invalide.');
-    }
 
     const rentAmount = Math.round(rentAmountRaw * 100);
 
@@ -145,8 +147,8 @@ Deno.serve(async (req: Request) => {
         },
       ],
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/mes-loyers?payment=success`,
-      cancel_url: `${req.headers.get('origin')}/mes-loyers?payment=cancelled`,
+      success_url: `${origin}/mes-loyers?payment=success`,
+      cancel_url: `${origin}/mes-loyers?payment=cancelled`,
       metadata: {
         payment_id: payment_id,
         booking_id: payment.booking_id,
@@ -166,12 +168,18 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    await supabaseClient
-      .from('rent_payments')
-      .update({
-        stripe_payment_intent_id: session.payment_intent as string,
-      })
-      .eq('id', payment_id);
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+
+    if (paymentIntentId) {
+      await supabaseClient
+        .from('rent_payments')
+        .update({
+          stripe_payment_intent_id: paymentIntentId,
+        })
+        .eq('id', payment_id);
+    }
 
     return new Response(
       JSON.stringify({ url: session.url }),

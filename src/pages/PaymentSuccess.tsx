@@ -16,7 +16,7 @@ export default function PaymentSuccess() {
     if (bookingId) {
       loadBooking();
     }
-  }, [bookingId]);
+  }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadBooking() {
     try {
@@ -106,7 +106,7 @@ export default function PaymentSuccess() {
                   <div className="mt-4 pt-4 border-t border-blue-300">
                     <p className="text-gray-500 mb-1">Montant payé</p>
                     <p className="text-3xl font-bold text-blue-600">
-                      {booking.payment_amount?.toFixed(2)} €
+                      {Number(booking.payment_amount || 0).toFixed(2)} €
                     </p>
                   </div>
                 </div>

@@ -17,7 +17,14 @@ Deno.serve(async (req) => {
   try {
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204 });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+        },
+      });
     }
 
     if (req.method !== 'POST') {
@@ -44,7 +51,12 @@ Deno.serve(async (req) => {
       return new Response(`Webhook signature verification failed: ${error.message}`, { status: 400 });
     }
 
-    EdgeRuntime.waitUntil(handleEvent(event));
+    try {
+      await handleEvent(event);
+    } catch (error) {
+      console.error('Error in handleEvent:', error);
+      return Response.json({ error: 'Webhook handler failed' }, { status: 500 });
+    }
 
     return Response.json({ received: true });
   } catch (error: any) {
@@ -228,12 +240,17 @@ async function handleEvent(event: Stripe.Event) {
 
         const { data: booking, error: bookingQueryError } = await supabase
           .from('bookings')
-          .select('id, listing_id, student_id, deposit_amount, stripe_payment_intent_id')
+          .select('id, listing_id, student_id, deposit_amount, stripe_payment_intent_id, payment_status')
           .eq('id', session.metadata.booking_id)
           .maybeSingle();
 
         if (bookingQueryError || !booking) {
           console.error('Booking not found:', session.metadata.booking_id);
+          return;
+        }
+
+        if (booking.payment_status === 'completed') {
+          console.info(`Booking ${session.metadata.booking_id} already completed, skipping`);
           return;
         }
 
@@ -295,6 +312,17 @@ async function handleEvent(event: Stripe.Event) {
       console.info(`Processing monthly rent payment: ${session.metadata.payment_id}`);
 
       try {
+        const { data: existingPayment } = await supabase
+          .from('rent_payments')
+          .select('status')
+          .eq('id', session.metadata.payment_id)
+          .maybeSingle();
+
+        if (existingPayment?.status === 'paid') {
+          console.info(`Rent payment ${session.metadata.payment_id} already paid, skipping`);
+          return;
+        }
+
         const { error } = await supabase
           .from('rent_payments')
           .update({
@@ -310,29 +338,6 @@ async function handleEvent(event: Stripe.Event) {
         }
       } catch (error) {
         console.error('Error processing monthly rent payment:', error);
-      }
-
-      return;
-    }
-
-    if (session.metadata?.booking_id) {
-      console.info(`Processing booking payment for booking: ${session.metadata.booking_id}`);
-
-      try {
-        const { error } = await supabase
-          .from('bookings')
-          .update({
-            payment_status: 'completed',
-          })
-          .eq('id', session.metadata.booking_id);
-
-        if (error) {
-          console.error('Error updating booking payment status:', error);
-        } else {
-          console.info(`Successfully updated payment status for booking: ${session.metadata.booking_id}`);
-        }
-      } catch (error) {
-        console.error('Error processing booking payment:', error);
       }
 
       return;

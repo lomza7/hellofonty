@@ -16,6 +16,8 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  let deposit_id: string | undefined;
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -42,7 +44,9 @@ Deno.serve(async (req: Request) => {
       throw new Error('Accès refusé - propriétaire uniquement');
     }
 
-    const { deposit_id, retained_amount, retention_reason } = await req.json();
+    const body = await req.json();
+    deposit_id = body.deposit_id;
+    const { retained_amount, retention_reason } = body;
 
     if (!deposit_id) {
       throw new Error('ID de caution manquant');
@@ -97,6 +101,10 @@ Deno.serve(async (req: Request) => {
 
     // Retrieve the original payment intent to get the charge
     if (!deposit.stripe_payment_intent_id) {
+      await supabaseAdmin
+        .from('deposit_transactions')
+        .update({ status: 'collected' })
+        .eq('id', deposit_id);
       throw new Error('Aucun identifiant de paiement Stripe trouvé pour cette caution');
     }
 
@@ -162,6 +170,17 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error: any) {
     console.error('Erreur stripe-deposit-refund:', error);
+    if (deposit_id) {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      await supabaseAdmin
+        .from('deposit_transactions')
+        .update({ status: 'collected' })
+        .eq('id', deposit_id)
+        .eq('status', 'refunding');
+    }
     return new Response(
       JSON.stringify({ error: error.message }),
       {

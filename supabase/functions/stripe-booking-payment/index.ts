@@ -88,6 +88,16 @@ Deno.serve(async (req: Request) => {
     const landlordStripeAccountId = booking.listing?.landlord?.stripe_account_id;
     const landlordChargesEnabled = booking.listing?.landlord?.stripe_charges_enabled;
 
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      Deno.env.get('APP_URL') || '',
+    ].filter(Boolean);
+    const origin = req.headers.get('origin');
+    if (!origin || !allowedOrigins.includes(origin)) {
+      throw new Error('Origine non autorisée');
+    }
+
     console.log('stripe-booking-payment: resolving account for booking', booking_id, {
       listing_id: booking.listing_id,
       landlord_id: booking.listing?.landlord_id,
@@ -111,8 +121,6 @@ Deno.serve(async (req: Request) => {
         .eq('landlord_id', booking.listing.landlord_id)
         .maybeSingle();
 
-      console.log('stripe-booking-payment: landlord_stripe_accounts lookup', { lsaAccount, lsaError });
-
       if (lsaAccount?.stripe_charges_enabled) {
         stripeAccountId = listingStripeAccountId;
       } else {
@@ -126,18 +134,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe pour recevoir les paiements.');
     }
 
-    console.log('stripe-booking-payment: using stripe account', stripeAccountId);
-
-    if (!booking.rent_amount || isNaN(parseFloat(booking.rent_amount)) || parseFloat(booking.rent_amount) <= 0) {
-      throw new Error('Le montant du loyer est invalide. Veuillez contacter le support.');
-    }
-
     const rentAmountRaw = parseFloat(booking.rent_amount);
     const depositAmountRaw = booking.deposit_amount ? parseFloat(booking.deposit_amount) : 0;
-
-    if (rentAmountRaw <= 0 || isNaN(rentAmountRaw)) {
-      throw new Error('Le montant du loyer est invalide.');
-    }
 
     const { data: platformSettings } = await supabaseClient
       .from('platform_settings')
@@ -203,8 +201,8 @@ Deno.serve(async (req: Request) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/paiement/succes?booking_id=${booking_id}`,
-      cancel_url: `${req.headers.get('origin')}/paiement/${booking_id}`,
+      success_url: `${origin}/paiement/succes?booking_id=${booking_id}`,
+      cancel_url: `${origin}/paiement/${booking_id}`,
       metadata: {
         booking_id: booking_id,
         student_id: user.id,
@@ -222,12 +220,18 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    await supabaseClient
-      .from('bookings')
-      .update({
-        stripe_payment_intent_id: session.payment_intent as string,
-      })
-      .eq('id', booking_id);
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+
+    if (paymentIntentId) {
+      await supabaseClient
+        .from('bookings')
+        .update({
+          stripe_payment_intent_id: paymentIntentId,
+        })
+        .eq('id', booking_id);
+    }
 
     return new Response(
       JSON.stringify({ url: session.url }),

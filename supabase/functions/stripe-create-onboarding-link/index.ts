@@ -17,6 +17,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
 
@@ -24,8 +25,11 @@ Deno.serve(async (req: Request) => {
       throw new Error('STRIPE_SECRET_KEY non configurée');
     }
 
-    const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Non authentifié');
+    }
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -38,6 +42,15 @@ Deno.serve(async (req: Request) => {
 
     if (!origin) {
       throw new Error('Origin manquant');
+    }
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      Deno.env.get('APP_URL') || '',
+    ].filter(Boolean);
+    if (!allowedOrigins.includes(origin)) {
+      throw new Error('Origine non autorisée');
     }
 
     // Look up the account in landlord_stripe_accounts table first

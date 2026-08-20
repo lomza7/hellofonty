@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Accès refusé - administrateur uniquement');
     }
 
-    const { booking_id, refund_type } = await req.json();
+    const { booking_id, refund_type, amount } = await req.json();
 
     if (!booking_id) {
       throw new Error('ID de réservation manquant');
@@ -107,10 +107,9 @@ Deno.serve(async (req: Request) => {
       refundAmount = Math.round(fee * 100);
       refundDescription = 'Remboursement des frais de plateforme Hellofonty';
     } else if (refund_type === 'full') {
-      refundAmount = Math.round(booking.payment_amount * 100);
+      refundAmount = Math.round(Number(booking.payment_amount) * 100);
       refundDescription = 'Remboursement total de la réservation';
     } else if (refund_type === 'partial') {
-      const { amount } = await req.json();
       if (!amount || amount <= 0) {
         throw new Error('Montant du remboursement partiel manquant');
       }

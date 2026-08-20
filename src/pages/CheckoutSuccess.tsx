@@ -33,7 +33,7 @@ export default function CheckoutSuccess() {
     }, 2500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isActive) setPolling(false);

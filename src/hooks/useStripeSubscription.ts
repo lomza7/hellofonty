@@ -25,7 +25,7 @@ export function useStripeSubscription() {
 
   useEffect(() => {
     fetchSubscription();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchSubscription() {
     try {

@@ -333,7 +333,7 @@ function BookingPaymentCard({
 
                 return (
                   <div
-                    key={index}
+                    key={payment.month_year}
                     className={`flex items-center justify-between py-3 px-4 rounded-lg border transition-colors ${
                       isPaid
                         ? 'bg-green-50 border-green-200'
@@ -517,6 +517,7 @@ export default function MyMonthlyRents() {
     currentDate.setMonth(currentDate.getMonth() + 1);
 
     while (currentDate < endDate) {
+      if (schedule.length > 120) break;
       const monthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
       const paymentDate = new Date(currentDate);
       paymentDate.setDate(5);
