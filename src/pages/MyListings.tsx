@@ -219,12 +219,24 @@ export default function MyListings() {
                           </div>
                         </div>
 
-                        <div className="text-2xl font-bold text-blue-600">
-                          {listing.price_per_month}€
-                          <span className="text-sm text-gray-600">
-                            /{t('listing.perMonth').split('/')[1]}
-                          </span>
-                        </div>
+                        {(() => {
+                          const charges = (listing.electricity_cost || 0) + (listing.heating_cost || 0) + (listing.water_cost || 0) + (listing.custom_charges?.reduce((s: number, c) => s + (parseFloat(c.amount) || 0), 0) || 0);
+                          const baseRent = listing.base_rent != null && listing.base_rent > 0 ? listing.base_rent : Math.max(0, listing.price_per_month - charges);
+                          const hasCharges = charges > 0;
+                          return (
+                            <div>
+                              <div className="flex items-baseline">
+                                <span className="text-2xl font-bold text-blue-600">{Number(baseRent).toLocaleString()}€</span>
+                                <span className="text-sm text-gray-600 ml-1">/{t('listing.perMonth').split('/')[1]}</span>
+                              </div>
+                              {hasCharges && (
+                                <div className="text-sm text-gray-500 mt-0.5">
+                                  + {Number(charges).toLocaleString()}€ {language === 'fr' ? 'de charges / mois' : 'charges / month'}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-4">
