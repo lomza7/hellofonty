@@ -224,6 +224,35 @@ export default function Payouts() {
     }
   };
 
+  const handleOpenStripeDashboard = async (accountId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session expirée');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-express-login`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accountId }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success || !data.url) {
+        throw new Error(data.error || 'Erreur lors de la génération du lien');
+      }
+
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'accès au dashboard Stripe');
+    }
+  };
+
   const handleSetDefault = async (accountId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -535,6 +564,15 @@ export default function Payouts() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {account.stripe_onboarding_status === 'complete' && (
+                        <button
+                          onClick={() => handleOpenStripeDashboard(account.id)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          {language === 'fr' ? 'Dashboard Stripe' : 'Stripe Dashboard'}
+                        </button>
+                      )}
                       {account.stripe_onboarding_status !== 'complete' && (
                         <button
                           onClick={() => handleActivatePayments(account.id)}

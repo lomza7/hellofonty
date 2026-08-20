@@ -48,7 +48,35 @@ Deno.serve(async (req: Request) => {
       throw new Error('Accès réservé aux propriétaires');
     }
 
-    if (!profile.stripe_account_id) {
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (_e) {
+      // body is optional for backward compatibility
+    }
+
+    let stripeAccountId: string | null = null;
+
+    if (body.accountId) {
+      // Look up the account in landlord_stripe_accounts and verify ownership
+      const { data: lsaAccount, error: lsaError } = await supabase
+        .from('landlord_stripe_accounts')
+        .select('stripe_account_id')
+        .eq('id', body.accountId)
+        .eq('landlord_id', user.id)
+        .maybeSingle();
+
+      if (lsaError || !lsaAccount) {
+        throw new Error('Ce compte Stripe ne vous appartient pas');
+      }
+
+      stripeAccountId = lsaAccount.stripe_account_id;
+    } else {
+      // Fall back to profile-level stripe_account_id
+      stripeAccountId = profile.stripe_account_id;
+    }
+
+    if (!stripeAccountId) {
       throw new Error('Aucun compte Stripe Connect configuré');
     }
 
@@ -56,7 +84,7 @@ Deno.serve(async (req: Request) => {
       apiVersion: '2023-10-16',
     });
 
-    const loginLink = await stripe.accounts.createLoginLink(profile.stripe_account_id);
+    const loginLink = await stripe.accounts.createLoginLink(stripeAccountId);
 
     return new Response(
       JSON.stringify({
