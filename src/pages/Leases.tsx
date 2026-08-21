@@ -104,6 +104,7 @@ export default function Leases() {
   const [reminding, setReminding] = useState<string | null>(null);
   const [customLeaseFile, setCustomLeaseFile] = useState<File | null>(null);
   const [uploadingLease, setUploadingLease] = useState(false);
+  const [bookingPaymentStatuses, setBookingPaymentStatuses] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isCustomLeaseMode = profile?.preferred_lease_type === 'custom';
@@ -137,6 +138,22 @@ export default function Leases() {
 
       if (error) throw error;
       setLeases(data || []);
+
+      // For students: fetch booking payment statuses to gate contract access
+      if (!isLandlord && data && data.length > 0) {
+        const bookingIds = data.map(l => l.booking_id).filter(id => id) as string[];
+        if (bookingIds.length > 0) {
+          const { data: bookings } = await supabase
+            .from('bookings')
+            .select('id, payment_status')
+            .in('id', bookingIds);
+          const statusMap: Record<string, string> = {};
+          (bookings || []).forEach((b: { id: string; payment_status: string }) => {
+            statusMap[b.id] = b.payment_status;
+          });
+          setBookingPaymentStatuses(statusMap);
+        }
+      }
     } catch (error) {
       console.error('Erreur chargement baux:', error);
     } finally {
@@ -817,6 +834,7 @@ export default function Leases() {
                   </div>
 
                   <div className="flex items-center space-x-2 ml-4">
+                    {(isLandlord || bookingPaymentStatuses[lease.booking_id || ''] === 'completed') && (
                     <button
                       onClick={() => lease.lease_source === 'custom' ? handleDownloadCustomLease(lease) : handleViewContract(lease)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -824,6 +842,7 @@ export default function Leases() {
                     >
                       <Eye className="w-5 h-5" />
                     </button>
+                    )}
 
                     {isLandlord && lease.status === 'draft' && (
                       <button
@@ -835,7 +854,8 @@ export default function Leases() {
                       </button>
                     )}
 
-                    {lease.lease_source === 'custom' ? (
+                    {(isLandlord || bookingPaymentStatuses[lease.booking_id || ''] === 'completed') && (
+                    lease.lease_source === 'custom' ? (
                       <button
                         onClick={() => handleDownloadCustomLease(lease)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -860,6 +880,7 @@ export default function Leases() {
                           EN
                         </button>
                       </div>
+                    )
                     )}
 
                     {isLandlord && lease.status === 'draft' && (
@@ -872,7 +893,7 @@ export default function Leases() {
                       </button>
                     )}
 
-                    {!isLandlord && lease.status === 'pending_signature' && (
+                    {!isLandlord && lease.status === 'pending_signature' && bookingPaymentStatuses[lease.booking_id || ''] === 'completed' && (
                       <button
                         onClick={() => handleSignLease(lease)}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center space-x-2"
@@ -881,6 +902,19 @@ export default function Leases() {
                         <CheckCircle className="w-5 h-5" />
                         <span>{language === 'fr' ? 'Signer' : 'Sign'}</span>
                       </button>
+                    )
+                    }
+
+                    {!isLandlord && lease.status === 'pending_signature' && bookingPaymentStatuses[lease.booking_id || ''] !== 'completed' && (
+                      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                        {language === 'fr' ? 'Contrat disponible après le paiement du premier loyer' : 'Contract available after first rent payment'}
+                      </div>
+                    )}
+
+                    {!isLandlord && lease.booking_id && bookingPaymentStatuses[lease.booking_id] !== 'completed' && lease.status !== 'pending_signature' && (
+                      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                        {language === 'fr' ? 'Contrat disponible après le paiement du premier loyer' : 'Contract available after first rent payment'}
+                      </div>
                     )}
 
                     {isLandlord && lease.status === 'pending_signature' && (

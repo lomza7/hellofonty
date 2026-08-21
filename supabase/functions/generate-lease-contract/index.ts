@@ -148,6 +148,21 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
+    // Tenant must have completed the first payment to access the contract
+    if (lease.tenant_id === user.id && lease.booking_id) {
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select('payment_status')
+        .eq('id', lease.booking_id)
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      if (booking.payment_status !== 'completed') {
+        throw new Error('Le contrat sera disponible après le paiement du premier loyer.');
+      }
+    }
+
     // Validation: durée < 8 mois
     const durationDays = Math.round(
       (new Date(lease.end_date).getTime() - new Date(lease.start_date).getTime()) / (1000 * 60 * 60 * 24)
