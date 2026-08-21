@@ -330,15 +330,26 @@ export default function Leases() {
   };
 
   const handleCancelSignature = async (lease: any) => {
-    if (!confirm(language === 'fr'
-      ? 'Annuler l\'envoi pour signature ? Le bail repassera en brouillon et pourra être modifié ou supprimé.'
-      : 'Cancel signature request? The lease will return to draft and can be edited or deleted.'
-    )) return;
+    const wasSigned = lease.status === 'signed';
+    const msg = wasSigned
+      ? (language === 'fr'
+        ? 'Annuler le contrat ? Les signatures du propriétaire et du locataire seront supprimées, et le bail repassera en brouillon.'
+        : 'Cancel the contract? Both landlord and tenant signatures will be removed, and the lease will return to draft.')
+      : (language === 'fr'
+        ? 'Annuler l\'envoi pour signature ? Le bail repassera en brouillon et pourra être modifié ou supprimé.'
+        : 'Cancel signature request? The lease will return to draft and can be edited or deleted.');
+    if (!confirm(msg)) return;
 
     try {
+      const updateData: Record<string, unknown> = { status: 'draft', landlord_signature: null };
+      if (wasSigned) {
+        updateData.tenant_signature = null;
+        updateData.signed_at = null;
+      }
+
       const { error } = await supabase
         .from('leases')
-        .update({ status: 'draft', landlord_signature: null })
+        .update(updateData)
         .eq('id', lease.id);
 
       if (error) throw error;
@@ -937,7 +948,7 @@ export default function Leases() {
                       </button>
                     )}
 
-                    {isLandlord && lease.status === 'pending_signature' && (
+                    {isLandlord && (lease.status === 'pending_signature' || (lease.status === 'signed' && bookingPaymentStatuses[lease.booking_id || ''] !== 'completed')) && (
                       <button
                         onClick={() => handleCancelSignature(lease)}
                         className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
