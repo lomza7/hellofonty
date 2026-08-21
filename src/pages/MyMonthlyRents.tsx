@@ -142,7 +142,7 @@ function BookingPaymentCard({
   booking: Booking;
   schedule: ScheduledPayment[];
   onPayInitial: (bookingId: string) => void;
-  onPayRent: (paymentId: string) => void;
+  onPayRent: (paymentId: string, bookingId?: string, monthYear?: string) => void;
   processingPayment: string | null;
 }) {
   const { language } = useLanguage();
@@ -329,7 +329,7 @@ function BookingPaymentCard({
                 const isOverdue = payment.status === 'overdue';
                 const isPending = payment.status === 'pending';
                 const isPaid = payment.status === 'paid';
-                const canPay = (isPending || isOverdue) && !payment.is_initial && payment.rent_payment_id;
+                const canPay = (isPending || isOverdue) && !payment.is_initial;
 
                 return (
                   <div
@@ -388,11 +388,11 @@ function BookingPaymentCard({
 
                       {canPay && landlordStripeReady && (
                         <button
-                          onClick={() => onPayRent(payment.rent_payment_id!)}
-                          disabled={processingPayment === payment.rent_payment_id}
+                          onClick={() => onPayRent(payment.rent_payment_id || '', payment.booking_id, payment.month_year)}
+                          disabled={processingPayment === (payment.rent_payment_id || payment.booking_id)}
                           className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {processingPayment === payment.rent_payment_id ? (
+                          {processingPayment === (payment.rent_payment_id || payment.booking_id) ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                           ) : (
                             <CreditCard className="w-4 h-4" />
@@ -640,12 +640,22 @@ export default function MyMonthlyRents() {
     }
   };
 
-  const handlePayRent = async (paymentId: string) => {
+  const handlePayRent = async (paymentId: string, bookingId?: string, monthYear?: string) => {
     try {
-      setProcessingPayment(paymentId);
+      setProcessingPayment(paymentId || bookingId || '');
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Non authentifie');
+
+      const payload: Record<string, string> = {};
+      if (paymentId) {
+        payload.payment_id = paymentId;
+      } else if (bookingId && monthYear) {
+        payload.booking_id = bookingId;
+        payload.month_year = monthYear;
+      } else {
+        throw new Error('Informations de paiement manquantes');
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-monthly-rent-payment`,
@@ -655,7 +665,7 @@ export default function MyMonthlyRents() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ payment_id: paymentId }),
+          body: JSON.stringify(payload),
         }
       );
 

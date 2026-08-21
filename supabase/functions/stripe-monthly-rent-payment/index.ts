@@ -35,18 +35,48 @@ Deno.serve(async (req: Request) => {
       throw new Error('Non authentifié');
     }
 
-    const { payment_id } = await req.json();
+    const body = await req.json();
+    const { payment_id, booking_id, month_year } = body;
 
-    if (!payment_id) {
-      throw new Error('ID de paiement manquant');
+    if (!payment_id && !booking_id) {
+      throw new Error('ID de paiement ou de réservation manquant');
     }
 
-    const { data: payment, error: paymentError } = await supabaseClient
-      .from('rent_payments')
-      .select(`
-        *,
-        booking:bookings(
+    let payment: any = null;
+
+    if (payment_id) {
+      const { data, error: paymentError } = await supabaseClient
+        .from('rent_payments')
+        .select(`
+          *,
+          booking:bookings(
+            id,
+            start_date,
+            end_date,
+            listing:listings(
+              id,
+              title,
+              address,
+              landlord_id,
+              stripe_account_id,
+              landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
+            )
+          )
+        `)
+        .eq('id', payment_id)
+        .maybeSingle();
+
+      if (paymentError || !data) {
+        throw new Error('Paiement introuvable');
+      }
+      payment = data;
+    } else {
+      // Look up by booking_id + month_year, create if missing
+      const { data: booking, error: bookingError } = await supabaseClient
+        .from('bookings')
+        .select(`
           id,
+          student_id,
           start_date,
           end_date,
           listing:listings(
@@ -54,16 +84,84 @@ Deno.serve(async (req: Request) => {
             title,
             address,
             landlord_id,
+            price_per_month,
             stripe_account_id,
             landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
           )
-        )
-      `)
-      .eq('id', payment_id)
-      .maybeSingle();
+        `)
+        .eq('id', booking_id)
+        .maybeSingle();
 
-    if (paymentError || !payment) {
-      throw new Error('Paiement introuvable');
+      if (bookingError || !booking) {
+        throw new Error('Réservation introuvable');
+      }
+
+      if (booking.student_id !== user.id) {
+        throw new Error('Non autorisé');
+      }
+
+      const { data: existing } = await supabaseClient
+        .from('rent_payments')
+        .select(`
+          *,
+          booking:bookings(
+            id,
+            start_date,
+            end_date,
+            listing:listings(
+              id,
+              title,
+              address,
+              landlord_id,
+              stripe_account_id,
+              landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
+            )
+          )
+        `)
+        .eq('booking_id', booking_id)
+        .eq('month_year', month_year)
+        .maybeSingle();
+
+      if (existing) {
+        payment = existing;
+      } else {
+        // Create the missing rent payment entry
+        const paymentDate = new Date(month_year.split('-')[0], parseInt(month_year.split('-')[1]) - 1, 5);
+        const { data: newPayment, error: insertError } = await supabaseClient
+          .from('rent_payments')
+          .insert({
+            booking_id: booking_id,
+            student_id: user.id,
+            rent_amount: booking.listing?.price_per_month || 0,
+            platform_fee: 0,
+            total_amount: booking.listing?.price_per_month || 0,
+            payment_date: paymentDate.toISOString().split('T')[0],
+            month_year: month_year,
+            status: 'pending',
+          })
+          .select(`
+            *,
+            booking:bookings(
+              id,
+              start_date,
+              end_date,
+              listing:listings(
+                id,
+                title,
+                address,
+                landlord_id,
+                stripe_account_id,
+                landlord:profiles!landlord_id(stripe_account_id, stripe_charges_enabled)
+              )
+            )
+          `)
+          .maybeSingle();
+
+        if (insertError || !newPayment) {
+          throw new Error('Impossible de créer le paiement');
+        }
+        payment = newPayment;
+      }
     }
 
     if (payment.student_id !== user.id) {
@@ -76,6 +174,20 @@ Deno.serve(async (req: Request) => {
 
     if (payment.status === 'cancelled') {
       throw new Error('Ce paiement a été annulé');
+    }
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      Deno.env.get('APP_URL') || '',
+    ].filter(Boolean);
+    const origin = req.headers.get('origin');
+    if (!origin || !allowedOrigins.includes(origin)) {
+      throw new Error('Origine non autorisée');
+    }
+
+    if (!payment.booking?.listing?.landlord_id) {
+      throw new Error('Logement introuvable ou propriétaire manquant');
     }
 
     // Resolve the Stripe account: listing-level first, then landlord profile fallback
@@ -110,16 +222,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le propriétaire n\'a pas configuré son compte Stripe');
     }
 
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      Deno.env.get('APP_URL') || '',
-    ].filter(Boolean);
-    const origin = req.headers.get('origin');
-    if (!origin || !allowedOrigins.includes(origin)) {
-      throw new Error('Origine non autorisée');
-    }
-
     const rentAmountRaw = parseFloat(payment.rent_amount);
 
     const rentAmount = Math.round(rentAmountRaw * 100);
@@ -150,7 +252,7 @@ Deno.serve(async (req: Request) => {
       success_url: `${origin}/mes-loyers?payment=success`,
       cancel_url: `${origin}/mes-loyers?payment=cancelled`,
       metadata: {
-        payment_id: payment_id,
+        payment_id: payment.id,
         booking_id: payment.booking_id,
         student_id: user.id,
         landlord_id: payment.booking.listing.landlord_id,
@@ -160,14 +262,14 @@ Deno.serve(async (req: Request) => {
       payment_intent_data: {
         on_behalf_of: stripeAccountId,
         metadata: {
-          payment_id: payment_id,
+          payment_id: payment.id,
           booking_id: payment.booking_id,
           type: 'monthly_rent_payment',
           month_year: payment.month_year,
         },
       },
     }, {
-      idempotencyKey: `rent_payment_${payment_id}_checkout`,
+      idempotencyKey: `rent_payment_${payment.id}_checkout`,
     });
 
     const paymentIntentId = typeof session.payment_intent === 'string'
@@ -180,7 +282,7 @@ Deno.serve(async (req: Request) => {
         .update({
           stripe_payment_intent_id: paymentIntentId,
         })
-        .eq('id', payment_id);
+        .eq('id', payment.id);
     }
 
     return new Response(

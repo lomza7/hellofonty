@@ -84,10 +84,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // Resolve the Stripe account: listing-level first, then landlord profile fallback
-    const listingStripeAccountId = booking.listing?.stripe_account_id;
-    const landlordStripeAccountId = booking.listing?.landlord?.stripe_account_id;
-    const landlordChargesEnabled = booking.listing?.landlord?.stripe_charges_enabled;
-
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:5174',
@@ -97,6 +93,14 @@ Deno.serve(async (req: Request) => {
     if (!origin || !allowedOrigins.includes(origin)) {
       throw new Error('Origine non autorisée');
     }
+
+    if (!booking.listing?.landlord_id) {
+      throw new Error('Logement introuvable ou propriétaire manquant');
+    }
+
+    const listingStripeAccountId = booking.listing?.stripe_account_id;
+    const landlordStripeAccountId = booking.listing?.landlord?.stripe_account_id;
+    const landlordChargesEnabled = booking.listing?.landlord?.stripe_charges_enabled;
 
     console.log('stripe-booking-payment: resolving account for booking', booking_id, {
       listing_id: booking.listing_id,

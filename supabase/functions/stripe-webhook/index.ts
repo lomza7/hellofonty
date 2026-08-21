@@ -381,10 +381,6 @@ async function handleEvent(event: Stripe.Event) {
   }
 
   // for one time payments, we only listen for the checkout.session.completed event
-  if (event.type === 'payment_intent.succeeded' && event.data.object.invoice === null) {
-    return;
-  }
-
   const { customer: customerId } = stripeData;
 
   if (!customerId || typeof customerId !== 'string') {
