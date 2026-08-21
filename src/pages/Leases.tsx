@@ -130,7 +130,7 @@ export default function Leases() {
       if (isLandlord) {
         query = query.eq('landlord_id', profile?.id);
       } else {
-        query = query.eq('tenant_id', profile?.id);
+        query = query.eq('tenant_id', profile?.id).neq('status', 'cancelled');
       }
 
       const { data, error } = await query;
