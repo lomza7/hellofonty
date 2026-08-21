@@ -148,8 +148,11 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    // Tenant must have completed the first payment to access the contract
-    if (lease.tenant_id === user.id && lease.booking_id) {
+    // Tenant must have completed the first payment to download the contract
+    // Viewing is always allowed for both landlord and tenant
+    const mode = url.searchParams.get('mode') === 'download' ? 'download' : 'view';
+
+    if (mode === 'download' && lease.tenant_id === user.id && lease.booking_id) {
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('payment_status')
@@ -159,7 +162,7 @@ Deno.serve(async (req: Request) => {
       if (bookingError) throw bookingError;
 
       if (booking.payment_status !== 'completed') {
-        throw new Error('Le contrat sera disponible après le paiement du premier loyer.');
+        throw new Error('Le téléchargement du contrat sera disponible après le paiement du premier loyer.');
       }
     }
 

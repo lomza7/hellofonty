@@ -468,7 +468,7 @@ export default function Leases() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}&mode=view`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -499,7 +499,7 @@ export default function Leases() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lease-contract?id=${leaseId}&lang=${lang}&mode=download`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -689,6 +689,12 @@ export default function Leases() {
     }
   };
 
+  const canDownloadLease = (lease: Lease | null): boolean => {
+    if (!lease) return false;
+    if (isLandlord) return true;
+    return bookingPaymentStatuses[lease.booking_id || ''] === 'completed';
+  };
+
   const getStatusBadge = (status: Lease['status']) => {
     const fr = language === 'fr';
     const badges = {
@@ -834,15 +840,23 @@ export default function Leases() {
                   </div>
 
                   <div className="flex items-center space-x-2 ml-4">
-                    {(isLandlord || bookingPaymentStatuses[lease.booking_id || ''] === 'completed') && (
                     <button
-                      onClick={() => lease.lease_source === 'custom' ? handleDownloadCustomLease(lease) : handleViewContract(lease)}
+                      onClick={() => {
+                        if (lease.lease_source === 'custom') {
+                          if (isLandlord || bookingPaymentStatuses[lease.booking_id || ''] === 'completed') {
+                            handleDownloadCustomLease(lease);
+                          } else {
+                            alert(language === 'fr' ? 'Le téléchargement du contrat sera disponible après le paiement du premier loyer.' : 'Contract download will be available after the first rent payment.');
+                          }
+                        } else {
+                          handleViewContract(lease);
+                        }
+                      }}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title={language === 'fr' ? 'Voir le bail' : 'View lease'}
                     >
                       <Eye className="w-5 h-5" />
                     </button>
-                    )}
 
                     {isLandlord && lease.status === 'draft' && (
                       <button
@@ -883,6 +897,12 @@ export default function Leases() {
                     )
                     )}
 
+                    {!isLandlord && lease.booking_id && bookingPaymentStatuses[lease.booking_id] !== 'completed' && (
+                      <span className="text-xs text-amber-600" title={language === 'fr' ? 'Téléchargement disponible après le paiement' : 'Download available after payment'}>
+                        {language === 'fr' ? 'Téléchargement verrouillé' : 'Download locked'}
+                      </span>
+                    )}
+
                     {isLandlord && lease.status === 'draft' && (
                       <button
                         onClick={() => handleSendForSignature(lease)}
@@ -893,7 +913,7 @@ export default function Leases() {
                       </button>
                     )}
 
-                    {!isLandlord && lease.status === 'pending_signature' && bookingPaymentStatuses[lease.booking_id || ''] === 'completed' && (
+                    {!isLandlord && lease.status === 'pending_signature' && (
                       <button
                         onClick={() => handleSignLease(lease)}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center space-x-2"
@@ -902,19 +922,6 @@ export default function Leases() {
                         <CheckCircle className="w-5 h-5" />
                         <span>{language === 'fr' ? 'Signer' : 'Sign'}</span>
                       </button>
-                    )
-                    }
-
-                    {!isLandlord && lease.status === 'pending_signature' && bookingPaymentStatuses[lease.booking_id || ''] !== 'completed' && (
-                      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                        {language === 'fr' ? 'Contrat disponible après le paiement du premier loyer' : 'Contract available after first rent payment'}
-                      </div>
-                    )}
-
-                    {!isLandlord && lease.booking_id && bookingPaymentStatuses[lease.booking_id] !== 'completed' && lease.status !== 'pending_signature' && (
-                      <div className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                        {language === 'fr' ? 'Contrat disponible après le paiement du premier loyer' : 'Contract available after first rent payment'}
-                      </div>
                     )}
 
                     {isLandlord && lease.status === 'pending_signature' && (
@@ -1285,14 +1292,20 @@ export default function Leases() {
                       Fermer
                     </button>
                     {selectedLease && selectedLease.lease_source === 'custom' ? (
-                      <button
-                        onClick={() => handleDownloadCustomLease(selectedLease)}
-                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Télécharger
-                      </button>
-                    ) : (
+                      canDownloadLease(selectedLease) ? (
+                        <button
+                          onClick={() => handleDownloadCustomLease(selectedLease)}
+                          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Télécharger
+                        </button>
+                      ) : (
+                        <span className="text-sm text-amber-600">
+                          {language === 'fr' ? 'Téléchargement disponible après le paiement' : 'Download available after payment'}
+                        </span>
+                      )
+                    ) : canDownloadLease(selectedLease) ? (
                       <button
                         onClick={() => selectedLease && handleDownloadContract(selectedLease.id, contractLang)}
                         className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
@@ -1300,6 +1313,10 @@ export default function Leases() {
                         <Download className="w-4 h-4 mr-2" />
                         Télécharger {contractLang === 'fr' ? 'FR' : 'EN'}
                       </button>
+                    ) : (
+                      <span className="text-sm text-amber-600">
+                        {language === 'fr' ? 'Téléchargement disponible après le paiement' : 'Download available after payment'}
+                      </span>
                     )}
                   </div>
                 </div>
