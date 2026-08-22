@@ -93,6 +93,10 @@ export default function MyBookingRequests() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
   const [listingFilter, setListingFilter] = useState<string>('all');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState<'document' | 'payment' | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -257,22 +261,56 @@ export default function MyBookingRequests() {
     );
   };
 
-  const handleCancelExpiredBooking = async (bookingId: string) => {
-    if (!confirm(language === 'fr'
-      ? 'Annuler cette reservation ? Le logement sera libere et l\'etudiant pourra refaire une demande.'
-      : 'Cancel this booking? The property will be freed and the student can make a new request.'
-    )) return;
+  const openCancelBookingModal = (booking: Booking) => {
+    setCancelTarget(booking);
+    setCancelReason(null);
+    setShowCancelModal(true);
+  };
 
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled', payment_status: 'expired' })
-      .eq('id', bookingId);
+  const doCancelBooking = async () => {
+    if (!cancelTarget || !cancelReason) return;
 
-    if (!error) {
+    setCancelling(true);
+    try {
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled', payment_status: 'expired' })
+        .eq('id', cancelTarget.id);
+      if (bookingError) throw bookingError;
+
+      await supabase.from('rent_payments').delete().eq('booking_id', cancelTarget.id);
+      await supabase.from('deposit_transactions').delete().eq('booking_id', cancelTarget.id);
+      await supabase.from('access_guide_unlock_overrides').delete().eq('booking_id', cancelTarget.id);
+
+      if (cancelTarget.student_id) {
+        const reasonMsg = cancelReason === 'document'
+          ? (language === 'fr'
+            ? 'Votre propriétaire a annulé la réservation pour un problème de document.'
+            : 'Your landlord cancelled the booking due to a document issue.')
+          : (language === 'fr'
+            ? 'Votre propriétaire a annulé la réservation car le paiement n\'a pas été effectué dans les délais.'
+            : 'Your landlord cancelled the booking because payment was not completed within the deadline.');
+
+        await supabase.from('notifications').insert({
+          user_id: cancelTarget.student_id,
+          type: 'booking_cancelled',
+          title: language === 'fr' ? 'Réservation annulée' : 'Booking cancelled',
+          message: reasonMsg,
+          link: '/mes-reservations',
+          related_id: cancelTarget.id,
+        });
+      }
+
+      setShowCancelModal(false);
+      setCancelTarget(null);
+      setCancelReason(null);
       loadBookings();
-      alert(language === 'fr' ? 'Reservation annulee. Le logement est de nouveau disponible.' : 'Booking cancelled. Property is available again.');
-    } else {
+      alert(language === 'fr' ? 'Réservation annulée. L\'étudiant a été notifié.' : 'Booking cancelled. The student has been notified.');
+    } catch (error) {
+      console.error('Erreur annulation:', error);
       alert(language === 'fr' ? 'Erreur lors de l\'annulation.' : 'Error cancelling booking.');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -620,13 +658,23 @@ export default function MyBookingRequests() {
                               <span>{language === 'fr' ? 'Relancer le paiement' : 'Relaunch payment'}</span>
                             </button>
                             <button
-                              onClick={() => handleCancelExpiredBooking(booking.id)}
+                              onClick={() => openCancelBookingModal(booking)}
                               className="flex items-center justify-center space-x-2 px-5 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition flex-1"
                             >
                               <Ban className="w-5 h-5" />
-                              <span>{language === 'fr' ? 'Annuler la reservation' : 'Cancel booking'}</span>
+                              <span>{language === 'fr' ? 'Annuler la réservation' : 'Cancel booking'}</span>
                             </button>
                           </div>
+                        )}
+
+                        {booking.status === 'confirmed' && booking.payment_status !== 'completed' && booking.payment_deadline && new Date(booking.payment_deadline) > new Date() && (
+                          <button
+                            onClick={() => openCancelBookingModal(booking)}
+                            className="flex items-center justify-center space-x-2 px-5 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition flex-1"
+                          >
+                            <Ban className="w-5 h-5" />
+                            <span>{language === 'fr' ? 'Annuler la réservation' : 'Cancel booking'}</span>
+                          </button>
                         )}
                       </div>
                     )}
@@ -634,6 +682,111 @@ export default function MyBookingRequests() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {showCancelModal && cancelTarget && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75" onClick={() => !cancelling && setShowCancelModal(false)}></div>
+
+              <div className="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <Ban className="w-5 h-5 mr-2" />
+                      {language === 'fr' ? 'Annuler la réservation' : 'Cancel booking'}
+                    </h3>
+                    <button
+                      onClick={() => !cancelling && setShowCancelModal(false)}
+                      className="text-white hover:bg-red-800 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-gray-700 mb-6">
+                    {language === 'fr'
+                      ? 'L\'annulation libérera le logement et notifiera l\'étudiant. Sélectionnez le motif :'
+                      : 'Cancelling will free the property and notify the student. Select a reason:'}
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    <button
+                      onClick={() => setCancelReason('document')}
+                      disabled={cancelling}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                        cancelReason === 'document'
+                          ? 'border-red-600 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex-shrink-0 ${cancelReason === 'document' ? 'border-red-600 bg-red-600' : 'border-gray-300'}`}>
+                          {cancelReason === 'document' && <CheckCircle className="w-4 h-4 text-white -ml-[3px] -mt-[3px]" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {language === 'fr' ? 'Problème de document' : 'Document issue'}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {language === 'fr'
+                              ? 'Les documents fournis par l\'étudiant sont incomplets ou invalides.'
+                              : 'The student\'s documents are incomplete or invalid.'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setCancelReason('payment')}
+                      disabled={cancelling}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                        cancelReason === 'payment'
+                          ? 'border-red-600 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex-shrink-0 ${cancelReason === 'payment' ? 'border-red-600 bg-red-600' : 'border-gray-300'}`}>
+                          {cancelReason === 'payment' && <CheckCircle className="w-4 h-4 text-white -ml-[3px] -mt-[3px]" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {language === 'fr' ? 'L\'étudiant n\'a pas payé' : 'Student has not paid'}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {language === 'fr'
+                              ? 'Le paiement initial n\'a pas été effectué dans les délais.'
+                              : 'The initial payment was not completed within the deadline.'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setShowCancelModal(false)}
+                      disabled={cancelling}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    >
+                      {language === 'fr' ? 'Retour' : 'Back'}
+                    </button>
+                    <button
+                      onClick={doCancelBooking}
+                      disabled={!cancelReason || cancelling}
+                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {cancelling && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {language === 'fr' ? 'Confirmer l\'annulation' : 'Confirm cancellation'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

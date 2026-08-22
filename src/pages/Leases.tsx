@@ -106,6 +106,10 @@ export default function Leases() {
   const [uploadingLease, setUploadingLease] = useState(false);
   const [bookingPaymentStatuses, setBookingPaymentStatuses] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Lease | null>(null);
+  const [cancelReason, setCancelReason] = useState<'document' | 'payment' | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const isCustomLeaseMode = profile?.preferred_lease_type === 'custom';
 
@@ -329,37 +333,105 @@ export default function Leases() {
     }
   };
 
-  const handleCancelSignature = async (lease: any) => {
+  const openCancelSignatureModal = (lease: Lease) => {
     const wasSigned = lease.status === 'signed';
-    const msg = wasSigned
-      ? (language === 'fr'
-        ? 'Annuler le contrat ? Les signatures du propriétaire et du locataire seront supprimées, et le bail repassera en brouillon.'
-        : 'Cancel the contract? Both landlord and tenant signatures will be removed, and the lease will return to draft.')
-      : (language === 'fr'
-        ? 'Annuler l\'envoi pour signature ? Le bail repassera en brouillon et pourra être modifié ou supprimé.'
-        : 'Cancel signature request? The lease will return to draft and can be edited or deleted.');
-    if (!confirm(msg)) return;
+    const isUnpaidSigned = wasSigned && lease.booking_id && bookingPaymentStatuses[lease.booking_id] !== 'completed';
 
+    if (!isUnpaidSigned) {
+      const msg = language === 'fr'
+        ? 'Annuler l\'envoi pour signature ? Le bail repassera en brouillon et pourra être modifié ou supprimé.'
+        : 'Cancel signature request? The lease will return to draft and can be edited or deleted.';
+      if (!confirm(msg)) return;
+      doCancelSignature(lease, null);
+      return;
+    }
+
+    setCancelTarget(lease);
+    setCancelReason(null);
+    setShowCancelModal(true);
+  };
+
+  const doCancelSignature = async (lease: Lease, reason: 'document' | 'payment' | null) => {
+    const wasSigned = lease.status === 'signed';
+    const isUnpaidSigned = wasSigned && lease.booking_id && bookingPaymentStatuses[lease.booking_id] !== 'completed';
+
+    setCancelling(true);
     try {
-      const updateData: Record<string, unknown> = { status: 'draft', landlord_signature: null };
-      if (wasSigned) {
-        updateData.tenant_signature = null;
-        updateData.signed_at = null;
+      if (isUnpaidSigned && lease.booking_id) {
+        const updateData: Record<string, unknown> = {
+          status: 'cancelled',
+          landlord_signature: null,
+          tenant_signature: null,
+          signed_at: null,
+        };
+
+        const { error: leaseError } = await supabase
+          .from('leases')
+          .update(updateData)
+          .eq('id', lease.id);
+        if (leaseError) throw leaseError;
+
+        await supabase
+          .from('bookings')
+          .update({ status: 'cancelled', payment_status: 'expired' })
+          .eq('id', lease.booking_id);
+
+        await supabase.from('rent_payments').delete().eq('booking_id', lease.booking_id);
+        await supabase.from('deposit_transactions').delete().eq('booking_id', lease.booking_id);
+        await supabase.from('access_guide_unlock_overrides').delete().eq('booking_id', lease.booking_id);
+
+        if (lease.tenant_id) {
+          const reasonMsg = reason === 'document'
+            ? (language === 'fr'
+              ? 'Votre propriétaire a annulé le contrat pour un problème de document. La réservation a été annulée.'
+              : 'Your landlord cancelled the contract due to a document issue. The booking has been cancelled.')
+            : (language === 'fr'
+              ? 'Votre propriétaire a annulé le contrat car le paiement n\'a pas été effectué. La réservation a été annulée.'
+              : 'Your landlord cancelled the contract because payment was not completed. The booking has been cancelled.');
+
+          await supabase.from('notifications').insert({
+            user_id: lease.tenant_id,
+            type: 'booking_cancelled',
+            title: language === 'fr' ? 'Contrat et réservation annulés' : 'Contract and booking cancelled',
+            message: reasonMsg,
+            link: '/mes-reservations',
+            related_id: lease.booking_id,
+          });
+        }
+
+        alert(language === 'fr'
+          ? 'Contrat et réservation annulés. L\'étudiant a été notifié.'
+          : 'Contract and booking cancelled. The student has been notified.');
+      } else {
+        const updateData: Record<string, unknown> = { status: 'draft', landlord_signature: null };
+        if (wasSigned) {
+          updateData.tenant_signature = null;
+          updateData.signed_at = null;
+        }
+
+        const { error } = await supabase
+          .from('leases')
+          .update(updateData)
+          .eq('id', lease.id);
+        if (error) throw error;
+
+        alert(language === 'fr' ? 'Signature annulée. Le bail est de nouveau en brouillon.' : 'Signature cancelled. Lease is back in draft.');
       }
 
-      const { error } = await supabase
-        .from('leases')
-        .update(updateData)
-        .eq('id', lease.id);
-
-      if (error) throw error;
-
-      alert(language === 'fr' ? 'Signature annulée. Le bail est de nouveau en brouillon.' : 'Signature cancelled. Lease is back in draft.');
+      setShowCancelModal(false);
+      setCancelTarget(null);
+      setCancelReason(null);
       loadLeases();
     } catch (error) {
       console.error('Erreur annulation signature:', error);
       alert(language === 'fr' ? 'Erreur lors de l\'annulation' : 'Error cancelling');
+    } finally {
+      setCancelling(false);
     }
+  };
+
+  const handleCancelSignature = (lease: Lease) => {
+    openCancelSignatureModal(lease);
   };
 
   const handleSendForSignature = async (lease: any) => {
@@ -951,8 +1023,8 @@ export default function Leases() {
                     {isLandlord && (lease.status === 'pending_signature' || (lease.status === 'signed' && bookingPaymentStatuses[lease.booking_id || ''] !== 'completed')) && (
                       <button
                         onClick={() => handleCancelSignature(lease)}
-                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        title={language === 'fr' ? 'Annuler la signature' : 'Cancel signature'}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={language === 'fr' ? 'Annuler le contrat' : 'Cancel contract'}
                       >
                         <RotateCcw className="w-5 h-5" />
                       </button>
@@ -1487,6 +1559,111 @@ export default function Leases() {
                 >
                   {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCancelModal && cancelTarget && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75" onClick={() => !cancelling && setShowCancelModal(false)}></div>
+
+              <div className="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2" />
+                      {language === 'fr' ? 'Annuler le contrat' : 'Cancel contract'}
+                    </h3>
+                    <button
+                      onClick={() => !cancelling && setShowCancelModal(false)}
+                      className="text-white hover:bg-red-800 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-gray-700 mb-6">
+                    {language === 'fr'
+                      ? 'Ce bail est signé mais le paiement n\'a pas été effectué. L\'annulation supprimera les signatures, annulera la réservation et notifiera l\'étudiant. Sélectionnez le motif :'
+                      : 'This lease is signed but payment has not been completed. Cancelling will remove signatures, cancel the booking and notify the student. Select a reason:'}
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    <button
+                      onClick={() => setCancelReason('document')}
+                      disabled={cancelling}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                        cancelReason === 'document'
+                          ? 'border-red-600 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex-shrink-0 ${cancelReason === 'document' ? 'border-red-600 bg-red-600' : 'border-gray-300'}`}>
+                          {cancelReason === 'document' && <CheckCircle className="w-4 h-4 text-white -ml-[3px] -mt-[3px]" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {language === 'fr' ? 'Problème de document' : 'Document issue'}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {language === 'fr'
+                              ? 'Les documents fournis par l\'étudiant sont incomplets ou invalides.'
+                              : 'The student\'s documents are incomplete or invalid.'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setCancelReason('payment')}
+                      disabled={cancelling}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                        cancelReason === 'payment'
+                          ? 'border-red-600 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex-shrink-0 ${cancelReason === 'payment' ? 'border-red-600 bg-red-600' : 'border-gray-300'}`}>
+                          {cancelReason === 'payment' && <CheckCircle className="w-4 h-4 text-white -ml-[3px] -mt-[3px]" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {language === 'fr' ? 'L\'étudiant n\'a pas payé' : 'Student has not paid'}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {language === 'fr'
+                              ? 'Le paiement initial n\'a pas été effectué dans les délais.'
+                              : 'The initial payment was not completed within the deadline.'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setShowCancelModal(false)}
+                      disabled={cancelling}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    >
+                      {language === 'fr' ? 'Retour' : 'Back'}
+                    </button>
+                    <button
+                      onClick={() => cancelReason && doCancelSignature(cancelTarget, cancelReason)}
+                      disabled={!cancelReason || cancelling}
+                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {cancelling && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {language === 'fr' ? 'Confirmer l\'annulation' : 'Confirm cancellation'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
