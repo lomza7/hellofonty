@@ -404,7 +404,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
         type: action === 'confirmed' ? 'booking_confirmed' : 'booking_cancelled',
         title: `Demande ${statusText}`,
         message: `Votre demande de réservation pour ${bookingData.listing?.title} a été ${statusText}`,
-        link: `/bookings/${bookingId}`,
+        link: `/mes-reservations`,
       });
 
       if (selectedConversation) {
