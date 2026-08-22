@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Trash2, CreditCard, Timer, KeyRound } from 'lucide-react';
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Timer, KeyRound, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -161,49 +161,6 @@ export default function MyBookingRequestsStudent() {
       setBookings(data as any);
     }
     setLoading(false);
-  };
-
-  const cancelBooking = async (booking: Booking) => {
-    if (!confirm(language === 'fr' ? 'Voulez-vous vraiment annuler cette demande de reservation ?' : 'Are you sure you want to cancel this booking request?')) {
-      return;
-    }
-
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', booking.id);
-
-    if (updateError) {
-      alert(language === 'fr' ? "Erreur lors de l'annulation de la demande" : 'Error cancelling the request');
-      return;
-    }
-
-    const messageContent = `❌ Demande de reservation annulee
-
-L'etudiant a annule sa demande de reservation.
-
-Periode: ${new Date(booking.start_date).toLocaleDateString('fr-FR')} - ${new Date(booking.end_date).toLocaleDateString('fr-FR')}
-Duree: ${booking.total_days} jour${booking.total_days > 1 ? 's' : ''}
-Prix total: ${booking.total_price.toFixed(0)}€`;
-
-    await supabase.from('messages').insert({
-      sender_id: profile!.id,
-      recipient_id: booking.listing.landlord_id,
-      listing_id: booking.listing.id,
-      booking_id: booking.id,
-      content: messageContent,
-    });
-
-    await supabase.from('notifications').insert({
-      user_id: booking.listing.landlord_id,
-      type: 'booking_cancelled',
-      title: 'Demande annulee',
-      message: `${profile!.first_name} ${profile!.last_name} a annule sa demande de reservation pour ${booking.listing.title}`,
-      link: `/bookings/${booking.id}`,
-    });
-
-    loadBookings();
-    alert(language === 'fr' ? 'Demande annulee avec succes!' : 'Request cancelled successfully!');
   };
 
   const needsPayment = (booking: Booking) => {
@@ -493,16 +450,20 @@ Prix total: ${booking.total_price.toFixed(0)}€`;
                         )}
 
                         {booking.status === 'pending' && (
-                          <button
-                            onClick={() => cancelBooking(booking)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>{language === 'fr' ? 'Annuler' : 'Cancel'}</span>
-                          </button>
+                          <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                            <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                            <span className="text-sm">{language === 'fr' ? 'Pour annuler, contactez hellofonty' : 'To cancel, contact hellofonty'}</span>
+                          </div>
                         )}
 
-                        {!needsPayment(booking) && !isPaymentCompleted(booking) && booking.status !== 'pending' && (
+                        {booking.status === 'confirmed' && !isPaymentCompleted(booking) && (
+                          <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                            <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                            <span className="text-sm">{language === 'fr' ? 'Pour annuler, contactez hellofonty' : 'To cancel, contact hellofonty'}</span>
+                          </div>
+                        )}
+
+                        {!needsPayment(booking) && !isPaymentCompleted(booking) && booking.status !== 'pending' && booking.status !== 'confirmed' && (
                           <div className="text-right">
                             <p className="text-xs text-gray-500">{language === 'fr' ? 'Demande effectuee le' : 'Request made on'}</p>
                             <p className="text-sm font-medium text-gray-700">
