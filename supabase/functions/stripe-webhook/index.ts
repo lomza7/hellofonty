@@ -369,6 +369,53 @@ async function handleEvent(event: Stripe.Event) {
     return;
   }
 
+  // Handle direct charges on landlord Stripe Connect accounts (premium subscription)
+  if (event.type === 'charge.succeeded') {
+    const charge = stripeData as Stripe.Charge;
+
+    if (charge.metadata?.type === 'premium_subscription' && charge.metadata?.landlord_id) {
+      console.info(`Processing premium subscription charge: ${charge.id} for landlord: ${charge.metadata.landlord_id}`);
+
+      try {
+        const invoiceId = `${charge.metadata.auto_charge === 'true' ? 'auto' : 'manual'}_${charge.id}`;
+
+        // Check if invoice already exists
+        const { data: existingInvoice } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('stripe_invoice_id', invoiceId)
+          .maybeSingle();
+
+        if (existingInvoice) {
+          console.info(`Invoice ${invoiceId} already exists, skipping`);
+          return;
+        }
+
+        // Record the invoice
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            user_id: charge.metadata.landlord_id,
+            stripe_invoice_id: invoiceId,
+            amount: charge.amount,
+            currency: charge.currency,
+            status: 'paid',
+            billing_reason: charge.metadata.auto_charge === 'true' ? 'automatic_monthly_charge' : 'manual_admin_charge',
+          });
+
+        if (invoiceError) {
+          console.error('Error inserting premium subscription invoice:', invoiceError);
+        } else {
+          console.info(`Successfully recorded premium subscription charge: ${charge.id}`);
+        }
+      } catch (error) {
+        console.error('Error processing premium subscription charge:', error);
+      }
+
+      return;
+    }
+  }
+
   // Only process subscription sync / one-time order insertion for checkout.session.completed events
   // that were NOT already handled above (first_payment / monthly_rent return early).
   // Other event types (charge.refunded, payment_intent.*, etc.) should not fall through here.

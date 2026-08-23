@@ -198,6 +198,8 @@ export default function Admin() {
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState<string | null>(null);
+  const [chargingLandlordId, setChargingLandlordId] = useState<string | null>(null);
+  const [chargeResult, setChargeResult] = useState<{ user_id: string; success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!profile || profile.role !== 'admin') {
@@ -1201,14 +1203,79 @@ export default function Admin() {
                       {new Date(user.created_at).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={async () => {
-                          if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur ${user.first_name} ${user.last_name} ? Cette action est irréversible.`)) {
-                            return;
-                          }
+                      <div className="flex items-center gap-2">
+                        {user.role === 'landlord' && (
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(`Prélever 59,00 € d'abonnement Premium sur le compte Stripe de ${user.first_name} ${user.last_name} ?`)) {
+                                return;
+                              }
 
-                          try {
-                            const { data: { session } } = await supabase.auth.getSession();
+                              setChargingLandlordId(user.id);
+                              setChargeResult(null);
+
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session) {
+                                  setChargeResult({ user_id: user.id, success: false, message: 'Session expirée. Veuillez vous reconnecter.' });
+                                  return;
+                                }
+
+                                const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+                                const response = await fetch(apiUrl, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                  },
+                                  body: JSON.stringify({ landlord_id: user.id }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok || !result.success) {
+                                  throw new Error(result.error || 'Erreur lors du prélèvement');
+                                }
+
+                                setChargeResult({ user_id: user.id, success: true, message: result.message || 'Prélèvement effectué avec succès' });
+                                await loadAdminData();
+                              } catch (error) {
+                                console.error('Error charging subscription:', error);
+                                setChargeResult({ user_id: user.id, success: false, message: error instanceof Error ? error.message : 'Erreur lors du prélèvement' });
+                              } finally {
+                                setChargingLandlordId(null);
+                              }
+                            }}
+                            disabled={chargingLandlordId === user.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Prélever l'abonnement Premium (59 €) sur le compte Stripe du propriétaire"
+                          >
+                            {chargingLandlordId === user.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                En cours...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="w-4 h-4" />
+                                Prélever abonnement
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {chargeResult && chargeResult.user_id === user.id && (
+                          <span className={`text-xs ${chargeResult.success ? 'text-green-600' : 'text-red-600'} max-w-xs`}>
+                            {chargeResult.message}
+                          </span>
+                        )}
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur ${user.first_name} ${user.last_name} ? Cette action est irréversible.`)) {
+                              return;
+                            }
+
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
 
                             if (!session) {
                               alert('Session expirée. Veuillez vous reconnecter.');
@@ -1246,6 +1313,7 @@ export default function Admin() {
                         <Trash2 className="w-4 h-4" />
                         Supprimer
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
