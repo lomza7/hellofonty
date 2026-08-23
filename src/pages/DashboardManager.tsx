@@ -93,7 +93,7 @@ export default function DashboardManager() {
           .order('collected_at', { ascending: false });
         setDeposits((deps ?? []) as unknown as DepositRow[]);
       }
-      setLoading(false);
+      setLoading(false); // always stop loading, even with zero assignments
     })();
   }, [authLoading, profile, navigate]);
 
@@ -171,18 +171,18 @@ export default function DashboardManager() {
               </thead>
               <tbody>
                 {deposits.map(d => {
-                  const cfg = depositStatusConfig[d.status];
+                  const cfg = depositStatusConfig[d.status] || { label: d.status, color: 'bg-gray-100 text-gray-700' };
                   return (
                     <tr key={d.id} className="border-b last:border-0">
                       <td className="py-2 pr-4">{d.student ? `${d.student.first_name} ${d.student.last_name}` : 'N/A'}</td>
                       <td className="py-2 pr-4">{d.listing?.title ?? 'N/A'}</td>
-                      <td className="py-2 pr-4 font-medium">{d.deposit_amount.toFixed(2)} €</td>
+                      <td className="py-2 pr-4 font-medium">{Number(d.deposit_amount || 0).toFixed(2)} €</td>
                       <td className="py-2 pr-4">
                         <span className={`px-2 py-1 rounded-full text-xs ${cfg.color}`}>{cfg.label}</span>
                       </td>
                       <td className="py-2 pr-4 text-xs text-gray-600">
                         {d.status === 'retained' && (
-                          <span>Retenu: {d.retained_amount.toFixed(2)}€ / Remboursé: {d.refunded_amount.toFixed(2)}€</span>
+                          <span>Retenu: {Number(d.retained_amount || 0).toFixed(2)}€ / Remboursé: {Number(d.refunded_amount || 0).toFixed(2)}€</span>
                         )}
                         {d.status === 'refunded' && <span>Remboursé le {d.refunded_at ? new Date(d.refunded_at).toLocaleDateString('fr-FR') : ''}</span>}
                         {d.status === 'collected' && <span className="text-gray-400">En attente</span>}

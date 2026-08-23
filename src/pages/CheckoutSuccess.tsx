@@ -66,7 +66,7 @@ export default function CheckoutSuccess() {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-                <CheckCircle className="w-13 h-13 text-white" strokeWidth={1.5} />
+                <CheckCircle className="w-12 h-12 text-white" strokeWidth={1.5} />
               </div>
               <div className="absolute -top-1 -right-1 w-9 h-9 bg-amber-400 rounded-full flex items-center justify-center shadow-md border-2 border-white">
                 <Crown className="w-4 h-4 text-white" />

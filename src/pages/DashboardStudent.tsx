@@ -53,7 +53,7 @@ interface Booking {
 interface Payment {
   id: string;
   amount: number;
-  due_date: string;
+  payment_date: string;
   status: string;
 }
 
@@ -155,10 +155,10 @@ export default function DashboardStudent() {
           .from('rent_payments')
           .select('*')
           .eq('student_id', user.id)
-          .eq('status', 'pending')
-          .gte('due_date', new Date().toISOString())
-          .lte('due_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
-          .order('due_date', { ascending: true }),
+          .in('status', ['pending', 'overdue'])
+          .gte('payment_date', new Date().toISOString().split('T')[0])
+          .lte('payment_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('payment_date', { ascending: true }),
 
         supabase
           .from('notifications')
@@ -377,7 +377,7 @@ export default function DashboardStudent() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-semibold text-gray-900">{payment.amount}€</span>
                         <span className="text-xs text-gray-600">
-                          {new Date(payment.due_date).toLocaleDateString('fr-FR')}
+                          {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
                         </span>
                       </div>
                       <Link

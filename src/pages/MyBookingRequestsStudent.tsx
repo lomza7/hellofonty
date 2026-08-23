@@ -314,12 +314,12 @@ export default function MyBookingRequestsStudent() {
                 <div className="flex flex-col md:flex-row">
                   <div
                     className="md:w-64 h-48 md:h-auto cursor-pointer"
-                    onClick={() => navigate(`/logement/${booking.listing.id}`)}
+                    onClick={() => booking.listing && navigate(`/logement/${booking.listing.id}`)}
                   >
-                    {booking.listing.images && booking.listing.images.length > 0 ? (
+                    {booking.listing?.images && booking.listing.images.length > 0 ? (
                       <img
                         src={booking.listing.images[0].image_url}
-                        alt={booking.listing.title}
+                        alt={booking.listing?.title || ''}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -334,14 +334,14 @@ export default function MyBookingRequestsStudent() {
                       <div className="flex-1 mb-4 md:mb-0">
                         <h3
                           className="text-2xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition"
-                          onClick={() => navigate(`/logement/${booking.listing.id}`)}
+                          onClick={() => booking.listing && navigate(`/logement/${booking.listing.id}`)}
                         >
-                          {booking.listing.title}
+                          {booking.listing?.title || ''}
                         </h3>
                         <div className="flex items-center text-gray-600 mb-3">
                           <MapPin className="w-4 h-4 mr-1" />
                           <span>
-                            {booking.listing.address}, {booking.listing.city}
+                            {booking.listing?.address || ''}, {booking.listing?.city || ''}
                           </span>
                         </div>
                       </div>

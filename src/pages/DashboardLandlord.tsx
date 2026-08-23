@@ -168,11 +168,11 @@ export default function DashboardLandlord() {
 
       const totalRevenue = payments
         .filter(p => p.status === 'paid')
-        .reduce((sum, p) => sum + (p.landlord_amount || 0), 0);
+        .reduce((sum, p) => sum + (p.total_amount || 0), 0);
 
       const pendingPayments = payments
-        .filter(p => p.status === 'pending')
-        .reduce((sum, p) => sum + (p.landlord_amount || 0), 0);
+        .filter(p => p.status === 'pending' || p.status === 'overdue')
+        .reduce((sum, p) => sum + (p.total_amount || 0), 0);
 
       setStats({
         totalRevenue: Math.round(totalRevenue),

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/BackButton';
-import { Shield, Clock, CheckCircle, AlertTriangle, Euro } from 'lucide-react';
+import { Shield, Clock, CheckCircle, AlertTriangle, Euro, AlertCircle } from 'lucide-react';
 
 interface DepositTransaction {
   id: string;
@@ -130,7 +130,7 @@ export default function StudentDeposits() {
         ) : (
           <div className="space-y-4">
             {deposits.map((deposit) => {
-              const cfg = statusConfig[deposit.status];
+              const cfg = statusConfig[deposit.status] || { label: deposit.status, color: 'bg-gray-100 text-gray-700', icon: AlertCircle };
               const Icon = cfg.icon;
               return (
                 <div key={deposit.id} className="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
@@ -151,7 +151,7 @@ export default function StudentDeposits() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">{deposit.deposit_amount.toFixed(2)} €</p>
+                      <p className="text-lg font-bold text-gray-900">{Number(deposit.deposit_amount || 0).toFixed(2)} €</p>
                       {deposit.status === 'refunded' && deposit.refunded_at && (
                         <p className="text-xs text-green-600">Remboursé le {new Date(deposit.refunded_at).toLocaleDateString('fr-FR')}</p>
                       )}
@@ -166,11 +166,11 @@ export default function StudentDeposits() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-600">Remboursé</p>
-                          <p className="font-semibold text-green-600">{deposit.refunded_amount.toFixed(2)} €</p>
+                          <p className="font-semibold text-green-600">{Number(deposit.refunded_amount || 0).toFixed(2)} €</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Retenu</p>
-                          <p className="font-semibold text-orange-600">{deposit.retained_amount.toFixed(2)} €</p>
+                          <p className="font-semibold text-orange-600">{Number(deposit.retained_amount || 0).toFixed(2)} €</p>
                         </div>
                       </div>
                       {deposit.retention_reason && (

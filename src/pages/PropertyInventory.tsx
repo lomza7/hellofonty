@@ -94,8 +94,8 @@ export default function PropertyInventory() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(inv =>
-        inv.listing.title.toLowerCase().includes(term) ||
-        inv.listing.address.toLowerCase().includes(term) ||
+        inv.listing?.title?.toLowerCase().includes(term) ||
+        inv.listing?.address?.toLowerCase().includes(term) ||
         (inv.tenant_name && inv.tenant_name.toLowerCase().includes(term))
       );
     }

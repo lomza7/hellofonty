@@ -143,8 +143,8 @@ export default function Leases() {
       if (error) throw error;
       setLeases(data || []);
 
-      // For students: fetch booking payment statuses to gate contract access
-      if (!isLandlord && data && data.length > 0) {
+      // Fetch booking payment statuses to gate contract access (both roles)
+      if (data && data.length > 0) {
         const bookingIds = data.map(l => l.booking_id).filter(id => id) as string[];
         if (bookingIds.length > 0) {
           const { data: bookings } = await supabase

@@ -103,12 +103,16 @@ export default function CreateInventory() {
     if (formData.lease_id && !formData.booking_id) {
       const selectedLease = leases.find(l => l.id === formData.lease_id);
       if (selectedLease) {
-        setFormData(prev => ({
-          ...prev,
-          tenant_id: selectedLease.tenant_id,
-          tenant_name: `${selectedLease.tenant.first_name} ${selectedLease.tenant.last_name}`,
-          tenant_email: selectedLease.tenant.email || ''
-        }));
+        supabase
+          .rpc('get_user_email', { user_id: selectedLease.tenant_id })
+          .then(({ data: emailData }) => {
+            setFormData(prev => ({
+              ...prev,
+              tenant_id: selectedLease.tenant_id,
+              tenant_name: `${selectedLease.tenant.first_name} ${selectedLease.tenant.last_name}`,
+              tenant_email: emailData || ''
+            }));
+          });
       }
     }
   }, [formData.lease_id, leases, formData.booking_id]);

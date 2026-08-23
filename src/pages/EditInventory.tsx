@@ -71,6 +71,9 @@ export default function EditInventory() {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoomType, setNewRoomType] = useState('');
   const [newRoomName, setNewRoomName] = useState('');
+  const [deletedRoomIds, setDeletedRoomIds] = useState<string[]>([]);
+  const [deletedElementIds, setDeletedElementIds] = useState<string[]>([]);
+  const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -197,6 +200,18 @@ export default function EditInventory() {
 
   const deleteRoom = (index: number) => {
     if (confirm(language === 'fr' ? 'Supprimer cette pièce ?' : 'Delete this room?')) {
+      const room = rooms[index];
+      if (room.id) {
+        setDeletedRoomIds(prev => [...prev, room.id!]);
+        for (const el of room.elements) {
+          if (el.id) {
+            setDeletedElementIds(prev => [...prev, el.id!]);
+            for (const ph of el.photos) {
+              if (ph.id) setDeletedPhotoIds(prev => [...prev, ph.id!]);
+            }
+          }
+        }
+      }
       setRooms(rooms.filter((_, i) => i !== index));
       setHasUnsavedChanges(true);
     }
@@ -236,6 +251,10 @@ export default function EditInventory() {
   };
 
   const deleteElementPhoto = (roomIndex: number, elementIndex: number, photoIndex: number) => {
+    const photo = rooms[roomIndex].elements[elementIndex].photos[photoIndex];
+    if (photo.id) {
+      setDeletedPhotoIds(prev => [...prev, photo.id!]);
+    }
     const newRooms = [...rooms];
     newRooms[roomIndex].elements[elementIndex].photos =
       newRooms[roomIndex].elements[elementIndex].photos.filter((_, i) => i !== photoIndex);
@@ -248,6 +267,20 @@ export default function EditInventory() {
 
     setSaving(true);
     try {
+      // Persist deletions first
+      if (deletedPhotoIds.length > 0) {
+        await supabase.from('inventory_photos').delete().in('id', deletedPhotoIds);
+        setDeletedPhotoIds([]);
+      }
+      if (deletedElementIds.length > 0) {
+        await supabase.from('inventory_elements').delete().in('id', deletedElementIds);
+        setDeletedElementIds([]);
+      }
+      if (deletedRoomIds.length > 0) {
+        await supabase.from('inventory_rooms').delete().in('id', deletedRoomIds);
+        setDeletedRoomIds([]);
+      }
+
       for (const [roomIndex, room] of rooms.entries()) {
         let roomId = room.id;
 

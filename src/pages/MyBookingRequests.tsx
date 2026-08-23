@@ -540,7 +540,7 @@ export default function MyBookingRequests() {
                           <span className="font-semibold">{language === 'fr' ? 'Locataire' : 'Tenant'}</span>
                         </div>
                         <p className="text-gray-900 font-medium">
-                          {booking.student.first_name} {booking.student.last_name}
+                          {booking.student?.first_name || ''} {booking.student?.last_name || ''}
                         </p>
                       </div>
 

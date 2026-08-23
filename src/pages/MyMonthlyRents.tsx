@@ -572,7 +572,7 @@ export default function MyMonthlyRents() {
         .eq('student_id', user!.id)
         .eq('status', 'confirmed')
         .order('created_at', { ascending: false })
-        .order('display_order', { ascending: true, referencedTable: 'listing_images' });
+        .order('display_order', { ascending: true, referencedTable: 'images' });
 
       if (error) throw error;
 
