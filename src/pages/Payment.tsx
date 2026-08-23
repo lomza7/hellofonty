@@ -244,7 +244,7 @@ export default function Payment() {
     );
   }
 
-  const isExpired = new Date(booking.payment_deadline) < new Date();
+  const isExpired = booking.payment_deadline ? new Date(booking.payment_deadline) < new Date() : false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 py-12">

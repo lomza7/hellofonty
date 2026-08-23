@@ -8,9 +8,9 @@ import BackButton from '../components/BackButton';
 interface LandlordDocument {
   id: string;
   document_type: string;
-  document_url: string;
-  verification_status: string;
-  submitted_at: string;
+  file_url: string;
+  status: string;
+  uploaded_at: string;
   reviewed_at?: string;
   rejection_reason?: string;
 }
@@ -87,7 +87,7 @@ export default function Profile() {
         .from('landlord_documents')
         .select('*')
         .eq('landlord_id', profile.id)
-        .order('submitted_at', { ascending: false });
+        .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
 
@@ -835,19 +835,19 @@ export default function Profile() {
                                   : (preferredLanguage === 'fr' ? 'Taxe foncière' : 'Property Tax')}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
-                                {doc.verification_status === 'approved' && (
+                                {doc.status === 'approved' && (
                                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" />
                                     {preferredLanguage === 'fr' ? 'Approuvé' : 'Approved'}
                                   </span>
                                 )}
-                                {doc.verification_status === 'pending' && (
+                                {doc.status === 'pending' && (
                                   <span className="text-xs font-medium text-orange-600 flex items-center gap-1">
                                     <ClockIcon className="w-3 h-3" />
                                     {preferredLanguage === 'fr' ? 'En attente' : 'Pending'}
                                   </span>
                                 )}
-                                {doc.verification_status === 'rejected' && (
+                                {doc.status === 'rejected' && (
                                   <span className="text-xs font-medium text-red-600 flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" />
                                     {preferredLanguage === 'fr' ? 'Refusé' : 'Rejected'}
@@ -856,7 +856,7 @@ export default function Profile() {
                               </div>
                             </div>
                             <a
-                              href={doc.document_url}
+                              href={doc.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 hover:bg-gray-100 rounded-lg transition"

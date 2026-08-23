@@ -171,7 +171,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
   };
 
   const loadAccessGuides = async () => {
-    if (!profile || profile.user_type !== 'landlord') return;
+    if (!profile || profile.role !== 'landlord') return;
 
     const { data: listingsData, error: listingsError } = await supabase
       .from('listings')
@@ -199,7 +199,7 @@ export default function Messages({ selectedUserId }: MessagesProps) {
 
   const insertAccessGuideLink = (guide: any) => {
     const shareUrl = `${window.location.origin}/partage/${guide.share_token}`;
-    const messageText = `📍 Guide d'accès pour ${guide.listing.title}\n\nVoici le lien vers le guide d'accès complet de votre logement avec toutes les instructions nécessaires :\n\n${shareUrl}\n\nVous y trouverez : les codes d'accès, le WiFi, les instructions de stationnement et toutes les informations pratiques.`;
+    const messageText = `📍 Guide d'accès pour ${guide.listing?.title || 'votre logement'}\n\nVoici le lien vers le guide d'accès complet de votre logement avec toutes les instructions nécessaires :\n\n${shareUrl}\n\nVous y trouverez : les codes d'accès, le WiFi, les instructions de stationnement et toutes les informations pratiques.`;
     setNewMessage(messageText);
     setShowGuideMenu(false);
   };
@@ -773,7 +773,7 @@ Votre demande de réservation a été ${statusText} par le propriétaire.`;
                     )}
 
                     {/* Bouton pour partager un guide d'accès */}
-                    {profile?.user_type === 'landlord' && accessGuides.length > 0 && (
+                    {profile?.role === 'landlord' && accessGuides.length > 0 && (
                       <div className="mb-4 relative">
                         <button
                           onClick={() => setShowGuideMenu(!showGuideMenu)}

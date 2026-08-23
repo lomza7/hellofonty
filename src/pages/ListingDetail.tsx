@@ -514,7 +514,7 @@ En attente de votre confirmation.`;
             <div className="mb-8">
               <BookingCalendar
                 pricePerMonth={listing.price_per_month}
-                charges={listing.charges || 0}
+                charges={(listing.electricity_cost || 0) + (listing.heating_cost || 0) + (listing.water_cost || 0) + (listing.custom_charges?.reduce((sum: number, c: any) => sum + (parseFloat(c.amount) || 0), 0) || 0)}
                 minimumStayMonths={listing.minimum_stay || 0.5}
                 maximumStayMonths={8}
                 existingBookings={existingBookings}

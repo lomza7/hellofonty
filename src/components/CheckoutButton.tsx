@@ -27,7 +27,7 @@ export default function CheckoutButton({
         priceId: product.priceId,
         mode: product.mode,
       });
-      window.location.href = url;
+      if (typeof url !== 'string' || !url.startsWith('https://')) throw new Error('Invalid checkout URL'); window.location.href = url;
     } catch (err: any) {
       setError(err.message ?? 'Une erreur est survenue.');
     } finally {

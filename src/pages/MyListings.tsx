@@ -51,10 +51,15 @@ export default function MyListings() {
   };
 
   const toggleActive = async (listingId: string, currentStatus: boolean) => {
-    await supabase
+    const { error } = await supabase
       .from('listings')
       .update({ is_active: !currentStatus })
       .eq('id', listingId);
+
+    if (error) {
+      alert(language === 'fr' ? 'Erreur lors de la mise à jour' : 'Error updating');
+      return;
+    }
 
     setListings((prev) =>
       prev.map((l) =>
@@ -107,7 +112,8 @@ export default function MyListings() {
           display_order: img.display_order,
         }));
 
-        await supabase.from('listing_images').insert(imageRecords);
+        const { error: imgError } = await supabase.from('listing_images').insert(imageRecords);
+      if (imgError) console.error('Error copying images:', imgError.message);
       }
 
       loadListings();

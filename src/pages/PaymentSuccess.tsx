@@ -35,6 +35,9 @@ export default function PaymentSuccess() {
 
       if (!error && data) {
         setBooking(data);
+        if (data.payment_status !== 'completed') {
+          setLoadError(true);
+        }
       } else {
         setLoadError(true);
       }
