@@ -122,27 +122,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+            phone: userData.phone,
+          },
+        },
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('No user returned from signup');
-
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: authData.user.id,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role: userData.role,
-        phone: userData.phone,
-        preferred_language: 'fr',
-        is_verified: false,
-      });
-
-      if (profileError) throw profileError;
-
-      if (userData.role === 'landlord') {
-        const { generateLeaseTypeTask } = await import('../utils/taskGenerator');
-        generateLeaseTypeTask(authData.user.id);
-      }
 
       return { error: null };
     } catch (error) {

@@ -89,7 +89,7 @@ export default function CreateInventory() {
           setFormData(prev => ({
             ...prev,
             tenant_id: selectedBooking.student_id,
-            tenant_name: `${selectedBooking.student.first_name} ${selectedBooking.student.last_name}`,
+            tenant_name: `${selectedBooking.student?.first_name || ''} ${selectedBooking.student?.last_name || ''}`.trim() || 'N/A',
             tenant_email: emailData || ''
           }));
         }
@@ -109,7 +109,7 @@ export default function CreateInventory() {
             setFormData(prev => ({
               ...prev,
               tenant_id: selectedLease.tenant_id,
-              tenant_name: `${selectedLease.tenant.first_name} ${selectedLease.tenant.last_name}`,
+              tenant_name: `${selectedLease.tenant?.first_name || ''} ${selectedLease.tenant?.last_name || ''}`.trim() || 'N/A',
               tenant_email: emailData || ''
             }));
           });
@@ -378,7 +378,7 @@ export default function CreateInventory() {
                     </option>
                     {bookings.map(booking => (
                       <option key={booking.id} value={booking.id}>
-                        {booking.student.first_name} {booking.student.last_name} - {new Date(booking.start_date).toLocaleDateString()} → {new Date(booking.end_date).toLocaleDateString()}
+                        {booking.student?.first_name || 'N/A'} {booking.student?.last_name || ''} - {new Date(booking.start_date).toLocaleDateString()} → {new Date(booking.end_date).toLocaleDateString()}
                       </option>
                     ))}
                   </select>
@@ -405,7 +405,7 @@ export default function CreateInventory() {
                     </option>
                     {leases.map(lease => (
                       <option key={lease.id} value={lease.id}>
-                        {lease.tenant.first_name} {lease.tenant.last_name} - {new Date(lease.start_date).toLocaleDateString()} → {new Date(lease.end_date).toLocaleDateString()}
+                        {lease.tenant?.first_name || 'N/A'} {lease.tenant?.last_name || ''} - {new Date(lease.start_date).toLocaleDateString()} → {new Date(lease.end_date).toLocaleDateString()}
                       </option>
                     ))}
                   </select>

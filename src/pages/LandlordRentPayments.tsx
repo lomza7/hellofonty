@@ -166,7 +166,7 @@ export default function LandlordRentPayments() {
           comparison = a.rent_amount - b.rent_amount;
           break;
         case 'property':
-          comparison = a.listing.title.localeCompare(b.listing.title);
+          comparison = (a.listing?.title || '').localeCompare(b.listing?.title || '');
           break;
       }
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -195,7 +195,7 @@ export default function LandlordRentPayments() {
     const rows = filteredPayments.map(p => [
       formatDate(p.payment_date),
       formatMonthYear(p.month_year),
-      p.listing.title,
+      p.listing?.title || 'N/A',
       p.student_name,
       p.rent_amount.toFixed(2),
       p.status
@@ -310,11 +310,11 @@ export default function LandlordRentPayments() {
         is_first_month_partial: !!booking.is_first_month_partial,
         payment_status: booking.payment_status,
         payment_deadline: booking.payment_deadline,
-        student_name: `${booking.student.first_name} ${booking.student.last_name}`,
+        student_name: `${booking.student?.first_name || ''} ${booking.student?.last_name || ''}`.trim() || 'N/A',
         listing: {
-          title: booking.listing.title,
-          address: booking.listing.address,
-          monthly_price: booking.listing.price_per_month,
+          title: booking.listing?.title || 'N/A',
+          address: booking.listing?.address || '',
+          monthly_price: booking.listing?.price_per_month,
         },
       }));
 
@@ -325,7 +325,7 @@ export default function LandlordRentPayments() {
       const formattedPayments = data.map((payment: any) => ({
         id: payment.id,
         booking_id: payment.booking_id,
-        student_name: `${payment.booking.student.first_name} ${payment.booking.student.last_name}`,
+        student_name: `${payment.booking?.student?.first_name || ''} ${payment.booking?.student?.last_name || ''}`.trim() || 'N/A',
         rent_amount: Number(payment.rent_amount) || 0,
         platform_fee: Number(payment.platform_fee) || 0,
         total_amount: Number(payment.total_amount) || 0,
@@ -336,9 +336,9 @@ export default function LandlordRentPayments() {
         auto_reminder_enabled: payment.auto_reminder_enabled ?? true,
         last_reminder_sent_at: payment.last_reminder_sent_at,
         listing: {
-          title: payment.booking.listing.title,
-          address: payment.booking.listing.address,
-          stripe_account_id: payment.booking.listing.stripe_account_id || null,
+          title: payment.booking?.listing?.title || 'N/A',
+          address: payment.booking?.listing?.address || '',
+          stripe_account_id: payment.booking?.listing?.stripe_account_id || null,
         },
       }));
 
