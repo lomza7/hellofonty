@@ -23,6 +23,14 @@ interface AccessCodeEntry {
   code: string;
 }
 
+const CODE_TYPE_LABELS: Record<string, string> = {
+  digicode: 'Digicode',
+  boite_a_cles: 'Boîte à clés',
+  portail: 'Portail',
+  interphone: 'Interphone',
+  autre: 'Autre',
+};
+
 interface AccessGuide {
   access_type: 'boite_a_cles' | 'remise_en_main_propre' | 'autre';
   access_instructions: string;
@@ -113,7 +121,7 @@ export default function AccessGuidePreviewModal({
                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 space-y-2">
                     {guide.access_codes.map((entry, index) => (
                       <div key={index} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
-                        <span className="text-sm text-gray-600 capitalize">{entry.type === 'boite_a_cles' ? 'Boîte à clés' : entry.type === 'autre' ? 'Autre' : entry.type}</span>
+                        <span className="text-sm text-gray-600">{CODE_TYPE_LABELS[entry.type] || entry.type}</span>
                         <span className="text-lg font-semibold text-gray-900 font-mono">{entry.code}</span>
                       </div>
                     ))}

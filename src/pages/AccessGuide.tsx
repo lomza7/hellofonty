@@ -77,7 +77,6 @@ export default function AccessGuide() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [_data, setData] = useState<any>(null);
   const [bookings, setBookings] = useState<Array<{ id: string; student_name: string; start_date: string; end_date: string }>>([]);
   const [selectedBooking, setSelectedBooking] = useState<string>('');
   const [overrideUnlockDate, setOverrideUnlockDate] = useState<string | null>(null);
@@ -85,7 +84,6 @@ export default function AccessGuide() {
   const [savingOverride, setSavingOverride] = useState(false);
   const [youtubeLink, setYoutubeLink] = useState('');
 
-  setData; // Mark _data as used
   const [formData, setFormData] = useState<AccessGuide>({
     listing_id: '',
     access_type: 'boite_a_cles',
