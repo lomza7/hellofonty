@@ -429,34 +429,41 @@ export default function MyBookingRequestsStudent() {
                         )}
 
                         {booking.status === 'confirmed' && (
-                          <div className="flex items-center gap-2">
-                            {(() => {
-                              const arrival = new Date(booking.start_date + 'T00:00:00');
-                              const now = new Date();
-                              now.setHours(0, 0, 0, 0);
-                              const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
-                              const isUnlocked = now >= unlockAt;
-                              const daysUntil = Math.ceil((arrival.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          <div className="mb-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                              <div className="flex items-center gap-2 flex-1">
+                                <KeyRound className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                <span className="text-sm font-medium text-blue-900">
+                                  {language === 'fr' ? 'Guide d\'accès de ce logement' : 'Access guide for this listing'}
+                                </span>
+                                {(() => {
+                                  const arrival = new Date(booking.start_date + 'T00:00:00');
+                                  const now = new Date();
+                                  now.setHours(0, 0, 0, 0);
+                                  const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
+                                  const isUnlocked = now >= unlockAt;
+                                  const daysUntil = Math.ceil((arrival.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-                              return isUnlocked ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                  <KeyRound className="w-3 h-3" />
-                                  {language === 'fr' ? 'Guide disponible' : 'Guide available'}
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                                  <Lock className="w-3 h-3" />
-                                  {language === 'fr' ? `Guide dans ${daysUntil}j` : `Guide in ${daysUntil}d`}
-                                </span>
-                              );
-                            })()}
-                            <button
-                              onClick={() => navigate(`/mon-guide/${booking.id}`)}
-                              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                            >
-                              <KeyRound className="w-4 h-4" />
-                              <span>{language === 'fr' ? 'Guide d\'accès' : 'Access guide'}</span>
-                            </button>
+                                  return isUnlocked ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                      {language === 'fr' ? 'Disponible' : 'Available'}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
+                                      <Lock className="w-3 h-3" />
+                                      {language === 'fr' ? `Dans ${daysUntil}j` : `In ${daysUntil}d`}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                              <button
+                                onClick={() => navigate(`/mon-guide/${booking.id}`)}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow-sm w-full sm:w-auto"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                                <span>{language === 'fr' ? 'Ouvrir le guide d\'accès' : 'Open access guide'}</span>
+                              </button>
+                            </div>
                           </div>
                         )}
 

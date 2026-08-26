@@ -309,6 +309,15 @@ export default function Navbar() {
                           </div>
 
                           <Link
+                            to="/mes-reservations"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-blue-700 hover:bg-blue-50 flex items-center space-x-3 font-semibold"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                            <span>{language === 'fr' ? "Mon guide d'accès" : 'My Access Guide'}</span>
+                          </Link>
+
+                          <Link
                             to="/favoris"
                             onClick={() => setShowUserMenu(false)}
                             className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"

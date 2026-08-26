@@ -184,7 +184,7 @@ export default function DashboardStudent() {
       setUpcomingPayments(paymentsRes.data?.slice(0, 3) || []);
 
       const confirmedBookings = (bookingsRes.data || []).filter(
-        (b: Booking) => b.status === 'confirmed' && b.payment_status === 'completed'
+        (b: Booking) => b.status === 'confirmed'
       );
       const upcomingConfirmed = confirmedBookings
         .filter((b: Booking) => new Date(b.end_date) >= new Date())
@@ -326,34 +326,44 @@ export default function DashboardStudent() {
                 </div>
                 <div className="space-y-4">
                   {recentBookings.map(booking => (
-                    <Link
+                    <div
                       key={booking.id}
-                      to={`/logement/${booking.listing_id}`}
                       className="block p-4 border-2 border-gray-100 rounded-xl hover:border-rose-200 hover:shadow-md transition-all"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">
-                            {booking.listings.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {booking.listings.address}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(booking.start_date).toLocaleDateString('fr-FR')} - {new Date(booking.end_date).toLocaleDateString('fr-FR')}
-                          </p>
+                      <Link to={`/logement/${booking.listing_id}`} className="block">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1">
+                              {booking.listings.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {booking.listings.address}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(booking.start_date).toLocaleDateString('fr-FR')} - {new Date(booking.end_date).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {booking.status === 'confirmed' ? t('dashboard.confirmed') :
+                             booking.status === 'pending' ? t('auth.pendingVerification') :
+                             booking.status}
+                          </span>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {booking.status === 'confirmed' ? t('dashboard.confirmed') :
-                           booking.status === 'pending' ? t('auth.pendingVerification') :
-                           booking.status}
-                        </span>
-                      </div>
-                    </Link>
+                      </Link>
+                      {booking.status === 'confirmed' && (
+                        <button
+                          onClick={() => navigate(`/mon-guide/${booking.id}`)}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                          {t('dashboard.student.myBookings') ? 'Voir le guide d\'accès' : 'Voir le guide d\'accès'}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -502,28 +512,63 @@ function AccessGuideCard({ booking }: { booking: Booking }) {
   const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
   const isUnlocked = now >= unlockAt;
   const daysUntilArrival = Math.ceil((arrival.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const isPaid = booking.payment_status === 'completed';
+
+  let state: 'locked-unpaid' | 'locked-paid' | 'unlocked';
+  if (!isPaid) {
+    state = 'locked-unpaid';
+  } else if (isUnlocked) {
+    state = 'unlocked';
+  } else {
+    state = 'locked-paid';
+  }
+
+  const styles = {
+    'locked-unpaid': {
+      container: 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300',
+      icon: 'bg-amber-500',
+      badge: 'bg-amber-100 text-amber-800',
+      badgeText: 'Paiement requis',
+      title: 'Votre guide d\'accès est en attente',
+      buttonText: 'Payer mon premier loyer',
+      buttonClass: 'bg-amber-600 text-white hover:bg-amber-700 shadow-md',
+      action: () => navigate('/mes-reservations'),
+    },
+    'locked-paid': {
+      container: 'bg-gradient-to-br from-slate-50 to-gray-50 border-gray-200',
+      icon: 'bg-gray-400',
+      badge: 'bg-gray-100 text-gray-600',
+      badgeText: `Déverrouillage dans ${daysUntilArrival} jour${daysUntilArrival > 1 ? 's' : ''}`,
+      title: 'Votre guide d\'accès',
+      buttonText: 'Prévisualiser',
+      buttonClass: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+      action: () => navigate(`/mon-guide/${booking.id}`),
+    },
+    'unlocked': {
+      container: 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300',
+      icon: 'bg-blue-500',
+      badge: 'bg-blue-100 text-blue-800',
+      badgeText: 'Guide déverrouillé',
+      title: 'Votre guide d\'accès est disponible',
+      buttonText: 'Ouvrir le guide',
+      buttonClass: 'bg-blue-600 text-white hover:bg-blue-700 shadow-md',
+      action: () => navigate(`/mon-guide/${booking.id}`),
+    },
+  }[state];
 
   return (
-    <div className={`rounded-2xl shadow-lg p-6 border-2 transition-all ${
-      isUnlocked
-        ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300'
-        : 'bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200'
-    }`}>
+    <div className={`rounded-2xl shadow-lg p-6 border-2 transition-all ${styles.container}`}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-start gap-4 flex-1">
-          <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center ${
-            isUnlocked ? 'bg-blue-500' : 'bg-gray-400'
-          }`}>
-            {isUnlocked ? (
+          <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center ${styles.icon}`}>
+            {state === 'unlocked' ? (
               <KeyRound className="w-7 h-7 text-white" />
             ) : (
               <Lock className="w-7 h-7 text-white" />
             )}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
-              {isUnlocked ? 'Votre guide d\'accès est disponible' : 'Votre guide d\'accès'}
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">{styles.title}</h2>
             <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
               <MapPin className="w-4 h-4 flex-shrink-0" />
               {booking.listings.title} — {booking.listings.address}
@@ -534,35 +579,18 @@ function AccessGuideCard({ booking }: { booking: Booking }) {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {isUnlocked ? (
-            <>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
-                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                Guide déverrouillé
-              </span>
-              <button
-                onClick={() => navigate(`/mon-guide/${booking.id}`)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
-              >
-                <KeyRound className="w-4 h-4" />
-                Ouvrir le guide
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                <Lock className="w-3 h-3" />
-                Déverrouillage dans {daysUntilArrival} jour{daysUntilArrival > 1 ? 's' : ''}
-              </span>
-              <button
-                onClick={() => navigate(`/mon-guide/${booking.id}`)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
-              >
-                <KeyRound className="w-4 h-4" />
-                Prévisualiser
-              </button>
-            </>
-          )}
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${styles.badge}`}>
+            {state === 'unlocked' && <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>}
+            {state !== 'unlocked' && <Lock className="w-3 h-3" />}
+            {styles.badgeText}
+          </span>
+          <button
+            onClick={styles.action}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition ${styles.buttonClass}`}
+          >
+            {state === 'unlocked' ? <KeyRound className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+            {styles.buttonText}
+          </button>
         </div>
       </div>
     </div>
