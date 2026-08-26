@@ -14,7 +14,10 @@ import {
   HelpCircle,
   CheckCircle,
   AlertCircle,
-  Shield
+  Shield,
+  KeyRound,
+  Lock,
+  MapPin
 } from 'lucide-react';
 import StatCard from '../components/dashboard/StatCard';
 import QuickActionButton from '../components/dashboard/QuickActionButton';
@@ -44,6 +47,7 @@ interface Booking {
   start_date: string;
   end_date: string;
   status: string;
+  payment_status: string | null;
   listings: {
     title: string;
     address: string;
@@ -73,6 +77,7 @@ export default function DashboardStudent() {
   const [loading, setLoading] = useState(true);
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [monthlyExpenses] = useState([850, 900, 850, 920, 850, 900]);
+  const [guideBooking, setGuideBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -135,7 +140,7 @@ export default function DashboardStudent() {
       ] = await Promise.all([
         supabase
           .from('bookings')
-          .select('*, listings(title, address)')
+          .select('id, listing_id, start_date, end_date, status, payment_status, listings(title, address)')
           .eq('student_id', user.id)
           .in('status', ['confirmed', 'pending'])
           .order('start_date', { ascending: true }),
@@ -177,6 +182,14 @@ export default function DashboardStudent() {
 
       setRecentBookings(bookingsRes.data?.slice(0, 3) || []);
       setUpcomingPayments(paymentsRes.data?.slice(0, 3) || []);
+
+      const confirmedBookings = (bookingsRes.data || []).filter(
+        (b: Booking) => b.status === 'confirmed' && b.payment_status === 'completed'
+      );
+      const upcomingConfirmed = confirmedBookings
+        .filter((b: Booking) => new Date(b.end_date) >= new Date())
+        .sort((a: Booking, b: Booking) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+      setGuideBooking(upcomingConfirmed[0] || null);
 
       const activityData: Activity[] = (notificationsRes.data || []).map(notif => ({
         id: notif.id,
@@ -256,6 +269,12 @@ export default function DashboardStudent() {
             </div>
           )}
         </div>
+
+        {guideBooking && (
+          <div className="mb-8">
+            <AccessGuideCard booking={guideBooking} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -455,6 +474,12 @@ export default function DashboardStudent() {
                   color="green"
                 />
                 <QuickActionButton
+                  icon={KeyRound}
+                  label="Guide d'accès"
+                  href={guideBooking ? `/mon-guide/${guideBooking.id}` : '/mes-reservations'}
+                  color="blue"
+                />
+                <QuickActionButton
                   icon={HelpCircle}
                   label={t('dashboard.help')}
                   href="/"
@@ -463,6 +488,81 @@ export default function DashboardStudent() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccessGuideCard({ booking }: { booking: Booking }) {
+  const navigate = useNavigate();
+  const arrival = new Date(booking.start_date + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
+  const isUnlocked = now >= unlockAt;
+  const daysUntilArrival = Math.ceil((arrival.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  return (
+    <div className={`rounded-2xl shadow-lg p-6 border-2 transition-all ${
+      isUnlocked
+        ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300'
+        : 'bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200'
+    }`}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1">
+          <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center ${
+            isUnlocked ? 'bg-blue-500' : 'bg-gray-400'
+          }`}>
+            {isUnlocked ? (
+              <KeyRound className="w-7 h-7 text-white" />
+            ) : (
+              <Lock className="w-7 h-7 text-white" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              {isUnlocked ? 'Votre guide d\'accès est disponible' : 'Votre guide d\'accès'}
+            </h2>
+            <p className="text-sm text-gray-600 flex items-center gap-1 mb-1">
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              {booking.listings.title} — {booking.listings.address}
+            </p>
+            <p className="text-sm text-gray-500">
+              Arrivée le {arrival.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          {isUnlocked ? (
+            <>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                Guide déverrouillé
+              </span>
+              <button
+                onClick={() => navigate(`/mon-guide/${booking.id}`)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
+              >
+                <KeyRound className="w-4 h-4" />
+                Ouvrir le guide
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                <Lock className="w-3 h-3" />
+                Déverrouillage dans {daysUntilArrival} jour{daysUntilArrival > 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={() => navigate(`/mon-guide/${booking.id}`)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
+              >
+                <KeyRound className="w-4 h-4" />
+                Prévisualiser
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

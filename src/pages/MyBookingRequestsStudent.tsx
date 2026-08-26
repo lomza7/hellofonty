@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Timer, KeyRound, MessageCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Timer, KeyRound, MessageCircle, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -429,13 +429,35 @@ export default function MyBookingRequestsStudent() {
                         )}
 
                         {booking.status === 'confirmed' && (
-                          <button
-                            onClick={() => navigate(`/mon-guide/${booking.id}`)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                          >
-                            <KeyRound className="w-4 h-4" />
-                            <span>{language === 'fr' ? 'Guide d\'accès' : 'Access guide'}</span>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const arrival = new Date(booking.start_date + 'T00:00:00');
+                              const now = new Date();
+                              now.setHours(0, 0, 0, 0);
+                              const unlockAt = new Date(arrival.getTime() - 24 * 3600 * 1000);
+                              const isUnlocked = now >= unlockAt;
+                              const daysUntil = Math.ceil((arrival.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                              return isUnlocked ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                  <KeyRound className="w-3 h-3" />
+                                  {language === 'fr' ? 'Guide disponible' : 'Guide available'}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                                  <Lock className="w-3 h-3" />
+                                  {language === 'fr' ? `Guide dans ${daysUntil}j` : `Guide in ${daysUntil}d`}
+                                </span>
+                              );
+                            })()}
+                            <button
+                              onClick={() => navigate(`/mon-guide/${booking.id}`)}
+                              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+                            >
+                              <KeyRound className="w-4 h-4" />
+                              <span>{language === 'fr' ? 'Guide d\'accès' : 'Access guide'}</span>
+                            </button>
+                          </div>
                         )}
 
                         {isPaymentExpired(booking) && booking.status === 'confirmed' && (
