@@ -48,6 +48,32 @@ const STEPS = [
   { id: 6, title: 'Photos', titleEn: 'Photos', icon: Camera },
 ];
 
+async function convertToJpeg(source: Blob | File, name: string): Promise<File> {
+  const mime = source.type || '';
+  const needsConversion = ['image/avif', 'image/heic', 'image/heif', 'image/webp'].includes(mime);
+
+  if (!needsConversion) {
+    return source instanceof File ? source : new File([source], name, { type: mime || 'image/jpeg' });
+  }
+
+  try {
+    const bitmap = await createImageBitmap(source);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas not supported');
+    ctx.drawImage(bitmap, 0, 0);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.92)
+    );
+    if (!blob) throw new Error('Conversion failed');
+    return new File([blob], name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return new File([source], name, { type: mime || 'image/jpeg' });
+  }
+}
+
 export default function AddEditListing() {
   const { id } = useParams<{ id: string }>();
   const listingId = id;
@@ -357,7 +383,7 @@ export default function AddEditListing() {
             const blob = await imgResp.blob();
             if (blob.size < 1000) continue;
 
-            const file = new File([blob], `airbnb-import-${i}.jpg`, { type: blob.type || 'image/jpeg' });
+            const file = await convertToJpeg(blob, `airbnb-import-${i}.jpg`);
             downloadedFiles.push(file);
             downloadedCount++;
           } catch (err) {
@@ -507,13 +533,13 @@ export default function AddEditListing() {
 
   const uploadImages = async (listingId: string) => {
     const uploadPromises = imageFiles.map(async (file, index) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${listingId}-${Date.now()}-${index}.${fileExt}`;
+      const uploadFile = await convertToJpeg(file, file.name);
+      const fileName = `${listingId}-${Date.now()}-${index}.jpg`;
       const filePath = `listings/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('images')
-        .upload(filePath, file);
+        .upload(filePath, uploadFile);
 
       if (uploadError) throw uploadError;
 
