@@ -1,0 +1,112 @@
+project_id = ""
+
+[functions.scrape-airbnb]
+verify_jwt = true
+
+[functions.check-email-exists]
+verify_jwt = true
+
+[functions.create-manager]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.generate-ical]
+verify_jwt = true
+
+[functions.generate-inventory-pdf]
+verify_jwt = true
+
+[functions.generate-lease-contract]
+verify_jwt = true
+
+[functions.generate-lease-preview]
+verify_jwt = true
+
+[functions.generate-sitemap]
+verify_jwt = false
+
+[functions.generate-task]
+verify_jwt = true
+
+[functions.import-external-ical]
+verify_jwt = true
+
+[functions.send-approval-email]
+verify_jwt = true
+
+[functions.send-booking-notification]
+verify_jwt = true
+
+[functions.send-lease-notification]
+verify_jwt = true
+
+[functions.send-message-notification]
+verify_jwt = true
+
+[functions.send-rent-reminder]
+verify_jwt = true
+
+[functions.send-support-notification]
+verify_jwt = true
+
+[functions.send-verification-email]
+verify_jwt = true
+
+[functions.stripe-booking-payment]
+verify_jwt = true
+
+[functions.stripe-cancel-subscription]
+verify_jwt = true
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-create-landlord-account]
+verify_jwt = true
+
+[functions.stripe-create-onboarding-link]
+verify_jwt = true
+
+[functions.stripe-deposit-refund]
+verify_jwt = true
+
+[functions.stripe-express-login]
+verify_jwt = true
+
+[functions.stripe-get-account-status]
+verify_jwt = true
+
+[functions.stripe-get-price]
+verify_jwt = true
+
+[functions.stripe-manage-landlord-account]
+verify_jwt = true
+
+[functions.stripe-monthly-rent-payment]
+verify_jwt = true
+
+[functions.stripe-refund]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.sync-all-calendars]
+verify_jwt = true
+
+[functions.sync-missing-invoice]
+verify_jwt = true
+
+[functions.translate-text]
+verify_jwt = true
+
+[functions.verify-email-code]
+verify_jwt = true
+
+[functions.admin-charge-landlord-subscription]
+verify_jwt = true
+
+[functions.charge-landlord-subscriptions-cron]
+verify_jwt = false

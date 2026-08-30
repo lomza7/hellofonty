@@ -60,6 +60,8 @@ export default function AddEditListing() {
 
   const [airbnbUrl, setAirbnbUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<string>('');
+  const [importError, setImportError] = useState('');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -256,6 +258,8 @@ export default function AddEditListing() {
 
     setIsImporting(true);
     setError('');
+    setImportError('');
+    setImportProgress(language === 'fr' ? 'Récupération des données...' : 'Fetching data...');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -280,6 +284,8 @@ export default function AddEditListing() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Erreur lors de l\'import');
       }
+
+      setImportProgress(language === 'fr' ? 'Import terminé !' : 'Import complete!');
 
       const airbnbData = result.data;
 
@@ -334,16 +340,25 @@ export default function AddEditListing() {
       }
 
       const imageCount = airbnbData.downloadedImages?.length || 0;
-      alert(language === 'fr'
-        ? `Données importées avec succès ! ${imageCount} photo(s) téléchargée(s). Veuillez vérifier et compléter les informations.`
-        : `Data imported successfully! ${imageCount} photo(s) downloaded. Please review and complete the information.`);
+      const msg = imageCount > 0
+        ? (language === 'fr'
+            ? `Données importées avec succès ! ${imageCount} photo(s) récupérée(s). Veuillez vérifier et compléter les informations.`
+            : `Data imported successfully! ${imageCount} photo(s) downloaded. Please review and complete the information.`)
+        : (language === 'fr'
+            ? 'Données importées, mais aucune photo n\'a pu être récupérée. Vous pouvez ajouter les photos manuellement à l\'étape 6.'
+            : 'Data imported, but no photos could be retrieved. You can add photos manually in step 6.');
+      alert(msg);
 
       setAirbnbUrl('');
+      setImportProgress('');
     } catch (error: any) {
       console.error('Error importing from Airbnb:', error);
-      setError(error.message || (language === 'fr' ? 'Erreur lors de l\'import depuis Airbnb' : 'Error importing from Airbnb'));
+      const errMsg = error.message || (language === 'fr' ? 'Erreur lors de l\'import depuis Airbnb' : 'Error importing from Airbnb');
+      setError(errMsg);
+      setImportError(errMsg);
     } finally {
       setIsImporting(false);
+      setImportProgress('');
     }
   };
 
@@ -727,7 +742,7 @@ export default function AddEditListing() {
                     type="button"
                     onClick={handleImportFromAirbnb}
                     disabled={isImporting || !airbnbUrl}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
                   >
                     {isImporting ? (
                       <>
@@ -742,6 +757,23 @@ export default function AddEditListing() {
                     )}
                   </button>
                 </div>
+                {isImporting && importProgress && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-blue-700">
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    <span>{importProgress}</span>
+                  </div>
+                )}
+                {!isImporting && importError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    <p className="font-medium mb-1">{language === 'fr' ? 'Import impossible' : 'Import failed'}</p>
+                    <p>{importError}</p>
+                    <p className="mt-1 text-xs text-red-600">
+                      {language === 'fr'
+                        ? 'Vous pouvez remplir le formulaire manuellement ou ajouter les photos à l\'étape 6.'
+                        : 'You can fill the form manually or add photos in step 6.'}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
