@@ -330,27 +330,57 @@ export default function AddEditListing() {
         setTotalFloors(airbnbData.totalFloors.toString());
       }
 
-      if (airbnbData.downloadedImages && airbnbData.downloadedImages.length > 0) {
-        const importedImages = airbnbData.downloadedImages.map((url: string, index: number) => ({
-          id: `imported-${Date.now()}-${index}`,
-          url: url,
-          order: index
-        }));
-        setExistingImages(importedImages);
+      // Download images client-side (browser IP is not blocked by Airbnb)
+      const imageUrls: string[] = airbnbData.images || [];
+      let downloadedCount = 0;
+
+      if (imageUrls.length > 0) {
+        setImportProgress(
+          language === 'fr'
+            ? `Téléchargement des photos (0/${imageUrls.length})...`
+            : `Downloading photos (0/${imageUrls.length})...`
+        );
+
+        const downloadedFiles: File[] = [];
+
+        for (let i = 0; i < Math.min(imageUrls.length, 30); i++) {
+          try {
+            setImportProgress(
+              language === 'fr'
+                ? `Téléchargement des photos (${i}/${imageUrls.length})...`
+                : `Downloading photos (${i}/${imageUrls.length})...`
+            );
+
+            const imgResp = await fetch(imageUrls[i], { mode: 'cors' });
+            if (!imgResp.ok) continue;
+
+            const blob = await imgResp.blob();
+            if (blob.size < 1000) continue;
+
+            const file = new File([blob], `airbnb-import-${i}.jpg`, { type: blob.type || 'image/jpeg' });
+            downloadedFiles.push(file);
+            downloadedCount++;
+          } catch (err) {
+            console.error(`Failed to download image ${i}:`, err);
+          }
+        }
+
+        if (downloadedFiles.length > 0) {
+          setImageFiles((prev) => [...prev, ...downloadedFiles]);
+        }
       }
 
-      const imageCount = airbnbData.downloadedImages?.length || 0;
-      const msg = imageCount > 0
+      setImportProgress('');
+      const msg = downloadedCount > 0
         ? (language === 'fr'
-            ? `Données importées avec succès ! ${imageCount} photo(s) récupérée(s). Veuillez vérifier et compléter les informations.`
-            : `Data imported successfully! ${imageCount} photo(s) downloaded. Please review and complete the information.`)
+            ? `Données importées avec succès ! ${downloadedCount} photo(s) récupérée(s). Veuillez vérifier et compléter les informations.`
+            : `Data imported successfully! ${downloadedCount} photo(s) downloaded. Please review and complete the information.`)
         : (language === 'fr'
             ? 'Données importées, mais aucune photo n\'a pu être récupérée. Vous pouvez ajouter les photos manuellement à l\'étape 6.'
             : 'Data imported, but no photos could be retrieved. You can add photos manually in step 6.');
       alert(msg);
 
       setAirbnbUrl('');
-      setImportProgress('');
     } catch (error: any) {
       console.error('Error importing from Airbnb:', error);
       const errMsg = error.message || (language === 'fr' ? 'Erreur lors de l\'import depuis Airbnb' : 'Error importing from Airbnb');

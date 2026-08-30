@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +14,6 @@ interface AirbnbData {
   bathrooms: number;
   max_guests: number;
   images: string[];
-  downloadedImages?: string[];
   amenities: string[];
   bonusFeatures?: string[];
   address: string;
@@ -23,269 +21,225 @@ interface AirbnbData {
   longitude?: number;
   propertyType?: string;
   apartmentArea?: number;
-  buildingYear?: number;
-  floor?: number;
-  totalFloors?: number;
   hasElevator?: boolean;
   furnished?: string;
+  floor?: number;
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
     const { url } = await req.json();
 
     if (!url || !url.includes('airbnb')) {
-      return new Response(
-        JSON.stringify({ success: false, error: "URL Airbnb invalide" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonError("URL Airbnb invalide", 400);
     }
 
     const listingIdMatch = url.match(/\/rooms\/(\d+)/);
     if (!listingIdMatch) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Impossible d'extraire l'ID de l'annonce" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonError("Impossible d'extraire l'ID de l'annonce", 400);
     }
 
     const listingId = listingIdMatch[1];
     console.log(`Fetching Airbnb listing: ${url} (ID: ${listingId})`);
 
-    // Strategy 1: Try Airbnb's internal API (returns JSON with all photo URLs)
-    let data: AirbnbData | null = null;
+    let html = "";
+    let fetchErrors: string[] = [];
 
+    // --- Strategy 1: Direct fetch ---
     try {
-      data = await fetchViaInternalApi(listingId, url);
-      console.log('Strategy 1 (internal API) succeeded');
+      html = await fetchPageDirect(url);
+      console.log('Strategy 1 (direct) succeeded, html length:', html.length);
     } catch (e) {
-      console.log('Strategy 1 (internal API) failed:', e.message);
+      console.log('Strategy 1 (direct) failed:', e.message);
+      fetchErrors.push(`direct: ${e.message}`);
     }
 
-    // Strategy 2: Fetch HTML page and parse embedded JSON data
-    if (!data || (data.images.length === 0 && !data.title)) {
+    // --- Strategy 2: allorigins proxy ---
+    if (!html || html.length < 500) {
       try {
-        const html = await fetchPageHtml(url);
-        data = parseFromHypernovaJson(html);
-        console.log('Strategy 2 (hypernova JSON) succeeded');
+        html = await fetchViaProxy(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, 'allorigins');
+        console.log('Strategy 2 (allorigins) succeeded, html length:', html.length);
       } catch (e) {
-        console.log('Strategy 2 (hypernova JSON) failed:', e.message);
+        console.log('Strategy 2 (allorigins) failed:', e.message);
+        fetchErrors.push(`allorigins: ${e.message}`);
       }
     }
 
-    // Strategy 3: Fetch HTML and parse meta tags + JSON-LD
-    if (!data || (data.images.length === 0 && !data.title)) {
+    // --- Strategy 3: corsproxy.io ---
+    if (!html || html.length < 500) {
       try {
-        const html = await fetchPageHtml(url);
-        data = parseFromHTML(html);
-        console.log('Strategy 3 (meta/JSON-LD) succeeded');
+        html = await fetchViaProxy(`https://corsproxy.io/?url=${encodeURIComponent(url)}`, 'corsproxy');
+        console.log('Strategy 3 (corsproxy) succeeded, html length:', html.length);
       } catch (e) {
-        console.log('Strategy 3 (meta/JSON-LD) failed:', e.message);
+        console.log('Strategy 3 (corsproxy) failed:', e.message);
+        fetchErrors.push(`corsproxy: ${e.message}`);
       }
     }
 
-    if (!data || (data.images.length === 0 && !data.title)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Impossible de récupérer les données de cette annonce Airbnb. Airbnb bloque parfois l'accès automatisé. Vous pouvez importer les photos manuellement.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+    // --- Strategy 4: r.jina.ai (reader proxy, renders JS) ---
+    if (!html || html.length < 500) {
+      try {
+        html = await fetchViaProxy(`https://r.jina.ai/${url}`, 'jina');
+        console.log('Strategy 4 (jina) succeeded, html length:', html.length);
+      } catch (e) {
+        console.log('Strategy 4 (jina) failed:', e.message);
+        fetchErrors.push(`jina: ${e.message}`);
+      }
+    }
+
+    if (!html || html.length < 500) {
+      return jsonError(
+        `Impossible de récupérer la page Airbnb (tentatives: ${fetchErrors.join(', ')}). Vous pouvez importer les photos manuellement.`,
+        500
       );
     }
 
-    // Download all images to Supabase storage
-    const downloadedImages: string[] = [];
-    if (data.images && data.images.length > 0) {
-      console.log(`Downloading ${data.images.length} images...`);
+    // --- Parse the HTML ---
+    let data: AirbnbData | null = null;
 
-      for (let i = 0; i < Math.min(data.images.length, 30); i++) {
-        try {
-          const imageUrl = data.images[i];
-          console.log(`Downloading image ${i + 1}/${data.images.length}: ${imageUrl.substring(0, 80)}...`);
+    // Try hypernova JSON first
+    try {
+      data = parseFromHypernovaJson(html);
+      console.log('Parsed via hypernova JSON');
+    } catch (e) {
+      console.log('Hypernova parse failed:', e.message);
+    }
 
-          const imageResponse = await fetch(imageUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-            },
-            redirect: 'follow',
-          });
-          if (!imageResponse.ok) {
-            console.error(`Failed to download image ${i + 1}: ${imageResponse.status}`);
-            continue;
-          }
-
-          const imageBlob = await imageResponse.blob();
-          const arrayBuffer = await imageBlob.arrayBuffer();
-          const uint8Array = new Uint8Array(arrayBuffer);
-
-          const contentType = imageBlob.type || 'image/jpeg';
-          const fileExt = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
-          const fileName = `airbnb-import-${Date.now()}-${i}.${fileExt}`;
-          const filePath = `listings/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('images')
-            .upload(filePath, uint8Array, {
-              contentType,
-              upsert: false,
-            });
-
-          if (uploadError) {
-            console.error(`Error uploading image ${i + 1}:`, uploadError);
-            continue;
-          }
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('images')
-            .getPublicUrl(filePath);
-
-          downloadedImages.push(publicUrl);
-          console.log(`Image ${i + 1} uploaded successfully`);
-        } catch (error) {
-          console.error(`Error processing image ${i + 1}:`, error);
-        }
+    // Fallback to meta/JSON-LD
+    if (!data || (!data.title && data.images.length === 0)) {
+      try {
+        data = parseFromHTML(html);
+        console.log('Parsed via meta/JSON-LD');
+      } catch (e) {
+        console.log('Meta/JSON-LD parse failed:', e.message);
       }
     }
 
-    data.downloadedImages = downloadedImages;
+    // Last resort: regex extraction
+    if (!data || (!data.title && data.images.length === 0)) {
+      try {
+        data = parseFromRegex(html, listingId);
+        console.log('Parsed via regex');
+      } catch (e) {
+        console.log('Regex parse failed:', e.message);
+      }
+    }
+
+    if (!data || (!data.title && data.images.length === 0)) {
+      return jsonError(
+        "Données récupérées mais impossibles à analyser. Vous pouvez remplir le formulaire manuellement.",
+        500
+      );
+    }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        data,
-        imageCount: downloadedImages.length,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: true, data, imageCount: data.images.length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error('Error scraping Airbnb:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || "Erreur lors du scraping",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return jsonError(error.message || "Erreur lors du scraping", 500);
   }
 });
 
-// --- Strategy 1: Airbnb internal API ---
-async function fetchViaInternalApi(listingId: string, originalUrl: string): Promise<AirbnbData> {
-  const apiKey = Deno.env.get("AIRBNB_API_KEY");
-  const apiUrl = `https://www.airbnb.fr/api/v3/PdpListingDetail?variables=%7B%22request%22%3A%7B%22listingId%22%3A%22${listingId}%22%2C%22shouldUseRefetch%22%3Afalse%7D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22${apiKey || 'a9e24a6f5b3e4c8d7f1e2a6b9c4d8e7f3a1b6c9d2e8f4a7b1c6d9e3f2a8b4'}%22%7D%7D`;
-
-  const response = await fetch(apiUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-      'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'X-Airbnb-API-Key': apiKey || '',
-      'X-Client-Version': '0.2.5',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API returned ${response.status}`);
-  }
-
-  const json = await response.json();
-  const listing = json?.data?.presentation?.exploreSections?.sections?.[0]?.section?.listings?.[0]?.listing
-    || json?.data?.presentation?.listing?.listing;
-
-  if (!listing) {
-    throw new Error('Listing data not found in API response');
-  }
-
-  return extractFromListingObject(listing);
+function jsonError(message: string, status: number): Response {
+  return new Response(
+    JSON.stringify({ success: false, error: message }),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
 
-// --- Strategy 2: Parse Hypernova embedded JSON ---
-function parseFromHypernovaJson(html: string): AirbnbData {
-  const jsonMatch = html.match(/<script[^>]*data-hypernova-key="spaspabundlejs"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/);
-  if (!jsonMatch) {
-    throw new Error('No hypernova JSON found');
+// --- Direct fetch ---
+async function fetchPageDirect(url: string): Promise<string> {
+  const resp = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.7',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+    },
+    redirect: 'follow',
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const text = await resp.text();
+  if (text.length < 500) throw new Error('Page trop courte');
+  return text;
+}
+
+// --- Proxy fetch ---
+async function fetchViaProxy(proxyUrl: string, name: string): Promise<string> {
+  const resp = await fetch(proxyUrl, {
+    headers: {
+      'Accept': 'text/html,application/json,*/*',
+    },
+    redirect: 'follow',
+  });
+  if (!resp.ok) throw new Error(`${name} HTTP ${resp.status}`);
+  const text = await resp.text();
+  if (text.length < 500) throw new Error(`${name} page trop courte`);
+  // jina returns markdown, extract useful content
+  if (name === 'jina') {
+    return text; // still try to parse it
   }
+  return text;
+}
+
+// --- Parse hypernova embedded JSON ---
+function parseFromHypernovaJson(html: string): AirbnbData {
+  const jsonMatch = html.match(/<script[^>]*data-hypernova-key="[^"]*"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/);
+  if (!jsonMatch) throw new Error('No hypernova JSON found');
 
   const jsonData = JSON.parse(jsonMatch[1]);
-  const listing = jsonData?.bootstrapData?.reduxData?.homePDP?.listingInfo?.listing;
-  if (!listing) {
-    throw new Error('Listing data not found in hypernova JSON');
-  }
+  const listing = jsonData?.bootstrapData?.reduxData?.homePDP?.listingInfo?.listing
+    || jsonData?.bootstrapData?.reduxData?.widgets?.listingInfo?.listing;
+  if (!listing) throw new Error('Listing not found in hypernova');
 
   return extractFromListingObject(listing);
 }
 
-// --- Strategy 3: Parse meta tags + JSON-LD from HTML ---
+// --- Parse meta tags + JSON-LD ---
 function parseFromHTML(html: string): AirbnbData {
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/);
-  const title = titleMatch ? titleMatch[1].replace(' - Airbnb', '').trim() : '';
+  const title = titleMatch ? titleMatch[1].replace(/\s*[-–|]\s*Airbnb\s*$/i, '').trim() : '';
 
-  const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/);
-  const description = descMatch ? descMatch[1] : '';
+  const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i)
+    || html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
+  const description = descMatch ? decodeHtmlEntities(descMatch[1]) : '';
 
   const images: string[] = [];
-  const imageMatches = html.matchAll(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/g);
-  for (const match of imageMatches) {
-    images.push(match[1]);
-  }
+  const ogMatches = html.matchAll(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/gi);
+  for (const m of ogMatches) images.push(m[1]);
 
-  // Also try to find image URLs in JSON-LD
-  const jsonLdMatches = html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g);
-  let price = 0;
-  let bedrooms = 0;
-  let bathrooms = 0;
-  let max_guests = 0;
-  let address = '';
+  let price = 0, bedrooms = 0, bathrooms = 0, max_guests = 0, address = '';
+  let amenities: string[] = [];
+  let bonusFeatures: string[] = [];
 
+  const jsonLdMatches = html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
   for (const match of jsonLdMatches) {
     try {
       const jsonLd = JSON.parse(match[1]);
-      if (jsonLd['@type'] === 'Product' || jsonLd['@type'] === 'LodgingBusiness') {
-        if (jsonLd.offers?.price) {
-          price = parseFloat(jsonLd.offers.price);
-        }
+      if (jsonLd['@type'] === 'Product' || jsonLd['@type'] === 'LodgingBusiness' || jsonLd['@type'] === 'Apartment') {
+        if (jsonLd.offers?.price) price = parseFloat(jsonLd.offers.price);
         if (jsonLd.address) {
           address = typeof jsonLd.address === 'string' ? jsonLd.address :
-                   (jsonLd.address.streetAddress || jsonLd.address.addressLocality || '');
+            [jsonLd.address.streetAddress, jsonLd.address.addressLocality].filter(Boolean).join(', ');
         }
-        if (jsonLd.numberOfRooms) {
-          bedrooms = parseInt(jsonLd.numberOfRooms);
-        }
-        if (jsonLd.occupancy?.maxValue) {
-          max_guests = parseInt(jsonLd.occupancy.maxValue);
+        if (jsonLd.numberOfRooms) bedrooms = parseInt(jsonLd.numberOfRooms);
+        if (jsonLd.occupancy?.maxValue) max_guests = parseInt(jsonLd.occupancy.maxValue);
+        if (jsonLd.amenityFeature) {
+          for (const feat of jsonLd.amenityFeature) {
+            const name = feat.name || '';
+            const mapped = mapAmenity(name);
+            if (mapped && !amenities.includes(mapped)) amenities.push(mapped);
+            const bonus = mapBonus(name);
+            if (bonus && !bonusFeatures.includes(bonus)) bonusFeatures.push(bonus);
+          }
         }
         if (jsonLd.image) {
           if (Array.isArray(jsonLd.image)) {
@@ -298,208 +252,125 @@ function parseFromHTML(html: string): AirbnbData {
           }
         }
       }
-    } catch (e) {
-      // skip invalid JSON-LD
-    }
+    } catch { /* skip */ }
   }
 
-  if (!title && images.length === 0) {
-    throw new Error('No usable data found in HTML');
-  }
+  if (!title && images.length === 0) throw new Error('No usable data in HTML');
 
   return {
-    title,
-    description,
-    price,
-    bedrooms,
-    bathrooms,
-    max_guests,
-    images,
-    amenities: [],
+    title, description, price, bedrooms, bathrooms, max_guests,
+    images: dedupe(images), amenities, bonusFeatures: bonusFeatures.length > 0 ? bonusFeatures : undefined,
     address,
   };
 }
 
-// --- Shared extraction from listing object ---
+// --- Last resort: regex extraction ---
+function parseFromRegex(html: string, listingId: string): AirbnbData {
+  let title = '';
+  const titleMatch = html.match(/"name"\s*:\s*"([^"]{5,200})"/);
+  if (titleMatch) title = titleMatch[1];
+
+  const images: string[] = [];
+  const imgMatches = html.matchAll(/"(?:large|xlarge|picture|url|baseUrl|originalPicture)"\s*:\s*"(https:\/\/a0\.momcomstatic\.com[^"]+|https:\/\/images\.airbnb\.com[^"]+)"/gi);
+  for (const m of imgMatches) {
+    images.push(m[1].replace(/\\u002F/g, '/'));
+  }
+
+  // Broader image regex
+  if (images.length === 0) {
+    const broadMatches = html.matchAll(/"(https:\/\/(?:a0\.momcomstatic\.com|images\.airbnb\.com)[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/gi);
+    for (const m of broadMatches) images.push(m[1].replace(/\\u002F/g, '/'));
+  }
+
+  if (!title && images.length === 0) throw new Error('Regex found nothing');
+
+  return {
+    title: title || `Airbnb #${listingId}`,
+    description: '',
+    price: 0, bedrooms: 0, bathrooms: 0, max_guests: 0,
+    images: dedupe(images), amenities: [], address: '',
+  };
+}
+
+// --- Shared extraction ---
 function extractFromListingObject(listing: any): AirbnbData {
   const amenities: string[] = [];
   const bonusFeatures: string[] = [];
 
-  const amenityMapping: { [key: string]: string } = {
-    'Wifi': 'WiFi',
-    'Kitchen': 'Cuisine équipée / Equipped kitchen',
-    'Washer': 'Lave-linge / Washing machine',
-    'Dryer': 'Lave-linge / Washing machine',
-    'Free parking': 'Parking',
-    'Parking': 'Parking',
-    'Garden': 'Jardin / Garden',
-    'Balcony': 'Balcon / Balcony',
-    'Patio': 'Balcon / Balcony',
-    'Air conditioning': 'Climatisation / Air conditioning',
-    'Heating': 'Chauffage / Heating',
-    'TV': 'TV',
-    'Workspace': 'Bureau / Desk',
-    'Desk': 'Bureau / Desk',
-  };
-
-  const bonusMapping: { [key: string]: string } = {
-    'Netflix': 'Netflix',
-    'Disney+': 'Disney+',
-    'Amazon Prime': 'Amazon Prime Video',
-    'Pool': 'Piscine / Swimming pool',
-    'Swimming pool': 'Piscine / Swimming pool',
-    'Gym': 'Salle de sport / Gym access',
-    'Hot tub': 'Piscine / Swimming pool',
-    'Game console': 'Console de jeux / Game console',
-    'Bike': 'Vélo / Bicycle',
-    'Scooter': 'Trottinette / Scooter',
-    'Private entrance': 'Terrasse privée / Private terrace',
-    'Terrace': 'Terrasse privée / Private terrace',
-    'Storage': 'Cave / Storage room',
-  };
-
   if (listing.amenities) {
-    listing.amenities.forEach((amenity: any) => {
-      const amenityName = amenity.name || '';
-
-      for (const [key, value] of Object.entries(amenityMapping)) {
-        if (amenityName.toLowerCase().includes(key.toLowerCase())) {
-          if (!amenities.includes(value)) {
-            amenities.push(value);
-          }
-          break;
-        }
-      }
-
-      for (const [key, value] of Object.entries(bonusMapping)) {
-        if (amenityName.toLowerCase().includes(key.toLowerCase())) {
-          if (!bonusFeatures.includes(value)) {
-            bonusFeatures.push(value);
-          }
-          break;
-        }
-      }
-    });
+    for (const amenity of listing.amenities) {
+      const name = amenity.name || '';
+      const mapped = mapAmenity(name);
+      if (mapped && !amenities.includes(mapped)) amenities.push(mapped);
+      const bonus = mapBonus(name);
+      if (bonus && !bonusFeatures.includes(bonus)) bonusFeatures.push(bonus);
+    }
   }
 
-  // Extract images - try multiple photo formats
   const images: string[] = [];
   if (listing.photos) {
-    listing.photos.forEach((photo: any) => {
-      // Try various photo URL fields in order of preference (largest first)
-      const url = photo.large || photo.xlarge || photo.picture || photo.url || photo.originalPicture || photo.baseUrl || photo;
+    for (const photo of listing.photos) {
+      const url = photo.large || photo.xlarge || photo.picture || photo.url || photo.originalPicture || photo.baseUrl || (typeof photo === 'string' ? photo : '');
       if (typeof url === 'string' && url.startsWith('http')) {
-        images.push(url);
-      } else if (photo.picture) {
-        images.push(photo.picture);
+        images.push(url.replace(/\\u002F/g, '/'));
       }
-    });
+    }
   }
-
-  // Also check for images in different structures
   if (images.length === 0 && listing.images) {
-    listing.images.forEach((img: any) => {
-      const url = typeof img === 'string' ? img : (img.url || img.large || img.picture);
-      if (typeof url === 'string' && url.startsWith('http')) {
-        images.push(url);
-      }
-    });
+    for (const img of listing.images) {
+      const url = typeof img === 'string' ? img : (img.url || img.large || img.picture || '');
+      if (typeof url === 'string' && url.startsWith('http')) images.push(url);
+    }
   }
 
-  // Extract description
   let fullDescription = '';
-  if (listing.description) {
-    fullDescription = listing.description;
-  }
-  if (listing.sectionedDescription?.description) {
-    fullDescription = listing.sectionedDescription.description;
-  }
+  if (listing.sectionedDescription?.description) fullDescription = listing.sectionedDescription.description;
+  else if (listing.description) fullDescription = listing.description;
+  else if (listing.summary) fullDescription = listing.summary;
+
   if (listing.descriptionSections && Array.isArray(listing.descriptionSections)) {
-    const descriptionParts: string[] = [];
-    listing.descriptionSections.forEach((section: any) => {
-      if (section.description) {
-        descriptionParts.push(section.description);
-      } else if (section.htmlDescription) {
-        const cleanHtml = section.htmlDescription.replace(/<[^>]*>/g, '');
-        descriptionParts.push(cleanHtml);
-      }
-    });
-    if (descriptionParts.length > 0) {
-      fullDescription = descriptionParts.join('\n\n');
+    const parts: string[] = [];
+    for (const section of listing.descriptionSections) {
+      if (section.description) parts.push(section.description);
+      else if (section.htmlDescription) parts.push(section.htmlDescription.replace(/<[^>]*>/g, ''));
     }
-  }
-  if (!fullDescription && listing.summary) {
-    fullDescription = listing.summary;
+    if (parts.length > 0) fullDescription = parts.join('\n\n');
   }
 
-  // Property type
   let propertyType = 'apartment';
-  const roomType = listing.roomType?.toLowerCase() || '';
-  const propertyTypeText = listing.propertyType?.toLowerCase() || '';
-  if (roomType.includes('entire') && (propertyTypeText.includes('house') || propertyTypeText.includes('maison'))) {
-    propertyType = 'house';
-  } else if (roomType.includes('private') && !roomType.includes('entire')) {
-    propertyType = 'room';
-  }
+  const roomType = (listing.roomType || '').toLowerCase();
+  const ptText = (listing.propertyType || '').toLowerCase();
+  if (roomType.includes('entire') && (ptText.includes('house') || ptText.includes('maison'))) propertyType = 'house';
+  else if (roomType.includes('private') && !roomType.includes('entire')) propertyType = 'room';
 
-  // Apartment area
   let apartmentArea: number | undefined;
-  if (listing.spaceInfo || listing.space) {
-    const spaceText = listing.spaceInfo || listing.space || '';
+  const spaceText = listing.spaceInfo || listing.space || '';
+  if (spaceText) {
     const areaMatch = spaceText.match(/(\d+)\s*(m²|m2|sqm)/i);
-    if (areaMatch) {
-      apartmentArea = parseInt(areaMatch[1]);
-    }
+    if (areaMatch) apartmentArea = parseInt(areaMatch[1]);
   }
 
-  // Furnished detection
-  let furnished: string | undefined;
-  const furnishedAmenities = ['Bed linens', 'Furniture', 'Essentials'];
-  let hasFurnitureAmenities = 0;
-  if (listing.amenities) {
-    furnishedAmenities.forEach(item => {
-      if (listing.amenities.some((a: any) => a.name?.includes(item))) {
-        hasFurnitureAmenities++;
-      }
-    });
-  }
-  if (hasFurnitureAmenities >= 2) {
-    furnished = 'furnished';
-  }
-
-  // Elevator
   let hasElevator: boolean | undefined;
   if (listing.amenities) {
     hasElevator = listing.amenities.some((a: any) =>
-      a.name?.toLowerCase().includes('elevator') ||
-      a.name?.toLowerCase().includes('lift') ||
-      a.name?.toLowerCase().includes('ascenseur')
-    );
+      (a.name || '').toLowerCase().match(/elevator|lift|ascenseur/));
   }
 
-  // Floor
+  let furnished: string | undefined;
+  if (listing.amenities) {
+    const furnitureKeywords = ['Bed linens', 'Furniture', 'Essentials', 'Hangers', 'Iron'];
+    const count = furnitureKeywords.filter(kw => listing.amenities.some((a: any) => (a.name || '').includes(kw))).length;
+    if (count >= 2) furnished = 'furnished';
+  }
+
   let floor: number | undefined;
-  const floorPatterns = [
-    /(\d+)(?:er|ème|e)\s*étage/i,
-    /floor\s*(\d+)/i,
-    /(\d+)(?:st|nd|rd|th)\s*floor/i,
-    /étage\s*(\d+)/i,
-  ];
   const fullText = `${listing.name || ''} ${fullDescription || ''} ${listing.summary || ''}`;
-  for (const pattern of floorPatterns) {
-    const match = fullText.match(pattern);
-    if (match) {
-      floor = parseInt(match[1]);
-      break;
-    }
+  const floorPatterns = [/(\d+)(?:er|ème|e)\s*étage/i, /floor\s*(\d+)/i, /(\d+)(?:st|nd|rd|th)\s*floor/i, /étage\s*(\d+)/i];
+  for (const p of floorPatterns) {
+    const m = fullText.match(p);
+    if (m) { floor = parseInt(m[1]); break; }
   }
-  if (!floor && (
-    fullText.toLowerCase().includes('rez-de-chaussée') ||
-    fullText.toLowerCase().includes('ground floor') ||
-    fullText.toLowerCase().includes('rdc')
-  )) {
-    floor = 0;
-  }
+  if (floor === undefined && fullText.toLowerCase().match(/rez-de-chaussée|ground floor|rdc/)) floor = 0;
 
   return {
     title: listing.name || '',
@@ -508,7 +379,7 @@ function extractFromListingObject(listing: any): AirbnbData {
     bedrooms: listing.bedrooms || 0,
     bathrooms: listing.bathrooms || 0,
     max_guests: listing.personCapacity || 0,
-    images,
+    images: dedupe(images),
     amenities,
     bonusFeatures: bonusFeatures.length > 0 ? bonusFeatures : undefined,
     address: listing.publicAddress || '',
@@ -522,32 +393,61 @@ function extractFromListingObject(listing: any): AirbnbData {
   };
 }
 
-// --- Fetch HTML page with browser-like headers ---
-async function fetchPageHtml(url: string): Promise<string> {
-  const pageResponse = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'none',
-      'Sec-Fetch-User': '?1',
-      'Upgrade-Insecure-Requests': '1',
-    },
-    redirect: 'follow',
-  });
-
-  if (!pageResponse.ok) {
-    throw new Error(`Failed to fetch page: ${pageResponse.status}`);
+// --- Helpers ---
+function mapAmenity(name: string): string | null {
+  const n = name.toLowerCase();
+  const map: Record<string, string> = {
+    'wifi': 'WiFi',
+    'kitchen': 'Cuisine équipée / Equipped kitchen',
+    'washer': 'Lave-linge / Washing machine',
+    'dryer': 'Lave-linge / Washing machine',
+    'parking': 'Parking',
+    'garden': 'Jardin / Garden',
+    'balcony': 'Balcon / Balcony',
+    'patio': 'Balcon / Balcony',
+    'air conditioning': 'Climatisation / Air conditioning',
+    'heating': 'Chauffage / Heating',
+    'tv': 'TV',
+    'workspace': 'Bureau / Desk',
+    'desk': 'Bureau / Desk',
+  };
+  for (const [key, val] of Object.entries(map)) {
+    if (n.includes(key)) return val;
   }
+  return null;
+}
 
-  const html = await pageResponse.text();
-  if (!html) {
-    throw new Error('Aucune donnée HTML récupérée');
+function mapBonus(name: string): string | null {
+  const n = name.toLowerCase();
+  const map: Record<string, string> = {
+    'netflix': 'Netflix',
+    'disney': 'Disney+',
+    'amazon prime': 'Amazon Prime Video',
+    'pool': 'Piscine / Swimming pool',
+    'swimming': 'Piscine / Swimming pool',
+    'gym': 'Salle de sport / Gym access',
+    'game console': 'Console de jeux / Game console',
+    'bike': 'Vélo / Bicycle',
+    'scooter': 'Trottinette / Scooter',
+    'terrace': 'Terrasse privée / Private terrace',
+    'storage': 'Cave / Storage room',
+  };
+  for (const [key, val] of Object.entries(map)) {
+    if (n.includes(key)) return val;
   }
+  return null;
+}
 
-  return html;
+function dedupe(arr: string[]): string[] {
+  return [...new Set(arr)];
+}
+
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'");
 }
