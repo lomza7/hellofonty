@@ -65,7 +65,9 @@ interface LandlordWithLease {
   lease_id: string;
   lease_start_date: string;
   lease_end_date: string;
+  lease_status: string;
   listing_title: string;
+  already_charged: boolean;
 }
 
 export default function AdminBookingsRent() {
@@ -83,7 +85,7 @@ export default function AdminBookingsRent() {
   const [togglingBookingAuto, setTogglingBookingAuto] = useState<string | null>(null);
   const [landlordsWithLeases, setLandlordsWithLeases] = useState<LandlordWithLease[]>([]);
   const [landlordLoading, setLandlordLoading] = useState(true);
-  const [chargingLandlordId, setChargingLandlordId] = useState<string | null>(null);
+  const [chargingLeaseId, setChargingLeaseId] = useState<string | null>(null);
   const [chargeResults, setChargeResults] = useState<Record<string, { success: boolean; message: string }>>({});
 
   const loadData = useCallback(async () => {
@@ -133,11 +135,27 @@ export default function AdminBookingsRent() {
           listing:listing_id(title),
           landlord:profiles!landlord_id(first_name, last_name, email, stripe_account_id, stripe_charges_enabled)
         `)
-        .eq('status', 'active')
+        .in('status', ['signed', 'active'])
         .gte('end_date', today)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
+
+      const leaseIds = (data || []).map((l: any) => l.id);
+
+      // Check which leases have already been charged
+      let chargedLeaseIds = new Set<string>();
+      if (leaseIds.length > 0) {
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('lease_id')
+          .in('lease_id', leaseIds)
+          .eq('status', 'paid')
+          .ilike('billing_reason', 'manual_admin_charge');
+        if (invoices) {
+          chargedLeaseIds = new Set(invoices.map((inv: any) => inv.lease_id).filter(Boolean));
+        }
+      }
 
       const rows: LandlordWithLease[] = (data || [])
         .filter((lease: any) => lease.landlord)
@@ -151,7 +169,9 @@ export default function AdminBookingsRent() {
           lease_id: lease.id,
           lease_start_date: lease.start_date,
           lease_end_date: lease.end_date,
+          lease_status: lease.status,
           listing_title: lease.listing?.title || '',
+          already_charged: chargedLeaseIds.has(lease.id),
         }));
 
       setLandlordsWithLeases(rows);
@@ -164,21 +184,18 @@ export default function AdminBookingsRent() {
 
   useEffect(() => { loadLandlordsWithLeases(); }, [loadLandlordsWithLeases]);
 
-  const chargeLandlord = async (landlordId: string) => {
-    const landlord = landlordsWithLeases.find(l => l.landlord_id === landlordId);
-    if (!landlord) return;
-
-    if (!window.confirm(`Prélever 59,00 € d'abonnement Premium sur le compte Stripe de ${landlord.landlord_first_name} ${landlord.landlord_last_name} ?`)) {
+  const chargeLandlord = async (lease: LandlordWithLease) => {
+    if (!window.confirm(`Prélever 59,00 € d'abonnement Premium sur le compte Stripe de ${lease.landlord_first_name} ${lease.landlord_last_name} pour le bail « ${lease.listing_title || 'sans titre'} » ?`)) {
       return;
     }
 
-    setChargingLandlordId(landlordId);
-    setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: '' } }));
+    setChargingLeaseId(lease.lease_id);
+    setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: '' } }));
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: 'Session expirée. Veuillez vous reconnecter.' } }));
+        setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: 'Session expirée. Veuillez vous reconnecter.' } }));
         return;
       }
 
@@ -189,7 +206,7 @@ export default function AdminBookingsRent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ landlord_id: landlordId }),
+        body: JSON.stringify({ landlord_id: lease.landlord_id, lease_id: lease.lease_id }),
       });
 
       const result = await response.json();
@@ -198,13 +215,13 @@ export default function AdminBookingsRent() {
         throw new Error(result.error || 'Erreur lors du prélèvement');
       }
 
-      setChargeResults(prev => ({ ...prev, [landlordId]: { success: true, message: result.message || 'Prélèvement effectué avec succès' } }));
+      setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: true, message: result.message || 'Prélèvement effectué avec succès' } }));
       await loadLandlordsWithLeases();
     } catch (error) {
       console.error('Error charging subscription:', error);
-      setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: error instanceof Error ? error.message : 'Erreur lors du prélèvement' } }));
+      setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: error instanceof Error ? error.message : 'Erreur lors du prélèvement' } }));
     } finally {
-      setChargingLandlordId(null);
+      setChargingLeaseId(null);
     }
   };
 
@@ -463,7 +480,7 @@ export default function AdminBookingsRent() {
         ) : landlordsWithLeases.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <Calendar className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p>Aucun propriétaire avec un bail actif.</p>
+            <p>Aucun bail signé ou actif trouvé.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -473,6 +490,7 @@ export default function AdminBookingsRent() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propriétaire</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Logement</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Période du bail</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut bail</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stripe</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Résultat</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
@@ -483,8 +501,8 @@ export default function AdminBookingsRent() {
                   const today = new Date().toISOString().split('T')[0];
                   const leaseStarted = l.lease_start_date <= today;
                   const stripeReady = !!l.stripe_account_id && l.stripe_charges_enabled;
-                  const canCharge = leaseStarted && stripeReady;
-                  const result = chargeResults[l.landlord_id];
+                  const canCharge = leaseStarted && stripeReady && !l.already_charged;
+                  const result = chargeResults[l.lease_id];
 
                   return (
                     <tr key={l.lease_id} className="hover:bg-gray-50">
@@ -492,14 +510,19 @@ export default function AdminBookingsRent() {
                         <p className="text-sm font-medium text-gray-900">
                           {l.landlord_first_name} {l.landlord_last_name}
                         </p>
-                        <p className="text-xs text-gray-500">{l.landlord_email}</p>
+                        {l.landlord_email && <p className="text-xs text-gray-500">{l.landlord_email}</p>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{l.listing_title || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={l.listing_title}>{l.listing_title || 'N/A'}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">
                         {new Date(l.lease_start_date).toLocaleDateString('fr-FR')} → {new Date(l.lease_end_date).toLocaleDateString('fr-FR')}
                         {!leaseStarted && (
                           <span className="block mt-1 text-orange-600 font-medium">Débute le {new Date(l.lease_start_date).toLocaleDateString('fr-FR')}</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${l.lease_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {l.lease_status === 'active' ? 'Actif' : 'Signé'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {stripeReady ? (
@@ -509,6 +532,12 @@ export default function AdminBookingsRent() {
                         )}
                       </td>
                       <td className="px-4 py-3">
+                        {l.already_charged && !result && (
+                          <div className="flex items-start gap-1.5 text-xs text-gray-500">
+                            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>Déjà prélevé</span>
+                          </div>
+                        )}
                         {result && (
                           <div className={`flex items-start gap-1.5 text-xs max-w-xs ${result.success ? 'text-green-600' : 'text-red-600'}`}>
                             {result.success ? <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
@@ -518,15 +547,20 @@ export default function AdminBookingsRent() {
                       </td>
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => chargeLandlord(l.landlord_id)}
-                          disabled={!canCharge || chargingLandlordId === l.landlord_id}
+                          onClick={() => chargeLandlord(l)}
+                          disabled={!canCharge || chargingLeaseId === l.lease_id}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={!leaseStarted ? 'Le bail n\'a pas encore commencé' : !stripeReady ? 'Compte Stripe non configuré' : 'Prélever 59 €'}
+                          title={!leaseStarted ? 'Le bail n\'a pas encore commencé' : !stripeReady ? 'Compte Stripe non configuré' : l.already_charged ? 'Ce bail a déjà été prélevé' : 'Prélever 59 €'}
                         >
-                          {chargingLandlordId === l.landlord_id ? (
+                          {chargingLeaseId === l.lease_id ? (
                             <>
                               <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                               En cours...
+                            </>
+                          ) : l.already_charged ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              Prélevé
                             </>
                           ) : (
                             <>

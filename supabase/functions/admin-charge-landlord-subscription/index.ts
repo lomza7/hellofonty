@@ -51,10 +51,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { landlord_id } = body;
+    const { landlord_id, lease_id } = body;
 
     if (!landlord_id) {
       throw new Error('ID du propriétaire manquant');
+    }
+
+    if (!lease_id) {
+      throw new Error('ID du bail manquant');
     }
 
     // Get landlord profile with Stripe account info
@@ -82,50 +86,65 @@ Deno.serve(async (req: Request) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Check that the landlord has at least one active lease with end_date in the future
-    const { data: activeLease, error: leaseError } = await supabaseAdmin
+    // Fetch the specific lease — must be signed or active, belong to this landlord, end in the future
+    const { data: lease, error: leaseError } = await supabaseAdmin
       .from('leases')
-      .select('id, start_date, end_date, status')
+      .select('id, start_date, end_date, status, listing_id')
+      .eq('id', lease_id)
       .eq('landlord_id', landlord_id)
-      .eq('status', 'active')
+      .in('status', ['signed', 'active'])
       .gte('end_date', today)
-      .order('end_date', { ascending: false })
-      .limit(1)
       .maybeSingle();
 
     if (leaseError) {
       throw new Error('Erreur lors de la vérification du bail');
     }
 
-    if (!activeLease) {
-      // No active lease — suspend subscription and refuse charge
-      await supabaseAdmin
-        .from('subscriptions')
-        .upsert({
-          user_id: landlord_id,
-          plan_type: 'free',
-          status: 'active',
-        }, { onConflict: 'user_id' });
-
-      throw new Error('Aucun bail actif trouvé. L\'abonnement a été suspendu automatiquement car le contrat est terminé.');
+    if (!lease) {
+      throw new Error('Bail introuvable, annulé, ou expiré. Seuls les baux signés ou actifs avec une date de fin future peuvent être prélevés.');
     }
 
     // Check that the lease has already started (start_date <= today)
-    if (activeLease.start_date && activeLease.start_date > today) {
-      throw new Error(`Le bail n'a pas encore commencé. Date de début du bail : ${new Date(activeLease.start_date).toLocaleDateString('fr-FR')}`);
+    if (lease.start_date && lease.start_date > today) {
+      throw new Error(`Le bail n'a pas encore commencé. Date de début du bail : ${new Date(lease.start_date).toLocaleDateString('fr-FR')}`);
     }
 
-    const leaseEndDate = activeLease.end_date as string;
+    // Prevent double charge: check if an invoice already exists for this lease
+    const { data: existingInvoice } = await supabaseAdmin
+      .from('invoices')
+      .select('id, stripe_invoice_id, created_at')
+      .eq('user_id', landlord_id)
+      .eq('lease_id', lease_id)
+      .eq('status', 'paid')
+      .ilike('billing_reason', 'manual_admin_charge')
+      .maybeSingle();
+
+    if (existingInvoice) {
+      throw new Error(`Ce bail a déjà été prélevé (paiement du ${new Date(existingInvoice.created_at).toLocaleDateString('fr-FR')}). Un seul prélèvement de 59 € par bail est autorisé.`);
+    }
+
+    const leaseEndDate = lease.end_date as string;
+
+    // Get listing title for the charge description
+    let listingTitle = '';
+    if (lease.listing_id) {
+      const { data: listing } = await supabaseAdmin
+        .from('listings')
+        .select('title')
+        .eq('id', lease.listing_id)
+        .maybeSingle();
+      if (listing) listingTitle = listing.title || '';
+    }
 
     // Create a direct charge on the landlord's Stripe Connect account
     const charge = await stripe.charges.create({
       amount: PREMIUM_AMOUNT,
       currency: 'eur',
-      description: `Abonnement Hellofonty Premium - ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`,
+      description: `Abonnement Hellofonty Premium (59€) — Bail: ${listingTitle || lease.id.slice(0, 8)} — ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`,
       metadata: {
         landlord_id: landlord_id,
         type: 'premium_subscription',
-        lease_id: activeLease.id,
+        lease_id: lease_id,
         lease_end_date: leaseEndDate,
         charged_by_admin: user.id,
       },
@@ -154,7 +173,7 @@ Deno.serve(async (req: Request) => {
       console.error('Error updating subscription:', subError);
     }
 
-    // Record invoice
+    // Record invoice with lease_id to prevent double charges
     const invoiceId = `manual_${charge.id}`;
     const { error: invoiceError } = await supabaseAdmin
       .from('invoices')
@@ -165,6 +184,7 @@ Deno.serve(async (req: Request) => {
         currency: 'eur',
         status: 'paid',
         billing_reason: 'manual_admin_charge',
+        lease_id: lease_id,
       });
 
     if (invoiceError) {
@@ -178,8 +198,10 @@ Deno.serve(async (req: Request) => {
         amount: PREMIUM_AMOUNT,
         currency: 'eur',
         landlord_name: `${landlord.first_name} ${landlord.last_name}`,
+        lease_id: lease_id,
         lease_end_date: leaseEndDate,
-        message: `Prélèvement de 59,00 € effectué sur le compte Stripe du propriétaire. Abonnement Premium actif jusqu'au ${periodEnd.toLocaleDateString('fr-FR')}. Le contrat se termine le ${new Date(leaseEndDate).toLocaleDateString('fr-FR')}.`,
+        listing_title: listingTitle,
+        message: `Prélèvement de 59,00 € effectué pour le bail « ${listingTitle || 'sans titre'} ». Abonnement Premium actif jusqu'au ${periodEnd.toLocaleDateString('fr-FR')}. Le contrat se termine le ${new Date(leaseEndDate).toLocaleDateString('fr-FR')}.`,
       }),
       {
         status: 200,
