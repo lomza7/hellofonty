@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Calendar, Search,
   Bell, BellOff, Send, ChevronDown, ChevronRight, Home,
-  CreditCard, AlertCircle, CheckCircle2
+  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle
 } from 'lucide-react';
 
 interface RentPayment {
@@ -68,6 +68,23 @@ interface LandlordWithLease {
   lease_status: string;
   listing_title: string;
   already_charged: boolean;
+  subscription_exempt: boolean;
+}
+
+interface SubscriptionCharge {
+  id: string;
+  landlord_id: string;
+  lease_id: string | null;
+  listing_id: string | null;
+  period_month: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'failed' | 'exempted' | 'cancelled';
+  failure_reason: string | null;
+  last_attempt_at: string | null;
+  attempt_count: number;
+  paid_at: string | null;
+  landlord?: { first_name: string; last_name: string };
+  lease?: { listing: { title: string } };
 }
 
 export default function AdminBookingsRent() {
@@ -87,6 +104,11 @@ export default function AdminBookingsRent() {
   const [landlordLoading, setLandlordLoading] = useState(true);
   const [chargingLeaseId, setChargingLeaseId] = useState<string | null>(null);
   const [chargeResults, setChargeResults] = useState<Record<string, { success: boolean; message: string }>>({});
+  const [unpaidCharges, setUnpaidCharges] = useState<SubscriptionCharge[]>([]);
+  const [unpaidLoading, setUnpaidLoading] = useState(true);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [retryingAllId, setRetryingAllId] = useState<string | null>(null);
+  const [exemptingId, setExemptingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -133,7 +155,7 @@ export default function AdminBookingsRent() {
         .select(`
           id, start_date, end_date, status, landlord_id,
           listing:listing_id(title),
-          landlord:profiles!landlord_id(first_name, last_name, email, stripe_account_id, stripe_charges_enabled)
+          landlord:profiles!landlord_id(first_name, last_name, email, stripe_account_id, stripe_charges_enabled, subscription_exempt)
         `)
         .in('status', ['signed', 'active'])
         .gte('end_date', today)
@@ -172,6 +194,7 @@ export default function AdminBookingsRent() {
           lease_status: lease.status,
           listing_title: lease.listing?.title || '',
           already_charged: chargedLeaseIds.has(lease.id),
+          subscription_exempt: lease.landlord.subscription_exempt || false,
         }));
 
       setLandlordsWithLeases(rows);
@@ -181,6 +204,30 @@ export default function AdminBookingsRent() {
       setLandlordLoading(false);
     }
   }, []);
+
+  const loadUnpaidCharges = useCallback(async () => {
+    setUnpaidLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('landlord_subscription_charges')
+        .select(`
+          id, landlord_id, lease_id, listing_id, period_month, amount, status,
+          failure_reason, last_attempt_at, attempt_count, paid_at,
+          landlord:profiles!landlord_id(first_name, last_name)
+        `)
+        .in('status', ['failed', 'pending'])
+        .order('period_month', { ascending: true });
+
+      if (error) throw error;
+      setUnpaidCharges((data || []) as unknown as SubscriptionCharge[]);
+    } catch (err) {
+      console.error('Error loading unpaid charges:', err);
+    } finally {
+      setUnpaidLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadUnpaidCharges(); }, [loadUnpaidCharges]);
 
   useEffect(() => { loadLandlordsWithLeases(); }, [loadLandlordsWithLeases]);
 
@@ -217,11 +264,115 @@ export default function AdminBookingsRent() {
 
       setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: true, message: result.message || 'Prélèvement effectué avec succès' } }));
       await loadLandlordsWithLeases();
+      await loadUnpaidCharges();
     } catch (error) {
       console.error('Error charging subscription:', error);
       setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: error instanceof Error ? error.message : 'Erreur lors du prélèvement' } }));
     } finally {
       setChargingLeaseId(null);
+    }
+  };
+
+  const retryCharge = async (charge: SubscriptionCharge) => {
+    setRetryingId(charge.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'retry', charge_id: charge.id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors de la récupération');
+      }
+
+      alert(result.message || 'Prélèvement récupéré avec succès');
+      await loadUnpaidCharges();
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors de la récupération');
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const retryAllCharges = async (landlordId: string, landlordName: string) => {
+    const landlordUnpaid = unpaidCharges.filter(c => c.landlord_id === landlordId && c.status === 'failed');
+    const totalAmount = landlordUnpaid.reduce((s, c) => s + c.amount, 0);
+    if (landlordUnpaid.length === 0) return;
+
+    if (!window.confirm(`Récupérer ${landlordUnpaid.length} impayé(s) (${(totalAmount / 100).toFixed(2)} €) sur le compte Stripe de ${landlordName} ?`)) return;
+
+    setRetryingAllId(landlordId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'retry_all', landlord_id: landlordId }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors de la récupération');
+      }
+
+      alert(result.message || 'Impayés récupérés avec succès');
+      await loadUnpaidCharges();
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors de la récupération');
+    } finally {
+      setRetryingAllId(null);
+    }
+  };
+
+  const toggleExemption = async (landlordId: string, landlordName: string, currentExempt: boolean) => {
+    const reason = currentExempt ? '' : window.prompt(`Raison de l'exonération de ${landlordName} ? (optionnel)`) || '';
+    if (!currentExempt && !window.confirm(`Exonérer ${landlordName} des frais Premium ? Les impayés en attente seront annulés.`)) return;
+    if (currentExempt && !window.confirm(`Retirer l'exonération de ${landlordName} ? Les prélèvements reprendront.`)) return;
+
+    setExemptingId(landlordId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'toggle_exempt', landlord_id: landlordId, reason }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors de la mise à jour');
+      }
+
+      alert(result.message || 'Exonération mise à jour');
+      await loadLandlordsWithLeases();
+      await loadUnpaidCharges();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors de la mise à jour');
+    } finally {
+      setExemptingId(null);
     }
   };
 
@@ -461,6 +612,76 @@ export default function AdminBookingsRent() {
         </select>
       </div>
 
+      {/* Unpaid Charges Section */}
+      {unpaidCharges.length > 0 && (
+        <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 overflow-hidden">
+          <div className="p-4 border-b border-red-200 bg-red-100">
+            <h3 className="text-lg font-semibold text-red-900 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              Impayés d'abonnement ({unpaidCharges.length})
+              <span className="text-sm font-normal text-red-700">
+                — Total: {(unpaidCharges.reduce((s, c) => s + c.amount, 0) / 100).toFixed(2)} €
+              </span>
+            </h3>
+            <p className="text-sm text-red-700 mt-1">
+              Ces prélèvements n'ont pas pu être effectués (solde Stripe insuffisant). Ils seront retentés automatiquement quand le loyer sera payé.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-red-50 border-b border-red-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Propriétaire</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Mois</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Montant</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Raison</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Tentatives</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Dernière tentative</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-red-100 bg-white">
+                {unpaidCharges.map((c) => {
+                  const landlordName = c.landlord ? `${c.landlord.first_name} ${c.landlord.last_name}` : 'N/A';
+                  return (
+                    <tr key={c.id} className="hover:bg-red-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{landlordName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{c.period_month}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-red-700">{(c.amount / 100).toFixed(2)} €</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs">{c.failure_reason || 'En attente'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{c.attempt_count || 0}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {c.last_attempt_at ? new Date(c.last_attempt_at).toLocaleDateString('fr-FR') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => retryCharge(c)}
+                          disabled={retryingId === c.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          title="Réessayer le prélèvement maintenant"
+                        >
+                          {retryingId === c.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                              ...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCw className="w-4 h-4" />
+                              Réessayer
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Landlord Subscription Charges */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200">
@@ -492,6 +713,7 @@ export default function AdminBookingsRent() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Période du bail</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut bail</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stripe</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Impayés</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Résultat</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                 </tr>
@@ -501,14 +723,19 @@ export default function AdminBookingsRent() {
                   const today = new Date().toISOString().split('T')[0];
                   const leaseStarted = l.lease_start_date <= today;
                   const stripeReady = !!l.stripe_account_id && l.stripe_charges_enabled;
-                  const canCharge = leaseStarted && stripeReady && !l.already_charged;
+                  const canCharge = leaseStarted && stripeReady && !l.already_charged && !l.subscription_exempt;
                   const result = chargeResults[l.lease_id];
+                  const landlordUnpaid = unpaidCharges.filter(c => c.landlord_id === l.landlord_id && c.status === 'failed');
+                  const landlordUnpaidTotal = landlordUnpaid.reduce((s, c) => s + c.amount, 0);
 
                   return (
-                    <tr key={l.lease_id} className="hover:bg-gray-50">
+                    <tr key={l.lease_id} className={`hover:bg-gray-50 ${l.subscription_exempt ? 'bg-gray-50' : ''}`}>
                       <td className="px-4 py-3">
                         <p className="text-sm font-medium text-gray-900">
                           {l.landlord_first_name} {l.landlord_last_name}
+                          {l.subscription_exempt && (
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">Exonéré</span>
+                          )}
                         </p>
                         {l.landlord_email && <p className="text-xs text-gray-500">{l.landlord_email}</p>}
                       </td>
@@ -532,6 +759,35 @@ export default function AdminBookingsRent() {
                         )}
                       </td>
                       <td className="px-4 py-3">
+                        {landlordUnpaid.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                              {landlordUnpaid.length} impayé{landlordUnpaid.length > 1 ? 's' : ''}
+                            </span>
+                            <span className="text-xs text-red-600 font-semibold">{(landlordUnpaidTotal / 100).toFixed(2)} €</span>
+                            <button
+                              onClick={() => retryAllCharges(l.landlord_id, `${l.landlord_first_name} ${l.landlord_last_name}`)}
+                              disabled={retryingAllId === l.landlord_id}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              {retryingAllId === l.landlord_id ? (
+                                <>
+                                  <div className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                  ...
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCw className="w-3 h-3" />
+                                  Tout récupérer
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         {l.already_charged && !result && (
                           <div className="flex items-start gap-1.5 text-xs text-gray-500">
                             <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -546,29 +802,58 @@ export default function AdminBookingsRent() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => chargeLandlord(l)}
-                          disabled={!canCharge || chargingLeaseId === l.lease_id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={!leaseStarted ? 'Le bail n\'a pas encore commencé' : !stripeReady ? 'Compte Stripe non configuré' : l.already_charged ? 'Ce bail a déjà été prélevé' : 'Prélever 59 €'}
-                        >
-                          {chargingLeaseId === l.lease_id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                              En cours...
-                            </>
-                          ) : l.already_charged ? (
-                            <>
-                              <CheckCircle2 className="w-4 h-4" />
-                              Prélevé
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="w-4 h-4" />
-                              Prélever 59 €
-                            </>
-                          )}
-                        </button>
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => chargeLandlord(l)}
+                            disabled={!canCharge || chargingLeaseId === l.lease_id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={!leaseStarted ? 'Le bail n\'a pas encore commencé' : !stripeReady ? 'Compte Stripe non configuré' : l.already_charged ? 'Ce bail a déjà été prélevé' : l.subscription_exempt ? 'Propriétaire exonéré' : 'Prélever 59 €'}
+                          >
+                            {chargingLeaseId === l.lease_id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                En cours...
+                              </>
+                            ) : l.already_charged ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                Prélevé
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="w-4 h-4" />
+                                Prélever 59 €
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => toggleExemption(l.landlord_id, `${l.landlord_first_name} ${l.landlord_last_name}`, l.subscription_exempt)}
+                            disabled={exemptingId === l.landlord_id}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              l.subscription_exempt
+                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                            title={l.subscription_exempt ? 'Retirer l\'exonération' : 'Exonérer ce propriétaire'}
+                          >
+                            {exemptingId === l.landlord_id ? (
+                              <>
+                                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                                ...
+                              </>
+                            ) : l.subscription_exempt ? (
+                              <>
+                                <ShieldCheck className="w-3 h-3" />
+                                Exonéré
+                              </>
+                            ) : (
+                              <>
+                                <ShieldOff className="w-3 h-3" />
+                                Exonérer
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
