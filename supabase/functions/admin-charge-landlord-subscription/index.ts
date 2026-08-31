@@ -136,10 +136,27 @@ Deno.serve(async (req: Request) => {
       if (listing) listingTitle = listing.title || '';
     }
 
-    // Create a direct charge on the landlord's Stripe Connect account
+    // Use the landlord's platform Stripe customer and its saved payment method.
+    const { data: stripeCustomer, error: customerError } = await supabaseAdmin
+      .from('stripe_customers')
+      .select('customer_id')
+      .eq('user_id', landlord_id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (customerError) {
+      throw new Error('Erreur lors de la récupération du client Stripe');
+    }
+
+    if (!stripeCustomer?.customer_id) {
+      throw new Error('Ce propriétaire n\'a pas encore de client Stripe. Il doit d\'abord enregistrer un moyen de paiement.');
+    }
+
+    // The customer belongs to the platform account, so the charge is created there.
     const charge = await stripe.charges.create({
       amount: PREMIUM_AMOUNT,
       currency: 'eur',
+      customer: stripeCustomer.customer_id,
       description: `Abonnement Hellofonty Premium (59€) — Bail: ${listingTitle || lease.id.slice(0, 8)} — ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`,
       metadata: {
         landlord_id: landlord_id,
@@ -149,7 +166,7 @@ Deno.serve(async (req: Request) => {
         charged_by_admin: user.id,
       },
     }, {
-      stripeAccount: landlord.stripe_account_id,
+      idempotencyKey: `manual_lease_charge_${lease_id}`,
     });
 
     // Calculate period dates: current month start, end of month
