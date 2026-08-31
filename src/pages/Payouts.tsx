@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -36,6 +36,8 @@ export default function Payouts() {
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [onboardingAccountId, setOnboardingAccountId] = useState<string | null>(null);
 
+  const hasSyncedRef = useRef(false);
+
   const fetchAccounts = useCallback(async () => {
     if (!user) return;
     setAccountsLoading(true);
@@ -70,26 +72,7 @@ export default function Payouts() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (profile?.role !== 'landlord') {
-      navigate('/');
-      return;
-    }
-
-    if (profile) {
-      setStripeStatus(profile.stripe_onboarding_status || 'not_connected');
-
-      syncStripeStatus();
-
-      if ((profile as any).stripe_migration_needed) {
-        setShowMigrationNotice(true);
-      }
-    }
-
-    fetchAccounts();
-  }, [profile, navigate, fetchAccounts]);
-
-  const syncStripeStatus = async () => {
+  const syncStripeStatus = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -110,15 +93,40 @@ export default function Payouts() {
       if (data.success && data.accounts) {
         setAccounts(data.accounts);
         const defaultAccount = data.accounts.find((a: StripeAccount) => a.is_default);
-        if (defaultAccount) {
-          setStripeStatus(defaultAccount.stripe_onboarding_status);
+        const newStatus = defaultAccount?.stripe_onboarding_status || 'not_connected';
+
+        setStripeStatus((prev) => (prev !== newStatus ? newStatus : prev));
+
+        if (profile?.stripe_onboarding_status !== newStatus) {
+          await refreshProfile();
         }
-        await refreshProfile();
       }
     } catch (err) {
       console.error('Error syncing Stripe status:', err);
     }
-  };
+  }, [profile?.stripe_onboarding_status, refreshProfile]);
+
+  useEffect(() => {
+    if (profile && profile.role !== 'landlord') {
+      navigate('/');
+      return;
+    }
+  }, [profile, navigate]);
+
+  useEffect(() => {
+    if (!profile || profile.role !== 'landlord') return;
+    if (hasSyncedRef.current) return;
+    hasSyncedRef.current = true;
+
+    setStripeStatus(profile.stripe_onboarding_status || 'not_connected');
+
+    if ((profile as any).stripe_migration_needed) {
+      setShowMigrationNotice(true);
+    }
+
+    syncStripeStatus();
+    fetchAccounts();
+  }, [profile, syncStripeStatus, fetchAccounts]);
 
   const handleActivatePayments = async (accountId?: string) => {
     setLoading(true);
