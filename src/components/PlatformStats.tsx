@@ -54,13 +54,13 @@ export default function PlatformStats() {
 
       // Compter les étudiants
       const { count: studentsCount } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'student');
 
       // Compter les propriétaires
       const { count: landlordsCount } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'landlord');
 

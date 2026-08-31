@@ -387,7 +387,7 @@ export default function Payouts() {
               onClick={async () => {
                 setShowMigrationNotice(false);
                 if (user) {
-                  await supabase.from('profiles').update({ stripe_migration_needed: false }).eq('id', user.id);
+                  await supabase.rpc('update_stripe_migration_needed', { p_needed: false });
                 }
               }}
               className="absolute top-3 right-3 p-1 rounded-lg hover:bg-amber-100 transition-colors"

@@ -1,0 +1,59 @@
+-- Revoke EXECUTE from PUBLIC (which includes anon) on all SECURITY DEFINER functions
+-- The previous REVOKE FROM anon didn't work because functions default to GRANT EXECUTE TO PUBLIC
+
+REVOKE EXECUTE ON FUNCTION auto_send_payment_message FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION calculate_mrr FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION can_manage_listing FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION charge_landlord_subscriptions FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION cleanup_old_imported_dates FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION cleanup_old_verification_attempts FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION cleanup_old_verification_codes FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION complete_landlord_document_task FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION complete_phone_task FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION complete_profile_photo_task FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION complete_stripe_onboarding_task FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION complete_student_document_task FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION expire_overdue_bookings FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION generate_profile_verification_tasks FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_access_guide_by_token FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_blocked_messages_stats FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_daily_activity FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_daily_booking_growth FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_daily_listing_growth FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_daily_user_growth FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_my_access_guide FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_platform_setting FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_user_blocked_attempts_count FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_user_email FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION handle_booking_cancellation FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION handle_new_user_profile FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION is_admin FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION is_assigned_manager FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION notify_booking_email FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION notify_booking_status_change FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION relaunch_booking_payment FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION send_system_message FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION trigger_generate_profile_verification_tasks FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION update_listing_bookings_count FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION update_listing_favorites_count FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION update_listing_statistics FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION validate_booking_duration FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION validate_lease_duration FROM PUBLIC;
+
+-- Now grant EXECUTE to authenticated ONLY for functions called from the frontend
+GRANT EXECUTE ON FUNCTION get_user_email TO authenticated;
+GRANT EXECUTE ON FUNCTION get_access_guide_by_token TO authenticated;
+GRANT EXECUTE ON FUNCTION get_daily_user_growth TO authenticated;
+GRANT EXECUTE ON FUNCTION get_daily_listing_growth TO authenticated;
+GRANT EXECUTE ON FUNCTION get_daily_booking_growth TO authenticated;
+GRANT EXECUTE ON FUNCTION get_daily_activity TO authenticated;
+GRANT EXECUTE ON FUNCTION get_blocked_messages_stats TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_blocked_attempts_count TO authenticated;
+GRANT EXECUTE ON FUNCTION get_my_access_guide TO authenticated;
+GRANT EXECUTE ON FUNCTION relaunch_booking_payment TO authenticated;
+GRANT EXECUTE ON FUNCTION is_admin TO authenticated;
+GRANT EXECUTE ON FUNCTION is_assigned_manager TO authenticated;
+GRANT EXECUTE ON FUNCTION can_manage_listing TO authenticated;
+GRANT EXECUTE ON FUNCTION get_platform_setting TO authenticated;
+GRANT EXECUTE ON FUNCTION update_stripe_migration_needed TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_update_verification_status TO authenticated;

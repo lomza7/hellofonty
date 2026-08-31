@@ -100,7 +100,7 @@ export default function ListingDetail() {
           .eq('landlord_id', data.landlord_id);
 
         const { data: profileData } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('created_at')
           .eq('id', data.landlord_id)
           .maybeSingle();
@@ -118,7 +118,7 @@ export default function ListingDetail() {
 
   const loadBookings = async () => {
     const { data } = await supabase
-      .from('bookings')
+      .from('public_bookings')
       .select('start_date, end_date')
       .eq('listing_id', listingId)
       .eq('status', 'confirmed');

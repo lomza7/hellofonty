@@ -289,13 +289,10 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
         ? (document as StudentDocument).student_id
         : (document as LandlordDocument).landlord_id;
 
-      await supabase
-        .from('profiles')
-        .update({
-          verification_status: 'approved',
-          verification_reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+      await supabase.rpc('admin_update_verification_status', {
+        p_user_id: userId,
+        p_status: 'approved',
+      });
 
       await supabase.from('notifications').insert({
         user_id: userId,
@@ -338,14 +335,11 @@ export default function DocumentVerificationPanel({ onPendingCountChange }: Docu
         ? (document as StudentDocument).student_id
         : (document as LandlordDocument).landlord_id;
 
-      await supabase
-        .from('profiles')
-        .update({
-          verification_status: 'rejected',
-          verification_reviewed_at: new Date().toISOString(),
-          verification_rejection_reason: rejectionReason,
-        })
-        .eq('id', userId);
+      await supabase.rpc('admin_update_verification_status', {
+        p_user_id: userId,
+        p_status: 'rejected',
+        p_rejection_reason: rejectionReason,
+      });
 
       await supabase.from('notifications').insert({
         user_id: userId,
