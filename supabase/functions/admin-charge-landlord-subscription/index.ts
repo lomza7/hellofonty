@@ -136,27 +136,29 @@ Deno.serve(async (req: Request) => {
       if (listing) listingTitle = listing.title || '';
     }
 
-    // Use the landlord's platform Stripe customer and its saved payment method.
-    const { data: stripeCustomer, error: customerError } = await supabaseAdmin
-      .from('stripe_customers')
-      .select('customer_id')
-      .eq('user_id', landlord_id)
-      .is('deleted_at', null)
-      .maybeSingle();
+    // Check the connected account's available balance before debiting
+    const balance = await stripe.balance.retrieve({
+      stripeAccount: landlord.stripe_account_id,
+    });
 
-    if (customerError) {
-      throw new Error('Erreur lors de la récupération du client Stripe');
+    const availableEur = balance.available.find((b) => b.currency === 'eur');
+    const availableAmount = availableEur ? availableEur.amount : 0;
+
+    if (availableAmount < PREMIUM_AMOUNT) {
+      const availableEuros = (availableAmount / 100).toFixed(2);
+      throw new Error(
+        `Solde Stripe insuffisant sur le compte du propriétaire. ` +
+        `Solde disponible : ${availableEuros} €. ` +
+        `Le propriétaire doit avoir au moins 59,00 € de solde disponible sur son compte Stripe Connect. ` +
+        `Dites au propriétaire d'attendre que ses paiements soient disponibles ou de vérifier son tableau de bord Stripe.`
+      );
     }
 
-    if (!stripeCustomer?.customer_id) {
-      throw new Error('Ce propriétaire n\'a pas encore de client Stripe. Il doit d\'abord enregistrer un moyen de paiement.');
-    }
-
-    // The customer belongs to the platform account, so the charge is created there.
+    // Debit the connected account's Stripe balance directly.
+    // This creates a charge on the connected account and transfers funds to the platform.
     const charge = await stripe.charges.create({
       amount: PREMIUM_AMOUNT,
       currency: 'eur',
-      customer: stripeCustomer.customer_id,
       description: `Abonnement Hellofonty Premium (59€) — Bail: ${listingTitle || lease.id.slice(0, 8)} — ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`,
       metadata: {
         landlord_id: landlord_id,
@@ -166,6 +168,7 @@ Deno.serve(async (req: Request) => {
         charged_by_admin: user.id,
       },
     }, {
+      stripeAccount: landlord.stripe_account_id,
       idempotencyKey: `manual_lease_charge_${lease_id}`,
     });
 
@@ -218,7 +221,7 @@ Deno.serve(async (req: Request) => {
         lease_id: lease_id,
         lease_end_date: leaseEndDate,
         listing_title: listingTitle,
-        message: `Prélèvement de 59,00 € effectué pour le bail « ${listingTitle || 'sans titre'} ». Abonnement Premium actif jusqu'au ${periodEnd.toLocaleDateString('fr-FR')}. Le contrat se termine le ${new Date(leaseEndDate).toLocaleDateString('fr-FR')}.`,
+        message: `Prélèvement de 59,00 € effectué sur le solde Stripe du propriétaire pour le bail « ${listingTitle || 'sans titre'} ». Abonnement Premium actif jusqu'au ${periodEnd.toLocaleDateString('fr-FR')}. Le contrat se termine le ${new Date(leaseEndDate).toLocaleDateString('fr-FR')}.`,
       }),
       {
         status: 200,
