@@ -576,6 +576,22 @@ export default function MyMonthlyRents() {
 
       if (error) throw error;
 
+      // Fetch landlord_stripe_accounts for all landlords in one query
+      const landlordIds = (data || [])
+        .map((b: any) => b.listing?.landlord_id)
+        .filter((id: any) => id) as string[];
+      const lsaReadyMap = new Map<string, boolean>();
+      if (landlordIds.length > 0) {
+        const { data: lsaRows } = await supabase
+          .from('landlord_stripe_accounts')
+          .select('landlord_id, stripe_charges_enabled')
+          .in('landlord_id', landlordIds)
+          .eq('is_default', true);
+        for (const row of lsaRows || []) {
+          if (row.stripe_charges_enabled) lsaReadyMap.set(row.landlord_id, true);
+        }
+      }
+
       const bookingsWithSchedules = await Promise.all(
         (data || []).map(async (booking: any) => {
           const schedule = await generatePaymentSchedule({
@@ -591,7 +607,18 @@ export default function MyMonthlyRents() {
               landlord: booking.listing?.landlord || null,
             },
           });
-          return { ...booking, schedule };
+          // Override stripe_charges_enabled with the more reliable landlord_stripe_accounts check
+          const lsaReady = lsaReadyMap.get(booking.listing?.landlord_id) === true;
+          const profileReady = booking.listing?.landlord?.stripe_charges_enabled === true;
+          const overrideLandlord = {
+            ...booking.listing?.landlord,
+            stripe_charges_enabled: lsaReady || profileReady,
+          };
+          return {
+            ...booking,
+            listing: { ...booking.listing, landlord: overrideLandlord },
+            schedule,
+          };
         })
       );
 

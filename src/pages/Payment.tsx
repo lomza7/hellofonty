@@ -44,6 +44,7 @@ export default function Payment() {
   const [slowPayment, setSlowPayment] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [studentFeeAmount, setStudentFeeAmount] = useState(0);
+  const [landlordStripeReady, setLandlordStripeReady] = useState(false);
 
   useEffect(() => {
     loadBooking();
@@ -96,6 +97,7 @@ export default function Payment() {
               address,
               price_per_month,
               security_deposit,
+              landlord_id,
               landlord:profiles!landlord_id(avatar_url, stripe_charges_enabled)
             )
           `)
@@ -107,6 +109,20 @@ export default function Payment() {
           .eq('setting_key', 'platform_fee_amount')
           .maybeSingle(),
       ]);
+
+      const landlordId = bookingResult.data?.listing?.landlord_id as string | undefined;
+      let lsaReady = false;
+      if (landlordId) {
+        const { data: lsaData } = await supabase
+          .from('landlord_stripe_accounts')
+          .select('stripe_charges_enabled')
+          .eq('landlord_id', landlordId)
+          .eq('is_default', true)
+          .maybeSingle();
+        lsaReady = lsaData?.stripe_charges_enabled === true;
+      }
+      const profileReady = bookingResult.data?.listing?.landlord?.stripe_charges_enabled === true;
+      setLandlordStripeReady(lsaReady || profileReady);
 
       if (bookingResult.error) throw bookingResult.error;
       const data = bookingResult.data;
@@ -366,7 +382,7 @@ export default function Payment() {
               </div>
             </div>
 
-            {!isExpired && booking.listing?.landlord?.stripe_charges_enabled && (
+            {!isExpired && landlordStripeReady && (
               <button
                 onClick={handlePayment}
                 disabled={processing}
@@ -386,7 +402,7 @@ export default function Payment() {
               </button>
             )}
 
-            {!isExpired && !booking.listing?.landlord?.stripe_charges_enabled && (
+            {!isExpired && !landlordStripeReady && (
               <div className="text-center py-4 bg-amber-50 border border-amber-200 rounded-xl px-6">
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
                 <p className="text-gray-800 font-semibold mb-2">

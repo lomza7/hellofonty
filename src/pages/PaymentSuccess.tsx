@@ -12,6 +12,7 @@ export default function PaymentSuccess() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<any>(null);
   const [loadError, setLoadError] = useState(false);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     if (bookingId) {
@@ -22,8 +23,9 @@ export default function PaymentSuccess() {
     }
   }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadBooking() {
+  async function loadBooking(isPoll = false) {
     try {
+      if (isPoll) setPolling(true);
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -35,7 +37,38 @@ export default function PaymentSuccess() {
 
       if (!error && data) {
         setBooking(data);
-        if (data.payment_status !== 'completed') {
+        if (data.payment_status === 'completed') {
+          setLoadError(false);
+          setLoading(false);
+          setPolling(false);
+          return;
+        }
+        // If this is the first load and payment is not yet completed,
+        // start polling (webhook may not have fired yet)
+        if (!isPoll && data.payment_status !== 'completed') {
+          setPolling(true);
+          let attempts = 0;
+          const pollInterval = setInterval(async () => {
+            attempts++;
+            const { data: pollData } = await supabase
+              .from('bookings')
+              .select('payment_status')
+              .eq('id', bookingId)
+              .maybeSingle();
+            if (pollData?.payment_status === 'completed') {
+              clearInterval(pollInterval);
+              setBooking((prev: any) => ({ ...prev, payment_status: 'completed' }));
+              setLoadError(false);
+              setPolling(false);
+            } else if (attempts >= 10) {
+              clearInterval(pollInterval);
+              setLoadError(true);
+              setPolling(false);
+            }
+          }, 2000);
+          return;
+        }
+        if (data.payment_status !== 'completed' && isPoll) {
           setLoadError(true);
         }
       } else {
@@ -45,16 +78,17 @@ export default function PaymentSuccess() {
       console.error('Erreur:', err);
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!isPoll) setLoading(false);
     }
   }
 
-  if (loading) {
+  if (loading || polling) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Vérification du paiement...</p>
+          <p className="text-sm text-gray-400 mt-2">Cela peut prendre quelques secondes.</p>
         </div>
       </div>
     );
