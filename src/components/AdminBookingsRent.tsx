@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Calendar, Search,
-  Bell, BellOff, Send, ChevronDown, ChevronRight, Home
+  Bell, BellOff, Send, ChevronDown, ChevronRight, Home,
+  CreditCard, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 interface RentPayment {
@@ -54,6 +55,19 @@ const bookingStatusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'Annulée', color: 'bg-red-100 text-red-700' },
 };
 
+interface LandlordWithLease {
+  landlord_id: string;
+  landlord_first_name: string;
+  landlord_last_name: string;
+  landlord_email: string;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean;
+  lease_id: string;
+  lease_start_date: string;
+  lease_end_date: string;
+  listing_title: string;
+}
+
 export default function AdminBookingsRent() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +81,10 @@ export default function AdminBookingsRent() {
   const [reminderMsg, setReminderMsg] = useState<string | null>(null);
   const [togglingAuto, setTogglingAuto] = useState<string | null>(null);
   const [togglingBookingAuto, setTogglingBookingAuto] = useState<string | null>(null);
+  const [landlordsWithLeases, setLandlordsWithLeases] = useState<LandlordWithLease[]>([]);
+  const [landlordLoading, setLandlordLoading] = useState(true);
+  const [chargingLandlordId, setChargingLandlordId] = useState<string | null>(null);
+  const [chargeResults, setChargeResults] = useState<Record<string, { success: boolean; message: string }>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -103,6 +121,92 @@ export default function AdminBookingsRent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadLandlordsWithLeases = useCallback(async () => {
+    setLandlordLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('leases')
+        .select(`
+          id, start_date, end_date, status, landlord_id,
+          listing:listing_id(title),
+          landlord:profiles!landlord_id(first_name, last_name, email, stripe_account_id, stripe_charges_enabled)
+        `)
+        .eq('status', 'active')
+        .gte('end_date', today)
+        .order('start_date', { ascending: true });
+
+      if (error) throw error;
+
+      const rows: LandlordWithLease[] = (data || [])
+        .filter((lease: any) => lease.landlord)
+        .map((lease: any) => ({
+          landlord_id: lease.landlord_id,
+          landlord_first_name: lease.landlord.first_name || '',
+          landlord_last_name: lease.landlord.last_name || '',
+          landlord_email: lease.landlord.email || '',
+          stripe_account_id: lease.landlord.stripe_account_id || null,
+          stripe_charges_enabled: lease.landlord.stripe_charges_enabled || false,
+          lease_id: lease.id,
+          lease_start_date: lease.start_date,
+          lease_end_date: lease.end_date,
+          listing_title: lease.listing?.title || '',
+        }));
+
+      setLandlordsWithLeases(rows);
+    } catch (err) {
+      console.error('Error loading landlords with leases:', err);
+    } finally {
+      setLandlordLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadLandlordsWithLeases(); }, [loadLandlordsWithLeases]);
+
+  const chargeLandlord = async (landlordId: string) => {
+    const landlord = landlordsWithLeases.find(l => l.landlord_id === landlordId);
+    if (!landlord) return;
+
+    if (!window.confirm(`Prélever 59,00 € d'abonnement Premium sur le compte Stripe de ${landlord.landlord_first_name} ${landlord.landlord_last_name} ?`)) {
+      return;
+    }
+
+    setChargingLandlordId(landlordId);
+    setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: '' } }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: 'Session expirée. Veuillez vous reconnecter.' } }));
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ landlord_id: landlordId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors du prélèvement');
+      }
+
+      setChargeResults(prev => ({ ...prev, [landlordId]: { success: true, message: result.message || 'Prélèvement effectué avec succès' } }));
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      console.error('Error charging subscription:', error);
+      setChargeResults(prev => ({ ...prev, [landlordId]: { success: false, message: error instanceof Error ? error.message : 'Erreur lors du prélèvement' } }));
+    } finally {
+      setChargingLandlordId(null);
+    }
+  };
 
   const allMonths = new Set<string>();
   bookings.forEach(b => {
@@ -338,6 +442,107 @@ export default function AdminBookingsRent() {
           <option value="all">Tous les mois</option>
           {sortedMonths.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
+      </div>
+
+      {/* Landlord Subscription Charges */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-amber-600" />
+            Prélèvement abonnement propriétaires (59 €)
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Propriétaires avec un bail actif dont la date de début est passée. Cliquez sur « Prélever » pour débiter 59 € sur leur compte Stripe.
+          </p>
+        </div>
+
+        {landlordLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-rose-500 border-t-transparent"></div>
+          </div>
+        ) : landlordsWithLeases.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <Calendar className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+            <p>Aucun propriétaire avec un bail actif.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propriétaire</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Logement</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Période du bail</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stripe</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Résultat</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {landlordsWithLeases.map((l) => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const leaseStarted = l.lease_start_date <= today;
+                  const stripeReady = !!l.stripe_account_id && l.stripe_charges_enabled;
+                  const canCharge = leaseStarted && stripeReady;
+                  const result = chargeResults[l.landlord_id];
+
+                  return (
+                    <tr key={l.lease_id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {l.landlord_first_name} {l.landlord_last_name}
+                        </p>
+                        <p className="text-xs text-gray-500">{l.landlord_email}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{l.listing_title || 'N/A'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {new Date(l.lease_start_date).toLocaleDateString('fr-FR')} → {new Date(l.lease_end_date).toLocaleDateString('fr-FR')}
+                        {!leaseStarted && (
+                          <span className="block mt-1 text-orange-600 font-medium">Débute le {new Date(l.lease_start_date).toLocaleDateString('fr-FR')}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {stripeReady ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Activé</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Non configuré</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {result && (
+                          <div className={`flex items-start gap-1.5 text-xs max-w-xs ${result.success ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.success ? <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
+                            <span>{result.message}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => chargeLandlord(l.landlord_id)}
+                          disabled={!canCharge || chargingLandlordId === l.landlord_id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={!leaseStarted ? 'Le bail n\'a pas encore commencé' : !stripeReady ? 'Compte Stripe non configuré' : 'Prélever 59 €'}
+                        >
+                          {chargingLandlordId === l.landlord_id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                              En cours...
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="w-4 h-4" />
+                              Prélever 59 €
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Table */}

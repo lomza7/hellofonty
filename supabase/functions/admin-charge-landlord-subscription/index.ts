@@ -80,13 +80,15 @@ Deno.serve(async (req: Request) => {
       throw new Error('Le compte Stripe de ce propriétaire n\'est pas activé pour les paiements');
     }
 
+    const today = new Date().toISOString().split('T')[0];
+
     // Check that the landlord has at least one active lease with end_date in the future
     const { data: activeLease, error: leaseError } = await supabaseAdmin
       .from('leases')
-      .select('id, end_date, status')
+      .select('id, start_date, end_date, status')
       .eq('landlord_id', landlord_id)
       .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0])
+      .gte('end_date', today)
       .order('end_date', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -106,6 +108,11 @@ Deno.serve(async (req: Request) => {
         }, { onConflict: 'user_id' });
 
       throw new Error('Aucun bail actif trouvé. L\'abonnement a été suspendu automatiquement car le contrat est terminé.');
+    }
+
+    // Check that the lease has already started (start_date <= today)
+    if (activeLease.start_date && activeLease.start_date > today) {
+      throw new Error(`Le bail n'a pas encore commencé. Date de début du bail : ${new Date(activeLease.start_date).toLocaleDateString('fr-FR')}`);
     }
 
     const leaseEndDate = activeLease.end_date as string;
