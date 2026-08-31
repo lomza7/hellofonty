@@ -159,8 +159,10 @@ export default function Payouts() {
         }
 
         targetAccountId = createData.account.id;
-        await fetchAccounts();
-        await refreshProfile();
+        if (!createData.already_exists) {
+          await fetchAccounts();
+          await refreshProfile();
+        }
       }
 
       const linkResponse = await fetch(
@@ -451,6 +453,42 @@ export default function Payouts() {
                   {language === 'fr' ? 'Activer les paiements Stripe' : 'Activate Stripe payments'}
                 </>
               )}
+            </button>
+          )}
+
+          {stripeStatus === 'pending' && accounts.length > 0 && (
+            <button
+              onClick={() => {
+                const defaultAcc = accounts.find(a => a.is_default) || accounts[0];
+                handleActivatePayments(defaultAcc.id);
+              }}
+              disabled={loading}
+              className="w-full bg-yellow-600 text-white py-4 px-6 rounded-xl font-semibold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  {language === 'fr' ? 'Chargement...' : 'Loading...'}
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-5 h-5" />
+                  {language === 'fr' ? 'Reprendre la configuration' : 'Resume setup'}
+                </>
+              )}
+            </button>
+          )}
+
+          {stripeStatus === 'complete' && accounts.length > 0 && (
+            <button
+              onClick={() => {
+                const defaultAcc = accounts.find(a => a.is_default) || accounts[0];
+                handleOpenStripeDashboard(defaultAcc.id);
+              }}
+              className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-5 h-5" />
+              {language === 'fr' ? 'Accéder au dashboard Stripe' : 'Open Stripe dashboard'}
             </button>
           )}
         </div>

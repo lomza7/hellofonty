@@ -57,9 +57,31 @@ Deno.serve(async (req: Request) => {
     });
 
     if (action === 'create') {
-      // Create a new Stripe Express account for this landlord
       const label = body.label || 'Compte secondaire';
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+      // If the landlord already has at least one account, return the default
+      // (or the first one) instead of creating a duplicate.
+      const { data: existingAccounts } = await supabaseAdmin
+        .from('landlord_stripe_accounts')
+        .select('*')
+        .eq('landlord_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      if (existingAccounts && existingAccounts.length > 0) {
+        const existing = existingAccounts[0];
+        return new Response(
+          JSON.stringify({
+            success: true,
+            account: existing,
+            already_exists: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // No existing account — create a new Stripe Express account
       const account = await stripe.accounts.create({
         type: 'express',
         country: 'FR',
@@ -76,17 +98,7 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-      // If this is the landlord's first account, mark it as default
-      // and also set it on the profile for backward compatibility
-      const { data: existingAccounts } = await supabaseAdmin
-        .from('landlord_stripe_accounts')
-        .select('id')
-        .eq('landlord_id', user.id)
-        .limit(1);
-
-      const isFirstAccount = !existingAccounts || existingAccounts.length === 0;
+      const isFirstAccount = true;
 
       const { data: newAccount, error: insertError } = await supabaseAdmin
         .from('landlord_stripe_accounts')
