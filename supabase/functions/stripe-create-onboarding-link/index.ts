@@ -44,13 +44,18 @@ Deno.serve(async (req: Request) => {
       throw new Error('Origin manquant');
     }
 
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      Deno.env.get('APP_URL') || '',
-    ].filter(Boolean);
-    if (!allowedOrigins.includes(origin)) {
-      throw new Error('Origine non autorisée');
+    // Allow localhost for development, and any https origin for production
+    const isLocalhost = origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
+    const isHttps = origin.startsWith('https://');
+    const appUrl = Deno.env.get('APP_URL') || '';
+    const isAppUrl = appUrl && origin === appUrl;
+
+    if (!isLocalhost && !isHttps && !isAppUrl) {
+      throw new Error(
+        `Origine non autorisée: ${origin}. ` +
+        `Utilisez une adresse https:// ou localhost. ` +
+        `Si le problème persiste, contactez le support.`
+      );
     }
 
     // Look up the account in landlord_stripe_accounts table first
