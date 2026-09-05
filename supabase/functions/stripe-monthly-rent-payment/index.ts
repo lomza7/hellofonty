@@ -176,13 +176,13 @@ Deno.serve(async (req: Request) => {
       throw new Error('Ce paiement a été annulé');
     }
 
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      Deno.env.get('APP_URL') || '',
-    ].filter(Boolean);
     const origin = req.headers.get('origin');
-    if (!origin || !allowedOrigins.includes(origin)) {
+    if (!origin) {
+      throw new Error('Origine manquante');
+    }
+    const isLocalhost = origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
+    const isHttps = origin.startsWith('https://');
+    if (!isLocalhost && !isHttps) {
       throw new Error('Origine non autorisée');
     }
 
