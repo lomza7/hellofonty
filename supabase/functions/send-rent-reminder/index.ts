@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
         landlord:profiles!landlord_id(first_name, last_name),
         booking:bookings!booking_id(listing_id, start_date, end_date, auto_reminder_enabled, listing:listings!listing_id(title, city, address))
       `)
-      .eq("status", "pending");
+      .in("status", ["pending", "overdue"]);
 
     if (isManual) {
       query = query.eq("id", paymentId);
