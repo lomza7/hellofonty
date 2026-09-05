@@ -325,7 +325,7 @@ function BookingPaymentCard({
 
           {expanded && (
             <div className="space-y-2">
-              {schedule.map((payment, index) => {
+              {schedule.map((payment) => {
                 const isOverdue = payment.status === 'overdue';
                 const isPending = payment.status === 'pending';
                 const isPaid = payment.status === 'paid';
@@ -470,6 +470,7 @@ export default function MyMonthlyRents() {
   const { language } = useLanguage();
   const [bookingsWithSchedule, setBookingsWithSchedule] = useState<Array<Booking & { schedule: ScheduledPayment[] }>>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
   useEffect(() => {
@@ -555,6 +556,8 @@ export default function MyMonthlyRents() {
 
   const loadBookings = async () => {
     try {
+      setLoadError(null);
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -565,7 +568,6 @@ export default function MyMonthlyRents() {
             address,
             price_per_month,
             landlord_id,
-            landlord:profiles!landlord_id(stripe_charges_enabled),
             images:listing_images(image_url, display_order)
           )
         `)
@@ -576,8 +578,30 @@ export default function MyMonthlyRents() {
 
       if (error) throw error;
 
+      const landlordIds = Array.from(
+        new Set((data || []).map((b: any) => b.listing?.landlord_id).filter(Boolean))
+      );
+
+      let landlordStripeMap: Record<string, { stripe_charges_enabled: boolean | null }> = {};
+      if (landlordIds.length > 0) {
+        const { data: landlordData, error: landlordError } = await supabase
+          .from('profiles')
+          .select('id, stripe_charges_enabled')
+          .in('id', landlordIds);
+
+        if (landlordError) {
+          console.warn('Could not load landlord Stripe status:', landlordError);
+        } else {
+          landlordStripeMap = Object.fromEntries(
+            (landlordData || []).map((p: any) => [p.id, { stripe_charges_enabled: p.stripe_charges_enabled }])
+          );
+        }
+      }
+
       const bookingsWithSchedules = await Promise.all(
         (data || []).map(async (booking: any) => {
+          const landlordId = booking.listing?.landlord_id;
+          const landlord = landlordId ? (landlordStripeMap[landlordId] || null) : null;
           const schedule = await generatePaymentSchedule({
             ...booking,
             rent_amount: Number(booking.rent_amount) || 0,
@@ -588,20 +612,21 @@ export default function MyMonthlyRents() {
             listing: {
               ...booking.listing,
               price_per_month: Number(booking.listing?.price_per_month) || 0,
-              landlord: booking.listing?.landlord || null,
+              landlord,
             },
           });
           return {
             ...booking,
-            listing: { ...booking.listing, landlord: booking.listing?.landlord || null },
+            listing: { ...booking.listing, landlord },
             schedule,
           };
         })
       );
 
       setBookingsWithSchedule(bookingsWithSchedules.filter(b => b.schedule.length > 0));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading bookings:', error);
+      setLoadError(error?.message || (language === 'fr' ? 'Erreur lors du chargement' : 'Error loading data'));
     } finally {
       setLoading(false);
     }
@@ -745,7 +770,24 @@ export default function MyMonthlyRents() {
           </div>
         )}
 
-        {bookingsWithSchedule.length === 0 ? (
+        {loadError ? (
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <AlertCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {language === 'fr' ? 'Erreur de chargement' : 'Loading error'}
+            </h3>
+            <p className="text-red-600 mb-6">{loadError}</p>
+            <button
+              onClick={() => {
+                setLoading(true);
+                loadBookings();
+              }}
+              className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors font-semibold"
+            >
+              {language === 'fr' ? 'Réessayer' : 'Retry'}
+            </button>
+          </div>
+        ) : bookingsWithSchedule.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
             <Home className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
