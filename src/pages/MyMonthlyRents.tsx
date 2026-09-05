@@ -528,7 +528,7 @@ export default function MyMonthlyRents() {
       if (existingPayment) {
         if (existingPayment.status === 'paid') {
           status = 'paid';
-        } else if (existingPayment.status === 'pending' && paymentDate < now) {
+        } else if (existingPayment.status === 'overdue' || (existingPayment.status === 'pending' && paymentDate < now)) {
           status = 'overdue';
         }
       } else if (paymentDate < now && isInitialPaid) {
