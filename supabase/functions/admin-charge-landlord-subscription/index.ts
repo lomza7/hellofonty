@@ -110,6 +110,11 @@ Deno.serve(async (req: Request) => {
       return await checkBalance(supabaseAdmin, landlord_id);
     }
 
+    // --- Action: mark subscription as paid manually (invoice sent outside Stripe) ---
+    if (action === 'mark_paid') {
+      return await markPaid(supabaseAdmin, landlord_id, lease_id, charge_id, body.payment_method || 'invoice', user.id);
+    }
+
     // --- Action: retry a specific failed charge ---
     if (action === 'retry' && charge_id) {
       return await retryCharge(supabaseAdmin, charge_id, user.id);
@@ -630,6 +635,163 @@ async function checkBalance(supabaseAdmin: any, landlordId: string) {
       message: availableAmount >= PREMIUM_AMOUNT
         ? `Solde suffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Prélèvement possible.`
         : `Solde insuffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Le prélèvement de 59,00 € échouera.`,
+    }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// --- Mark subscription as paid manually (no Stripe, invoice sent directly) ---
+async function markPaid(supabaseAdmin: any, landlord_id: string | undefined, lease_id: string | undefined, charge_id: string | undefined, paymentMethod: string, admin_id: string) {
+  if (!landlord_id) throw new Error('ID du propriétaire manquant');
+
+  const { data: landlord } = await supabaseAdmin
+    .from('profiles')
+    .select('id, first_name, last_name, role')
+    .eq('id', landlord_id)
+    .maybeSingle();
+
+  if (!landlord) throw new Error('Propriétaire introuvable');
+
+  const now = new Date().toISOString();
+  const periodMonth = new Date().toISOString().slice(0, 7);
+
+  // Case 1: marking a specific unpaid charge as paid
+  if (charge_id) {
+    const { data: chargeRecord, error: recErr } = await supabaseAdmin
+      .from('landlord_subscription_charges')
+      .select('*')
+      .eq('id', charge_id)
+      .maybeSingle();
+
+    if (recErr || !chargeRecord) throw new Error('Prélèvement introuvable');
+    if (chargeRecord.status === 'paid') throw new Error('Ce prélèvement est déjà payé');
+
+    await supabaseAdmin
+      .from('landlord_subscription_charges')
+      .update({
+        status: 'paid',
+        paid_at: now,
+        last_attempt_at: now,
+        failure_reason: null,
+      })
+      .eq('id', charge_id);
+
+    await supabaseAdmin
+      .from('invoices')
+      .insert({
+        user_id: chargeRecord.landlord_id,
+        stripe_invoice_id: `manual_mark_${charge_id}`,
+        amount: chargeRecord.amount,
+        currency: 'eur',
+        status: 'paid',
+        billing_reason: `manual_mark_paid_${paymentMethod}`,
+        lease_id: chargeRecord.lease_id,
+      });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Prélèvement de ${(chargeRecord.amount / 100).toFixed(2)} € pour ${chargeRecord.period_month} marqué comme payé (${paymentMethod}).`,
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Case 2: marking a lease as paid for the current month
+  if (!lease_id) throw new Error('ID du bail manquant');
+
+  const { data: lease, error: leaseError } = await supabaseAdmin
+    .from('leases')
+    .select('id, start_date, end_date, status, listing_id')
+    .eq('id', lease_id)
+    .eq('landlord_id', landlord_id)
+    .in('status', ['signed', 'active'])
+    .maybeSingle();
+
+  if (leaseError || !lease) throw new Error('Bail introuvable ou inactif');
+
+  let listingTitle = '';
+  if (lease.listing_id) {
+    const { data: listing } = await supabaseAdmin
+      .from('listings')
+      .select('title')
+      .eq('id', lease.listing_id)
+      .maybeSingle();
+    if (listing) listingTitle = listing.title || '';
+  }
+
+  const { data: existingCharge } = await supabaseAdmin
+    .from('landlord_subscription_charges')
+    .select('*')
+    .eq('landlord_id', landlord_id)
+    .eq('lease_id', lease_id)
+    .eq('period_month', periodMonth)
+    .maybeSingle();
+
+  if (existingCharge && existingCharge.status === 'paid') {
+    throw new Error(`Ce bail a déjà été payé pour ${periodMonth}.`);
+  }
+
+  if (existingCharge) {
+    await supabaseAdmin
+      .from('landlord_subscription_charges')
+      .update({
+        status: 'paid',
+        paid_at: now,
+        last_attempt_at: now,
+        failure_reason: null,
+      })
+      .eq('id', existingCharge.id);
+  } else {
+    await supabaseAdmin
+      .from('landlord_subscription_charges')
+      .insert({
+        landlord_id,
+        lease_id,
+        listing_id: lease.listing_id,
+        period_month: periodMonth,
+        amount: PREMIUM_AMOUNT,
+        status: 'paid',
+        paid_at: now,
+        last_attempt_at: now,
+        attempt_count: 1,
+      });
+  }
+
+  // Update subscription as active
+  const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const periodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+
+  await supabaseAdmin
+    .from('subscriptions')
+    .upsert({
+      user_id: landlord_id,
+      plan_type: 'premium',
+      status: 'active',
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+    }, { onConflict: 'user_id' });
+
+  await supabaseAdmin
+    .from('invoices')
+    .insert({
+      user_id: landlord_id,
+      stripe_invoice_id: `manual_mark_${lease_id}_${periodMonth}`,
+      amount: PREMIUM_AMOUNT,
+      currency: 'eur',
+      status: 'paid',
+      billing_reason: `manual_mark_paid_${paymentMethod}`,
+      lease_id,
+    });
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      landlord_name: `${landlord.first_name} ${landlord.last_name}`,
+      lease_id,
+      listing_title: listingTitle,
+      message: `Abonnement de 59,00 € marqué comme payé (${paymentMethod}) pour le bail « ${listingTitle || 'sans titre'} » — ${periodMonth}.`,
     }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Calendar, Search,
   Bell, BellOff, Send, ChevronDown, ChevronRight, Home,
-  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle, Wallet
+  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle, Wallet, FileCheck
 } from 'lucide-react';
 
 interface RentPayment {
@@ -110,6 +110,8 @@ export default function AdminBookingsRent() {
   const [retryingAllId, setRetryingAllId] = useState<string | null>(null);
   const [exemptingId, setExemptingId] = useState<string | null>(null);
   const [checkingBalanceId, setCheckingBalanceId] = useState<string | null>(null);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [markingPaidChargeId, setMarkingPaidChargeId] = useState<string | null>(null);
   const [balanceResults, setBalanceResults] = useState<Record<string, { available: string; pending: string; can_charge: boolean; unpaid_count: number; unpaid_total: string }>>({});
 
   const loadData = useCallback(async () => {
@@ -418,6 +420,88 @@ export default function AdminBookingsRent() {
     }
   };
 
+  const markPaid = async (lease: LandlordWithLease) => {
+    const methods = ['Virement', 'Chèque', 'Espèces', 'Facture envoyée', 'Autre'];
+    const method = window.prompt(
+      `Marquer l'abonnement de 59,00 € comme payé pour ${lease.landlord_first_name} ${lease.landlord_last_name} (bail « ${lease.listing_title || 'sans titre'} »).\n\nMode de paiement (optionnel):\n${methods.join(', ')}`,
+      'Facture envoyée'
+    );
+    if (method === null) return;
+
+    setMarkingPaidId(lease.lease_id);
+    setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: '' } }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: 'Session expirée. Veuillez vous reconnecter.' } }));
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'mark_paid', landlord_id: lease.landlord_id, lease_id: lease.lease_id, payment_method: method || 'invoice' }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors du marquage');
+      }
+
+      setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: true, message: result.message || 'Abonnement marqué comme payé' } }));
+      await loadLandlordsWithLeases();
+      await loadUnpaidCharges();
+    } catch (error) {
+      console.error('Error marking paid:', error);
+      setChargeResults(prev => ({ ...prev, [lease.lease_id]: { success: false, message: error instanceof Error ? error.message : 'Erreur lors du marquage' } }));
+    } finally {
+      setMarkingPaidId(null);
+    }
+  };
+
+  const markChargePaid = async (charge: SubscriptionCharge) => {
+    const methods = ['Virement', 'Chèque', 'Espèces', 'Facture envoyée', 'Autre'];
+    const method = window.prompt(
+      `Marquer l'impayé de ${(charge.amount / 100).toFixed(2)} € (${charge.period_month}) comme payé.\n\nMode de paiement (optionnel):\n${methods.join(', ')}`,
+      'Facture envoyée'
+    );
+    if (method === null) return;
+
+    setMarkingPaidChargeId(charge.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+ method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'mark_paid', landlord_id: charge.landlord_id, charge_id: charge.id, payment_method: method || 'invoice' }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors du marquage');
+      }
+
+      alert(result.message || 'Impayé marqué comme payé');
+      await loadUnpaidCharges();
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors du marquage');
+    } finally {
+      setMarkingPaidChargeId(null);
+    }
+  };
+
   const allMonths = new Set<string>();
   bookings.forEach(b => {
     b.rent_payments?.forEach(p => allMonths.add(p.month_year));
@@ -696,24 +780,44 @@ export default function AdminBookingsRent() {
                         {c.last_attempt_at ? new Date(c.last_attempt_at).toLocaleDateString('fr-FR') : '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => retryCharge(c)}
-                          disabled={retryingId === c.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                          title="Réessayer le prélèvement maintenant"
-                        >
-                          {retryingId === c.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                              ...
-                            </>
-                          ) : (
-                            <>
-                              <RotateCw className="w-4 h-4" />
-                              Réessayer
-                            </>
-                          )}
-                        </button>
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => retryCharge(c)}
+                            disabled={retryingId === c.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            title="Réessayer le prélèvement Stripe maintenant"
+                          >
+                            {retryingId === c.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                ...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCw className="w-4 h-4" />
+                                Réessayer
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => markChargePaid(c)}
+                            disabled={markingPaidChargeId === c.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            title="Marquer comme payé (facture envoyée directement)"
+                          >
+                            {markingPaidChargeId === c.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                ...
+                              </>
+                            ) : (
+                              <>
+                                <FileCheck className="w-4 h-4" />
+                                Marquer payé
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -900,6 +1004,24 @@ export default function AdminBookingsRent() {
                               <>
                                 <CreditCard className="w-4 h-4" />
                                 Prélever 59 €
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => markPaid(l)}
+                            disabled={(markingPaidId === l.lease_id) || l.subscription_exempt}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={l.subscription_exempt ? 'Propriétaire exonéré' : 'Marquer comme payé (facture envoyée directement au propriétaire)'}
+                          >
+                            {markingPaidId === l.lease_id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                En cours...
+                              </>
+                            ) : (
+                              <>
+                                <FileCheck className="w-4 h-4" />
+                                Marquer payé
                               </>
                             )}
                           </button>
