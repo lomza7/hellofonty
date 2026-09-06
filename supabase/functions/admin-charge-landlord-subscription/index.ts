@@ -125,6 +125,11 @@ Deno.serve(async (req: Request) => {
       return await retryAllCharges(supabaseAdmin, landlord_id, user.id);
     }
 
+    // --- Action: refund a paid charge ---
+    if (action === 'refund' && charge_id) {
+      return await refundCharge(supabaseAdmin, charge_id, body.reason || '', body.amount, user.id);
+    }
+
     // --- Default action: charge a specific lease ---
     if (!landlord_id) throw new Error('ID du propriétaire manquant');
     if (!lease_id) throw new Error('ID du bail manquant');
@@ -635,6 +640,81 @@ async function checkBalance(supabaseAdmin: any, landlordId: string) {
       message: availableAmount >= PREMIUM_AMOUNT
         ? `Solde suffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Prélèvement possible.`
         : `Solde insuffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Le prélèvement de 59,00 € échouera.`,
+    }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// --- Refund a paid subscription charge via Stripe ---
+async function refundCharge(supabaseAdmin: any, chargeId: string, reason: string, refundAmount: number | undefined, adminId: string) {
+  const { data: chargeRecord, error: recErr } = await supabaseAdmin
+    .from('landlord_subscription_charges')
+    .select('*')
+    .eq('id', chargeId)
+    .maybeSingle();
+
+  if (recErr || !chargeRecord) throw new Error('Prélèvement introuvable');
+  if (chargeRecord.status !== 'paid') throw new Error('Seuls les prélèvements payés peuvent être remboursés');
+  if (!chargeRecord.stripe_charge_id) throw new Error('Aucun ID de charge Stripe associé à ce prélèvement');
+
+  const { data: landlord } = await supabaseAdmin
+    .from('profiles')
+    .select('id, first_name, last_name, stripe_account_id, stripe_charges_enabled')
+    .eq('id', chargeRecord.landlord_id)
+    .maybeSingle();
+
+  if (!landlord) throw new Error('Propriétaire introuvable');
+  if (!landlord.stripe_account_id) throw new Error('Ce propriétaire n\'a pas de compte Stripe Connect');
+
+  const refundParams: any = {
+    charge: chargeRecord.stripe_charge_id,
+    metadata: {
+      landlord_id: chargeRecord.landlord_id,
+      type: 'premium_subscription_refund',
+      charge_id: chargeId,
+      refunded_by_admin: adminId,
+      reason: reason || 'admin_refund',
+    },
+  };
+
+  if (refundAmount && refundAmount > 0 && refundAmount < chargeRecord.amount) {
+    refundParams.amount = refundAmount;
+  }
+
+  const refund = await stripe.refunds.create(refundParams, {
+    stripeAccount: landlord.stripe_account_id,
+  });
+
+  const now = new Date().toISOString();
+  const actualRefundAmount = refund.amount;
+  const isFullRefund = !refundAmount || refundAmount >= chargeRecord.amount;
+
+  await supabaseAdmin
+    .from('landlord_subscription_charges')
+    .update({
+      status: isFullRefund ? 'refunded' : 'paid',
+      stripe_refund_id: refund.id,
+      refunded_at: now,
+      refund_reason: reason || null,
+      refund_amount: actualRefundAmount,
+      refunded_by_admin: adminId,
+    })
+    .eq('id', chargeId);
+
+  if (isFullRefund) {
+    await supabaseAdmin
+      .from('invoices')
+      .update({ status: 'refunded' })
+      .eq('stripe_invoice_id', `manual_${chargeRecord.stripe_charge_id}`);
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      refund_id: refund.id,
+      refund_amount: actualRefundAmount,
+      is_full_refund: isFullRefund,
+      message: `Remboursement de ${(actualRefundAmount / 100).toFixed(2)} € effectué${reason ? ` (${reason})` : ''}.`,
     }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

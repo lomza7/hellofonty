@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Calendar, Search,
   Bell, BellOff, Send, ChevronDown, ChevronRight, Home,
-  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle, Wallet, FileCheck
+  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle, Wallet, FileCheck, RotateCcw
 } from 'lucide-react';
 
 interface RentPayment {
@@ -78,11 +78,16 @@ interface SubscriptionCharge {
   listing_id: string | null;
   period_month: string;
   amount: number;
-  status: 'pending' | 'paid' | 'failed' | 'exempted' | 'cancelled';
+  status: 'pending' | 'paid' | 'failed' | 'exempted' | 'cancelled' | 'refunded';
   failure_reason: string | null;
   last_attempt_at: string | null;
   attempt_count: number;
   paid_at: string | null;
+  stripe_charge_id: string | null;
+  stripe_refund_id: string | null;
+  refunded_at: string | null;
+  refund_reason: string | null;
+  refund_amount: number | null;
   landlord?: { first_name: string; last_name: string };
   lease?: { listing: { title: string } };
 }
@@ -112,6 +117,10 @@ export default function AdminBookingsRent() {
   const [checkingBalanceId, setCheckingBalanceId] = useState<string | null>(null);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [markingPaidChargeId, setMarkingPaidChargeId] = useState<string | null>(null);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [paidCharges, setPaidCharges] = useState<SubscriptionCharge[]>([]);
+  const [paidChargesLoading, setPaidChargesLoading] = useState(true);
+  const [showPaidCharges, setShowPaidCharges] = useState(false);
   const [balanceResults, setBalanceResults] = useState<Record<string, { available: string; pending: string; can_charge: boolean; unpaid_count: number; unpaid_total: string }>>({});
 
   const loadData = useCallback(async () => {
@@ -217,6 +226,7 @@ export default function AdminBookingsRent() {
         .select(`
           id, landlord_id, lease_id, listing_id, period_month, amount, status,
           failure_reason, last_attempt_at, attempt_count, paid_at,
+          stripe_charge_id, stripe_refund_id, refunded_at, refund_reason, refund_amount,
           landlord:profiles!landlord_id(first_name, last_name)
         `)
         .in('status', ['failed', 'pending'])
@@ -231,7 +241,33 @@ export default function AdminBookingsRent() {
     }
   }, []);
 
+  const loadPaidCharges = useCallback(async () => {
+    setPaidChargesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('landlord_subscription_charges')
+        .select(`
+          id, landlord_id, lease_id, listing_id, period_month, amount, status,
+          failure_reason, last_attempt_at, attempt_count, paid_at,
+          stripe_charge_id, stripe_refund_id, refunded_at, refund_reason, refund_amount,
+          landlord:profiles!landlord_id(first_name, last_name),
+          lease:leases!lease_id(listing:listings!listing_id(title))
+        `)
+        .in('status', ['paid', 'refunded'])
+        .order('paid_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setPaidCharges((data || []) as unknown as SubscriptionCharge[]);
+    } catch (err) {
+      console.error('Error loading paid charges:', err);
+    } finally {
+      setPaidChargesLoading(false);
+    }
+  }, []);
+
   useEffect(() => { loadUnpaidCharges(); }, [loadUnpaidCharges]);
+  useEffect(() => { loadPaidCharges(); }, [loadPaidCharges]);
 
   useEffect(() => { loadLandlordsWithLeases(); }, [loadLandlordsWithLeases]);
 
@@ -499,6 +535,64 @@ export default function AdminBookingsRent() {
       alert(error instanceof Error ? error.message : 'Erreur lors du marquage');
     } finally {
       setMarkingPaidChargeId(null);
+    }
+  };
+
+  const refundCharge = async (charge: SubscriptionCharge) => {
+    const landlordName = charge.landlord ? `${charge.landlord.first_name} ${charge.landlord.last_name}` : 'N/A';
+    const defaultAmount = (charge.amount / 100).toFixed(2);
+    const amountStr = window.prompt(
+      `Rembourser le prélèvement de ${charge.period_month} pour ${landlordName}.\n\nMontant du remboursement (€, laisser vide pour remboursement total de ${defaultAmount} €):`,
+      defaultAmount
+    );
+    if (amountStr === null) return;
+
+    const reason = window.prompt('Motif du remboursement (optionnel):', 'Remboursement administrateur') || '';
+
+    let refundAmountCents: number | undefined;
+    if (amountStr.trim() !== '') {
+      const parsed = parseFloat(amountStr.replace(',', '.'));
+      if (isNaN(parsed) || parsed <= 0) {
+        alert('Montant invalide');
+        return;
+      }
+      refundAmountCents = Math.round(parsed * 100);
+      if (refundAmountCents > charge.amount) {
+        alert('Le montant du remboursement ne peut pas dépasser le montant du prélèvement');
+        return;
+      }
+    }
+
+    if (!window.confirm(`Confirmer le remboursement de ${refundAmountCents ? (refundAmountCents / 100).toFixed(2) : defaultAmount} € sur le compte Stripe de ${landlordName} ?`)) return;
+
+    setRefundingId(charge.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'refund', charge_id: charge.id, reason, amount: refundAmountCents }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors du remboursement');
+      }
+
+      alert(result.message || 'Remboursement effectué avec succès');
+      await loadPaidCharges();
+      await loadUnpaidCharges();
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors du remboursement');
+    } finally {
+      setRefundingId(null);
     }
   };
 
@@ -827,6 +921,114 @@ export default function AdminBookingsRent() {
           </div>
         </div>
       )}
+
+      {/* Paid Charges & Refunds Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-blue-600" />
+              Abonnements prélevés & Remboursements
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {paidCharges.length} prélèvement(s) payé(s). Cliquez sur « Rembourser » pour rembourser un abonnement via Stripe.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPaidCharges(!showPaidCharges)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            {showPaidCharges ? 'Masquer' : 'Afficher'}
+          </button>
+        </div>
+
+        {showPaidCharges && (
+          paidChargesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-rose-500 border-t-transparent"></div>
+            </div>
+          ) : paidCharges.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p>Aucun prélèvement payé trouvé.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propriétaire</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Mois</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Payé le</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Remboursé</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paidCharges.map((c) => {
+                    const landlordName = c.landlord ? `${c.landlord.first_name} ${c.landlord.last_name}` : 'N/A';
+                    const isRefunded = c.status === 'refunded';
+                    return (
+                      <tr key={c.id} className={`hover:bg-gray-50 ${isRefunded ? 'bg-blue-50' : ''}`}>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{landlordName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{c.period_month}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">{(c.amount / 100).toFixed(2)} €</td>
+                        <td className="px-4 py-3">
+                          {isRefunded ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Remboursé</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Payé</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {c.paid_at ? new Date(c.paid_at).toLocaleDateString('fr-FR') : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {c.refunded_at ? (
+                            <div>
+                              <div>{new Date(c.refunded_at).toLocaleDateString('fr-FR')}</div>
+                              {c.refund_amount && (
+                                <div className="font-semibold text-blue-600">{(c.refund_amount / 100).toFixed(2)} €</div>
+                              )}
+                              {c.refund_reason && (
+                                <div className="text-gray-400 italic max-w-xs truncate" title={c.refund_reason}>{c.refund_reason}</div>
+                              )}
+                            </div>
+                          ) : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {!isRefunded && c.stripe_charge_id && (
+                            <button
+n                              onClick={() => refundCharge(c)}
+                              disabled={refundingId === c.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                              title="Rembourser ce prélèvement via Stripe"
+                            >
+                              {refundingId === c.id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                  En cours...
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="w-4 h-4" />
+                                  Rembourser
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
 
       {/* Landlord Subscription Charges */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
