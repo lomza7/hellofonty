@@ -301,6 +301,17 @@ async function handleEvent(event: Stripe.Event) {
             }
           }
         }
+
+        const landlordId = session.metadata?.landlord_id;
+        if (landlordId) {
+          const { data: lease } = await supabase
+            .from('leases')
+            .select('id')
+            .eq('booking_id', session.metadata.booking_id)
+            .in('status', ['signed', 'active'])
+            .maybeSingle();
+          await tryChargeLandlordSubscription(landlordId, lease?.id ?? null, booking.listing_id);
+        }
       } catch (error) {
         console.error('Error processing first rent payment:', error);
       }
@@ -335,6 +346,17 @@ async function handleEvent(event: Stripe.Event) {
           console.error('Error updating rent payment status:', error);
         } else {
           console.info(`Successfully updated rent payment: ${session.metadata.payment_id}`);
+
+          const landlordId = session.metadata?.landlord_id;
+          if (landlordId) {
+            const { data: lease } = await supabase
+              .from('leases')
+              .select('id, listing_id')
+              .eq('booking_id', session.metadata.booking_id)
+              .in('status', ['signed', 'active'])
+              .maybeSingle();
+            await tryChargeLandlordSubscription(landlordId, lease?.id ?? null, lease?.listing_id ?? null);
+          }
         }
       } catch (error) {
         console.error('Error processing monthly rent payment:', error);
@@ -480,6 +502,151 @@ async function handleEvent(event: Stripe.Event) {
         console.error('Error processing one-time payment:', error);
       }
     }
+  }
+}
+
+const PREMIUM_AMOUNT = 5900; // 59.00 EUR in cents
+
+function isExempted(profile: any): boolean {
+  if (!profile.subscription_exempt) return false;
+  if (profile.subscription_exempt_until) {
+    return new Date(profile.subscription_exempt_until) > new Date();
+  }
+  return true;
+}
+
+async function tryChargeLandlordSubscription(landlordId: string, leaseId: string | null, listingId: string | null) {
+  try {
+    const periodMonth = new Date().toISOString().slice(0, 7);
+
+    const { data: existingCharge } = await supabase
+      .from('landlord_subscription_charges')
+      .select('id, status')
+      .eq('landlord_id', landlordId)
+      .eq('period_month', periodMonth)
+      .maybeSingle();
+
+    if (existingCharge) {
+      console.info(`Subscription charge already exists for ${landlordId} / ${periodMonth}, skipping`);
+      return;
+    }
+
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('current_period_end')
+      .eq('user_id', landlordId)
+      .maybeSingle();
+
+    const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+    if (periodEnd && periodEnd > new Date()) {
+      console.info(`Subscription still active for ${landlordId} until ${periodEnd.toISOString()}, skipping`);
+      return;
+    }
+
+    const { data: landlord } = await supabase
+      .from('profiles')
+      .select('stripe_account_id, stripe_charges_enabled, subscription_exempt, subscription_exempt_until')
+      .eq('id', landlordId)
+      .maybeSingle();
+
+    if (!landlord?.stripe_account_id || !landlord?.stripe_charges_enabled) {
+      console.info(`Landlord ${landlordId} has no active Stripe account, skipping subscription charge`);
+      return;
+    }
+
+    if (isExempted(landlord)) {
+      console.info(`Landlord ${landlordId} is exempted, skipping subscription charge`);
+      return;
+    }
+
+    const balance = await stripe.balance.retrieve({
+      stripeAccount: landlord.stripe_account_id,
+    });
+    const availableEur = balance.available.find((b: any) => b.currency === 'eur');
+    const availableAmount = availableEur ? availableEur.amount : 0;
+
+    if (availableAmount < PREMIUM_AMOUNT) {
+      const availableEuros = (availableAmount / 100).toFixed(2);
+      console.info(`Insufficient balance for ${landlordId}: ${availableEuros} € available`);
+
+      await supabase
+        .from('landlord_subscription_charges')
+        .insert({
+          landlord_id: landlordId,
+          lease_id: leaseId,
+          listing_id: listingId,
+          period_month: periodMonth,
+          amount: PREMIUM_AMOUNT,
+          status: 'failed',
+          failure_reason: `Solde Stripe insuffisant: ${availableEuros} € disponible`,
+          last_attempt_at: new Date().toISOString(),
+          attempt_count: 1,
+        });
+      return;
+    }
+
+    const charge = await stripe.charges.create({
+      amount: PREMIUM_AMOUNT,
+      currency: 'eur',
+      description: `Abonnement Hellofonty Premium — ${periodMonth}`,
+      metadata: {
+        landlord_id: landlordId,
+        type: 'premium_subscription',
+        lease_id: leaseId || '',
+        period_month: periodMonth,
+        auto_charge: 'true',
+      },
+    }, {
+      stripeAccount: landlord.stripe_account_id,
+      idempotencyKey: `auto_charge_${landlordId}_${periodMonth}`,
+    });
+
+    const now = new Date().toISOString();
+
+    await supabase
+      .from('landlord_subscription_charges')
+      .insert({
+        landlord_id: landlordId,
+        lease_id: leaseId,
+        listing_id: listingId,
+        period_month: periodMonth,
+        amount: PREMIUM_AMOUNT,
+        status: 'paid',
+        stripe_charge_id: charge.id,
+        paid_at: now,
+        last_attempt_at: now,
+        attempt_count: 1,
+      });
+
+    const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const periodEndNew = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+
+    await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: landlordId,
+        plan_type: 'premium',
+        status: 'active',
+        current_period_start: periodStart.toISOString(),
+        current_period_end: periodEndNew.toISOString(),
+        cancel_at_period_end: false,
+      }, { onConflict: 'user_id' });
+
+    await supabase
+      .from('invoices')
+      .insert({
+        user_id: landlordId,
+        stripe_invoice_id: `auto_${charge.id}`,
+        amount: PREMIUM_AMOUNT,
+        currency: 'eur',
+        status: 'paid',
+        billing_reason: 'automatic_monthly_charge',
+        lease_id: leaseId,
+      });
+
+    console.info(`Successfully charged 59€ subscription for landlord ${landlordId} on rent payment`);
+  } catch (error) {
+    console.error(`Error in tryChargeLandlordSubscription for ${landlordId}:`, error);
   }
 }
 
