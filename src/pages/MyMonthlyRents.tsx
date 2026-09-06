@@ -573,13 +573,25 @@ export default function MyMonthlyRents() {
         `)
         .eq('student_id', user!.id)
         .eq('status', 'confirmed')
-        .order('created_at', { ascending: false })
-        .order('display_order', { ascending: true, referencedTable: 'images' });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
+      const bookings = (data || []).map((booking: any) => ({
+        ...booking,
+        listing: booking.listing
+          ? {
+              ...booking.listing,
+              images: [...(booking.listing.images || [])].sort(
+                (first: { display_order?: number }, second: { display_order?: number }) =>
+                  (first.display_order ?? 0) - (second.display_order ?? 0)
+              ),
+            }
+          : booking.listing,
+      }));
+
       const landlordIds = Array.from(
-        new Set((data || []).map((b: any) => b.listing?.landlord_id).filter(Boolean))
+        new Set(bookings.map((b: any) => b.listing?.landlord_id).filter(Boolean))
       );
 
       let landlordStripeMap: Record<string, { stripe_charges_enabled: boolean | null }> = {};
@@ -599,7 +611,7 @@ export default function MyMonthlyRents() {
       }
 
       const bookingsWithSchedules = await Promise.all(
-        (data || []).map(async (booking: any) => {
+        bookings.map(async (booking: any) => {
           const landlordId = booking.listing?.landlord_id;
           const landlord = landlordId ? (landlordStripeMap[landlordId] || null) : null;
           const schedule = await generatePaymentSchedule({
