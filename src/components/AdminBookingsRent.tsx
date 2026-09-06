@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   Calendar, Search,
   Bell, BellOff, Send, ChevronDown, ChevronRight, Home,
-  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle
+  CreditCard, AlertCircle, CheckCircle2, RotateCw, ShieldOff, ShieldCheck, XCircle, Wallet
 } from 'lucide-react';
 
 interface RentPayment {
@@ -109,6 +109,8 @@ export default function AdminBookingsRent() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryingAllId, setRetryingAllId] = useState<string | null>(null);
   const [exemptingId, setExemptingId] = useState<string | null>(null);
+  const [checkingBalanceId, setCheckingBalanceId] = useState<string | null>(null);
+  const [balanceResults, setBalanceResults] = useState<Record<string, { available: string; pending: string; can_charge: boolean; unpaid_count: number; unpaid_total: string }>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -373,6 +375,46 @@ export default function AdminBookingsRent() {
       alert(error instanceof Error ? error.message : 'Erreur lors de la mise à jour');
     } finally {
       setExemptingId(null);
+    }
+  };
+
+  const checkBalance = async (landlordId: string, stripeAccountId: string | null) => {
+    if (!stripeAccountId) return;
+    setCheckingBalanceId(landlordId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-charge-landlord-subscription`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: 'check_balance', landlord_id: landlordId }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erreur lors de la vérification du solde');
+      }
+
+      setBalanceResults(prev => ({
+        ...prev,
+        [landlordId]: {
+          available: result.balance.available_euros,
+          pending: result.balance.pending_euros,
+          can_charge: result.can_charge,
+          unpaid_count: result.unpaid_charges.count,
+          unpaid_total: result.unpaid_charges.total_euros,
+        },
+      }));
+      await loadLandlordsWithLeases();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erreur lors de la vérification du solde');
+    } finally {
+      setCheckingBalanceId(null);
     }
   };
 
@@ -802,7 +844,42 @@ export default function AdminBookingsRent() {
                         )}
                       </td>
                       <td className="px-4 py-3">
+                        {balanceResults[l.landlord_id] && (
+                          <div className="mb-2 p-2 rounded-lg bg-gray-50 border border-gray-200 text-xs space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <Wallet className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="font-semibold text-gray-700">Disponible: {balanceResults[l.landlord_id].available} €</span>
+                            </div>
+                            <div className="text-gray-500">En attente: {balanceResults[l.landlord_id].pending} €</div>
+                            {balanceResults[l.landlord_id].unpaid_count > 0 && (
+                              <div className="text-red-600 font-medium">Impayés: {balanceResults[l.landlord_id].unpaid_count} ({balanceResults[l.landlord_id].unpaid_total} €)</div>
+                            )}
+                            <div className={`font-medium ${balanceResults[l.landlord_id].can_charge ? 'text-green-600' : 'text-red-600'}`}>
+                              {balanceResults[l.landlord_id].can_charge ? 'Prélèvement possible' : 'Solde insuffisant'}
+                            </div>
+                          </div>
+                        )}
                         <div className="flex flex-col gap-1.5">
+                          {l.stripe_account_id && (
+                            <button
+                              onClick={() => checkBalance(l.landlord_id, l.stripe_account_id)}
+                              disabled={checkingBalanceId === l.landlord_id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                              title="Vérifier le solde Stripe du propriétaire"
+                            >
+                              {checkingBalanceId === l.landlord_id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                  Vérification...
+                                </>
+                              ) : (
+                                <>
+                                  <Wallet className="w-4 h-4" />
+                                  Solde Stripe
+                                </>
+                              )}
+                            </button>
+                          )}
                           <button
                             onClick={() => chargeLandlord(l)}
                             disabled={!canCharge || chargingLeaseId === l.lease_id}

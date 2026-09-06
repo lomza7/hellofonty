@@ -105,6 +105,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // --- Action: check Stripe balance ---
+    if (action === 'check_balance' && landlord_id) {
+      return await checkBalance(supabaseAdmin, landlord_id);
+    }
+
     // --- Action: retry a specific failed charge ---
     if (action === 'retry' && charge_id) {
       return await retryCharge(supabaseAdmin, charge_id, user.id);
@@ -543,6 +548,88 @@ async function retryAllCharges(supabaseAdmin: any, landlordId: string, adminId: 
       total_recovered: totalRecovered,
       errors,
       message: `${recovered} prélèvement${recovered > 1 ? 's' : ''} récupéré${recovered > 1 ? 's' : ''} (${(totalRecovered / 100).toFixed(2)} €).`,
+    }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// --- Check landlord Stripe balance ---
+async function checkBalance(supabaseAdmin: any, landlordId: string) {
+  const { data: landlord, error: landlordError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, first_name, last_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .eq('id', landlordId)
+    .maybeSingle();
+
+  if (landlordError || !landlord) throw new Error('Propriétaire introuvable');
+  if (!landlord.stripe_account_id) throw new Error('Ce propriétaire n\'a pas de compte Stripe Connect');
+
+  const balance = await stripe.balance.retrieve({
+    stripeAccount: landlord.stripe_account_id,
+  });
+
+  const availableEur = balance.available.find((b: any) => b.currency === 'eur');
+  const pendingEur = balance.pending.find((b: any) => b.currency === 'eur');
+
+  const availableAmount = availableEur ? availableEur.amount : 0;
+  const pendingAmount = pendingEur ? pendingEur.amount : 0;
+
+  // Also fetch unpaid charges total
+  const { data: unpaidCharges } = await supabaseAdmin
+    .from('landlord_subscription_charges')
+    .select('amount')
+    .eq('landlord_id', landlordId)
+    .in('status', ['failed', 'pending']);
+
+  const unpaidTotal = (unpaidCharges || []).reduce((sum: number, c: any) => sum + c.amount, 0);
+
+  // Also update account status
+  const account = await stripe.accounts.retrieve(landlord.stripe_account_id);
+  const chargesEnabled = account.charges_enabled || false;
+  const payoutsEnabled = account.payouts_enabled || false;
+  const detailsSubmitted = account.details_submitted || false;
+
+  let onboardingStatus = 'pending';
+  if (payoutsEnabled) onboardingStatus = 'complete';
+  else if (!detailsSubmitted) onboardingStatus = 'pending';
+
+  await supabaseAdmin
+    .from('profiles')
+    .update({
+      stripe_details_submitted: detailsSubmitted,
+      stripe_charges_enabled: chargesEnabled,
+      stripe_payouts_enabled: payoutsEnabled,
+      stripe_onboarding_status: onboardingStatus,
+      stripe_onboarding_updated_at: new Date().toISOString(),
+    })
+    .eq('id', landlordId);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      balance: {
+        available: availableAmount,
+        pending: pendingAmount,
+        currency: 'eur',
+        available_euros: (availableAmount / 100).toFixed(2),
+        pending_euros: (pendingAmount / 100).toFixed(2),
+      },
+      account_status: {
+        charges_enabled: chargesEnabled,
+        payouts_enabled: payoutsEnabled,
+        details_submitted: detailsSubmitted,
+        onboarding_status: onboardingStatus,
+      },
+      unpaid_charges: {
+        count: (unpaidCharges || []).length,
+        total: unpaidTotal,
+        total_euros: (unpaidTotal / 100).toFixed(2),
+      },
+      landlord_name: `${landlord.first_name} ${landlord.last_name}`,
+      can_charge: availableAmount >= PREMIUM_AMOUNT,
+      message: availableAmount >= PREMIUM_AMOUNT
+        ? `Solde suffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Prélèvement possible.`
+        : `Solde insuffisant: ${(availableAmount / 100).toFixed(2)} € disponible. Le prélèvement de 59,00 € échouera.`,
     }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
