@@ -36,7 +36,6 @@ interface BookingListing {
   title: string;
   address: string;
   price_per_month: number;
-  images: Array<{ image_url: string }>;
 }
 
 interface Booking {
@@ -160,8 +159,6 @@ function BookingPaymentCard({
 
   const platformFee = booking.platform_fee || booking.service_fee || 0;
 
-  const listingImage = booking.listing.images?.[0]?.image_url;
-
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       {isInitialPayable && (
@@ -189,17 +186,9 @@ function BookingPaymentCard({
 
       <div className="p-6">
         <div className="flex gap-4 mb-6">
-          {listingImage ? (
-            <img
-              src={listingImage}
-              alt={booking.listing.title}
-              className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
-              <Home className="w-8 h-8 text-gray-400" />
-            </div>
-          )}
+          <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
+            <Home className="w-8 h-8 text-gray-400" />
+          </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-gray-900 truncate">{booking.listing.title}</h3>
             <div className="flex items-center gap-1 text-gray-500 text-sm mt-0.5">
@@ -567,8 +556,7 @@ export default function MyMonthlyRents() {
             title,
             address,
             price_per_month,
-            landlord_id,
-            images:listing_images(image_url, display_order)
+            landlord_id
           )
         `)
         .eq('student_id', user!.id)
@@ -577,21 +565,8 @@ export default function MyMonthlyRents() {
 
       if (error) throw error;
 
-      const bookings = (data || []).map((booking: any) => ({
-        ...booking,
-        listing: booking.listing
-          ? {
-              ...booking.listing,
-              images: [...(booking.listing.images || [])].sort(
-                (first: { display_order?: number }, second: { display_order?: number }) =>
-                  (first.display_order ?? 0) - (second.display_order ?? 0)
-              ),
-            }
-          : booking.listing,
-      }));
-
       const landlordIds = Array.from(
-        new Set(bookings.map((b: any) => b.listing?.landlord_id).filter(Boolean))
+        new Set((data || []).map((b: any) => b.listing?.landlord_id).filter(Boolean))
       );
 
       let landlordStripeMap: Record<string, { stripe_charges_enabled: boolean | null }> = {};
@@ -611,7 +586,7 @@ export default function MyMonthlyRents() {
       }
 
       const bookingsWithSchedules = await Promise.all(
-        bookings.map(async (booking: any) => {
+        (data || []).map(async (booking: any) => {
           const landlordId = booking.listing?.landlord_id;
           const landlord = landlordId ? (landlordStripeMap[landlordId] || null) : null;
           const schedule = await generatePaymentSchedule({
