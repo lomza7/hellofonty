@@ -281,6 +281,7 @@ Deno.serve(async (req: Request) => {
         .from('rent_payments')
         .update({
           stripe_payment_intent_id: paymentIntentId,
+          stripe_session_id: session.id,
         })
         .eq('id', payment.id);
     }

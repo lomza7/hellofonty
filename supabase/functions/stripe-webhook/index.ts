@@ -254,15 +254,43 @@ async function handleEvent(event: Stripe.Event) {
           return;
         }
 
+        // Retrieve the charge ID from the payment intent
+        let firstChargeId: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['latest_charge'],
+            });
+            const charge = pi.latest_charge;
+            if (charge) {
+              firstChargeId = typeof charge === 'string' ? charge : charge.id;
+            }
+          } catch (chargeErr) {
+            console.error('Error retrieving charge from first payment intent:', chargeErr);
+          }
+        }
+
+        const bookingUpdatePayload: any = {
+          payment_status: 'completed',
+        };
+        if (paymentIntentId && !booking.stripe_payment_intent_id) {
+          bookingUpdatePayload.stripe_payment_intent_id = paymentIntentId;
+        }
+
         const { error: bookingUpdateError } = await supabase
           .from('bookings')
-          .update({
-            payment_status: 'completed',
-            ...(paymentIntentId && !booking.stripe_payment_intent_id
-              ? { stripe_payment_intent_id: paymentIntentId }
-              : {}),
-          })
+          .update(bookingUpdatePayload)
           .eq('id', session.metadata.booking_id);
+
+        // Also record the charge on the first month's rent payment if it exists
+        if (firstChargeId) {
+          await supabase
+            .from('rent_payments')
+            .update({ stripe_charge_id: firstChargeId, stripe_session_id: session.id })
+            .eq('booking_id', session.metadata.booking_id)
+            .eq('status', 'paid')
+            .is('stripe_charge_id', null);
+        }
 
         if (bookingUpdateError) {
           console.error('Error updating booking payment status:', bookingUpdateError);
@@ -334,18 +362,48 @@ async function handleEvent(event: Stripe.Event) {
           return;
         }
 
+        // Retrieve the charge ID from the session's payment intent
+        let stripeChargeId: string | null = null;
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+
+        if (paymentIntentId) {
+          try {
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['latest_charge'],
+            });
+            const charge = pi.latest_charge;
+            if (charge) {
+              stripeChargeId = typeof charge === 'string' ? charge : charge.id;
+            }
+          } catch (chargeErr) {
+            console.error('Error retrieving charge from payment intent:', chargeErr);
+          }
+        }
+
+        const updatePayload: any = {
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          stripe_session_id: session.id,
+        };
+
+        if (paymentIntentId) {
+          updatePayload.stripe_payment_intent_id = paymentIntentId;
+        }
+        if (stripeChargeId) {
+          updatePayload.stripe_charge_id = stripeChargeId;
+        }
+
         const { error } = await supabase
           .from('rent_payments')
-          .update({
-            status: 'paid',
-            paid_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq('id', session.metadata.payment_id);
 
         if (error) {
           console.error('Error updating rent payment status:', error);
         } else {
-          console.info(`Successfully updated rent payment: ${session.metadata.payment_id}`);
+          console.info(`Successfully updated rent payment: ${session.metadata.payment_id} (charge: ${stripeChargeId || 'N/A'})`);
 
           const landlordId = session.metadata?.landlord_id;
           if (landlordId) {

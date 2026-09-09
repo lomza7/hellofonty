@@ -36,6 +36,10 @@ interface RentPayment {
   paid_at: string | null;
   auto_reminder_enabled: boolean;
   last_reminder_sent_at: string | null;
+  stripe_charge_id: string | null;
+  stripe_session_id: string | null;
+  stripe_payout_id: string | null;
+  stripe_payout_date: string | null;
   listing: {
     title: string;
     address: string;
@@ -335,6 +339,10 @@ export default function LandlordRentPayments() {
         paid_at: payment.paid_at,
         auto_reminder_enabled: payment.auto_reminder_enabled ?? true,
         last_reminder_sent_at: payment.last_reminder_sent_at,
+        stripe_charge_id: payment.stripe_charge_id || null,
+        stripe_session_id: payment.stripe_session_id || null,
+        stripe_payout_id: payment.stripe_payout_id || null,
+        stripe_payout_date: payment.stripe_payout_date || null,
         listing: {
           title: payment.booking?.listing?.title || 'N/A',
           address: payment.booking?.listing?.address || '',
@@ -415,13 +423,13 @@ export default function LandlordRentPayments() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, stripeChargeId?: string | null) => {
     switch (status) {
       case 'paid':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
             <CheckCircle className="w-4 h-4" />
-            Payé
+            {stripeChargeId ? 'Payé (Stripe)' : 'Payé'}
           </span>
         );
       case 'pending':
@@ -1016,7 +1024,7 @@ export default function LandlordRentPayments() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {getStatusBadge(payment.status)}
+                          {getStatusBadge(payment.status, payment.stripe_charge_id)}
                         </td>
 
                         <td className="px-6 py-4 text-center">
@@ -1090,10 +1098,30 @@ export default function LandlordRentPayments() {
                                     </span>
                                   </div>
                                   {payment.status === 'paid' && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200">
-                                      <p className="text-xs text-gray-600">
-                                        Le loyer sera viré sur votre compte bancaire selon les conditions de votre contrat Stripe Connect
-                                      </p>
+                                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-1.5">
+                                      {payment.stripe_charge_id ? (
+                                        <>
+                                          <div className="flex justify-between text-xs">
+                                            <span className="text-gray-600">Référence Stripe :</span>
+                                            <span className="font-mono text-gray-900 text-[11px]">{payment.stripe_charge_id.slice(0, 20)}...</span>
+                                          </div>
+                                          {payment.stripe_payout_date ? (
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                              <CheckCircle className="w-3 h-3 text-green-500" />
+                                              <span className="text-green-700 font-medium">Versement effectué le {formatDate(payment.stripe_payout_date)}</span>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                              <Clock className="w-3 h-3 text-blue-500" />
+                                              <span className="text-blue-700 font-medium">Paiement accepté — versement en cours</span>
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <p className="text-xs text-gray-600">
+                                          Le loyer sera viré sur votre compte bancaire selon les conditions de votre contrat Stripe Connect
+                                        </p>
+                                      )}
                                     </div>
                                   )}
                                 </div>
