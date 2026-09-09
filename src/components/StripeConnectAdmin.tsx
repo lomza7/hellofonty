@@ -183,6 +183,7 @@ export default function StripeConnectAdmin() {
     not_connected: landlords.filter(l => !l.stripe_onboarding_status || l.stripe_onboarding_status === 'not_connected').length,
     pending: landlords.filter(l => l.stripe_onboarding_status === 'pending').length,
     complete: landlords.filter(l => l.stripe_onboarding_status === 'complete').length,
+    reconnect_needed: landlords.filter(l => l.stripe_onboarding_status === 'reconnect_needed').length,
   };
 
   if (loading) {
@@ -198,7 +199,7 @@ export default function StripeConnectAdmin() {
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Gestion Stripe Connect</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-sm text-gray-600 mb-1">Total propriétaires</p>
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -210,6 +211,10 @@ export default function StripeConnectAdmin() {
           <div className="bg-yellow-50 rounded-lg p-4">
             <p className="text-sm text-gray-600 mb-1">En cours</p>
             <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+          </div>
+          <div className="bg-orange-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600 mb-1">À reconnecter</p>
+            <p className="text-2xl font-bold text-orange-600">{stats.reconnect_needed}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm text-gray-600 mb-1">Vérifiés</p>
@@ -236,6 +241,7 @@ export default function StripeConnectAdmin() {
             <option value="all">Tous les statuts</option>
             <option value="not_connected">Non connecté</option>
             <option value="pending">En cours</option>
+            <option value="reconnect_needed">À reconnecter</option>
             <option value="complete">Vérifié</option>
           </select>
         </div>

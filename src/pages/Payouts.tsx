@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw, X, Plus, Trash2, Star, Building2, CheckCircle, Clock } from 'lucide-react';
+import { CreditCard, AlertCircle, Info, ExternalLink, RefreshCw, X, Plus, Trash2, Star, Building2, CheckCircle, Clock, ZapOff } from 'lucide-react';
 import StripeStatusBadge from '../components/StripeStatusBadge';
 import type { StripeOnboardingStatus } from '../types/stripe';
 import BackButton from '../components/BackButton';
@@ -263,6 +263,66 @@ export default function Payouts() {
     }
   };
 
+  const handleReconnectAccount = async (accountId: string) => {
+    if (!confirm(language === 'fr'
+      ? 'Ce compte Stripe n\'est plus accessible. Un nouveau compte Stripe va être créé pour le remplacer, puis vous serez redirigé vers Stripe pour le configurer. Continuer ?'
+      : 'This Stripe account is no longer accessible. A new Stripe account will be created to replace it, then you will be redirected to Stripe to set it up. Continue?'
+    )) return;
+
+    setLoading(true);
+    setError(null);
+    setOnboardingAccountId(accountId);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session expirée');
+
+      const reconnectResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-manage-landlord-account`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ action: 'reconnect', accountId }),
+        }
+      );
+
+      const reconnectData = await reconnectResponse.json();
+      if (!reconnectData.success) {
+        throw new Error(reconnectData.error || 'Erreur lors de la reconnexion');
+      }
+
+      await fetchAccounts();
+
+      const linkResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-create-onboarding-link`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accountId, origin: window.location.origin }),
+        }
+      );
+
+      const linkData = await linkResponse.json();
+      if (!linkData.success || !linkData.url) {
+        throw new Error(linkData.error || 'Erreur lors de la génération du lien d\'onboarding');
+      }
+
+      window.location.href = linkData.url;
+    } catch (err: any) {
+      console.error('Erreur reconnexion:', err);
+      setError(err.message || 'Erreur lors de la reconnexion du compte');
+    } finally {
+      setLoading(false);
+      setOnboardingAccountId(null);
+    }
+  };
+
   const handleSetDefault = async (accountId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -341,6 +401,11 @@ export default function Payouts() {
           title: fr ? 'Paiements activés' : 'Payments activated',
           description: fr ? 'Votre compte est configuré et vérifié. Vous pouvez maintenant recevoir des paiements de loyers.' : 'Your account is configured and verified. You can now receive rent payments.',
         };
+      case 'reconnect_needed':
+        return {
+          title: fr ? 'Reconnexion nécessaire' : 'Reconnection needed',
+          description: fr ? "Votre compte Stripe n'est plus accessible depuis la plateforme. Reconnectez-le pour continuer à recevoir des paiements." : 'Your Stripe account is no longer accessible from the platform. Reconnect it to continue receiving payments.',
+        };
       default:
         return {
           title: fr ? 'Statut inconnu' : 'Unknown status',
@@ -366,6 +431,14 @@ export default function Payouts() {
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
           <Clock className="w-3.5 h-3.5" />
           {language === 'fr' ? 'En attente' : 'Pending'}
+        </span>
+      );
+    }
+    if (status === 'reconnect_needed') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          <ZapOff className="w-3.5 h-3.5" />
+          {language === 'fr' ? 'Reconnexion nécessaire' : 'Reconnect needed'}
         </span>
       );
     }
@@ -491,6 +564,29 @@ export default function Payouts() {
               {language === 'fr' ? 'Accéder au dashboard Stripe' : 'Open Stripe dashboard'}
             </button>
           )}
+
+          {stripeStatus === 'reconnect_needed' && accounts.length > 0 && (
+            <button
+              onClick={() => {
+                const defaultAcc = accounts.find(a => a.is_default) || accounts[0];
+                if (defaultAcc) handleReconnectAccount(defaultAcc.id);
+              }}
+              disabled={loading}
+              className="w-full bg-orange-600 text-white py-4 px-6 rounded-xl font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  {language === 'fr' ? 'Reconnexion...' : 'Reconnecting...'}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-5 h-5" />
+                  {language === 'fr' ? 'Reconnecter le compte Stripe' : 'Reconnect Stripe account'}
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Multi-account management */}
@@ -610,6 +706,20 @@ export default function Payouts() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {account.stripe_onboarding_status === 'reconnect_needed' && (
+                        <button
+                          onClick={() => handleReconnectAccount(account.id)}
+                          disabled={loading && onboardingAccountId === account.id}
+                          className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        >
+                          {loading && onboardingAccountId === account.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          )}
+                          {language === 'fr' ? 'Reconnecter' : 'Reconnect'}
+                        </button>
+                      )}
                       {account.stripe_onboarding_status === 'complete' && (
                         <button
                           onClick={() => handleOpenStripeDashboard(account.id)}
@@ -619,7 +729,7 @@ export default function Payouts() {
                           {language === 'fr' ? 'Dashboard Stripe' : 'Stripe Dashboard'}
                         </button>
                       )}
-                      {account.stripe_onboarding_status !== 'complete' && (
+                      {account.stripe_onboarding_status !== 'complete' && account.stripe_onboarding_status !== 'reconnect_needed' && (
                         <button
                           onClick={() => handleActivatePayments(account.id)}
                           disabled={loading && onboardingAccountId === account.id}

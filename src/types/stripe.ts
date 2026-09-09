@@ -1,4 +1,4 @@
-export type StripeOnboardingStatus = 'not_connected' | 'pending' | 'complete';
+export type StripeOnboardingStatus = 'not_connected' | 'pending' | 'complete' | 'reconnect_needed';
 
 export interface StripeAccountStatus {
   details_submitted: boolean;

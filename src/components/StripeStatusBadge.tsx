@@ -1,4 +1,4 @@
-import { AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import type { StripeOnboardingStatus } from '../types/stripe';
 
 interface StripeStatusBadgeProps {
@@ -32,6 +32,14 @@ export default function StripeStatusBadge({ status, size = 'md' }: StripeStatusB
           bgColor: 'bg-green-100',
           textColor: 'text-green-800',
           iconColor: 'text-green-600',
+        };
+      case 'reconnect_needed':
+        return {
+          icon: RefreshCw,
+          text: 'Reconnexion nécessaire',
+          bgColor: 'bg-orange-100',
+          textColor: 'text-orange-800',
+          iconColor: 'text-orange-600',
         };
       default:
         return {

@@ -88,7 +88,43 @@ Deno.serve(async (req: Request) => {
       apiVersion: '2023-10-16',
     });
 
-    const account = await stripe.accounts.retrieve(targetStripeAccountId);
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(targetStripeAccountId);
+    } catch (retrieveErr: any) {
+      const isAccessError = retrieveErr?.type === 'StripeInvalidRequestError' ||
+        (retrieveErr?.message && (
+          retrieveErr.message.includes('does not have access') ||
+          retrieveErr.message.includes('resource_missing') ||
+          retrieveErr.message.includes('No such account')
+        ));
+
+      if (isAccessError) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            stripe_onboarding_status: 'reconnect_needed',
+            stripe_onboarding_updated_at: new Date().toISOString(),
+          })
+          .eq('id', targetUserId);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            status: {
+              details_submitted: false,
+              charges_enabled: false,
+              payouts_enabled: false,
+              onboarding_status: 'reconnect_needed',
+              requirements: { currently_due: [], eventually_due: [], past_due: [], pending_verification: [] },
+              account_id: targetStripeAccountId,
+            },
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw retrieveErr;
+    }
 
     const detailsSubmitted = account.details_submitted || false;
     const chargesEnabled = account.charges_enabled || false;

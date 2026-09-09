@@ -250,6 +250,7 @@ Deno.serve(async (req: Request) => {
             stripe_charges_enabled: chargesEnabled,
             stripe_payouts_enabled: payoutsEnabled,
             stripe_onboarding_status: onboardingStatus,
+            sync_error: null,
           });
 
           // If this is the default account, also update the profile
@@ -265,8 +266,34 @@ Deno.serve(async (req: Request) => {
               })
               .eq('id', user.id);
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error(`Erreur sync compte ${acc.stripe_account_id}:`, e);
+
+          const isAccessError = e?.type === 'StripeInvalidRequestError' ||
+            (e?.message && (
+              e.message.includes('does not have access') ||
+              e.message.includes('resource_missing') ||
+              e.message.includes('No such account')
+            ));
+
+          const syncErrorMessage = isAccessError
+            ? 'Compte inaccessible — reconnexion nécessaire'
+            : (e?.message || 'Erreur de synchronisation');
+
+          await supabaseAdmin
+            .from('landlord_stripe_accounts')
+            .update({
+              stripe_onboarding_status: 'reconnect_needed',
+              stripe_onboarding_updated_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', acc.id);
+
+          updatedAccounts.push({
+            ...acc,
+            stripe_onboarding_status: 'reconnect_needed',
+            sync_error: syncErrorMessage,
+          });
         }
       }
 
@@ -319,6 +346,76 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'reconnect') {
+      // Create a new Stripe Express account to replace an inaccessible one.
+      // The old landlord_stripe_accounts row is updated with the new stripe_account_id.
+      const accountId = body.accountId;
+      if (!accountId) throw new Error('accountId manquant');
+
+      const { data: account, error: accountError } = await supabase
+        .from('landlord_stripe_accounts')
+        .select('id, is_default, stripe_account_id, label')
+        .eq('id', accountId)
+        .eq('landlord_id', user.id)
+        .maybeSingle();
+
+      if (accountError || !account) {
+        throw new Error('Compte introuvable ou non autorisé');
+      }
+
+      const newStripeAccount = await stripe.accounts.create({
+        type: 'express',
+        country: 'FR',
+        email: user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual',
+        metadata: {
+          supabase_user_id: user.id,
+          landlord_name: `${profile.first_name} ${profile.last_name}`,
+          label: account.label,
+          replaced_account: account.stripe_account_id,
+        },
+      });
+
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+      await supabaseAdmin
+        .from('landlord_stripe_accounts')
+        .update({
+          stripe_account_id: newStripeAccount.id,
+          stripe_onboarding_status: 'pending',
+          stripe_details_submitted: false,
+          stripe_charges_enabled: false,
+          stripe_payouts_enabled: false,
+          stripe_onboarding_updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', accountId);
+
+      if (account.is_default) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            stripe_account_id: newStripeAccount.id,
+            stripe_onboarding_status: 'pending',
+            stripe_onboarding_updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          accountId: accountId,
+          newStripeAccountId: newStripeAccount.id,
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
