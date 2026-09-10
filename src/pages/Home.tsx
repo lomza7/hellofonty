@@ -163,15 +163,6 @@ export default function Home() {
       >
         <div className="absolute inset-0 flex items-center justify-center py-6 sm:py-16">
           <div className="w-full px-3 sm:px-6 max-w-5xl overflow-hidden">
-            <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="inline-flex items-center gap-2 px-3 sm:px-6 py-1.5 sm:py-3 bg-white/10 backdrop-blur-md border-2 border-white/30 rounded-full hover:bg-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer group">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-white font-semibold text-xs sm:text-sm tracking-wide uppercase group-hover:tracking-wider transition-all">
-                  For INSEAD Only
-                </span>
-              </div>
-            </div>
-
             <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-3 sm:mb-4 tracking-tight text-center leading-tight px-2">
               {renderGradientText(t('home.hero.title'))}
             </h1>
