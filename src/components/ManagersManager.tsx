@@ -28,7 +28,7 @@ export default function ManagersManager() {
   const [message, setMessage] = useState<string | null>(null);
 
   // Formulaire de création
-  const [form, setForm] = useState({ email: '', password: '', first_name: '', last_name: '', phone: '' });
+  const [form, setForm] = useState({ email: '', first_name: '', last_name: '', phone: '' });
 
   // Formulaire d'attribution
   const [selManager, setSelManager] = useState('');
@@ -52,19 +52,21 @@ export default function ManagersManager() {
 
   const createManager = async () => {
     setMessage(null);
-    if (!form.email || !form.password || !form.first_name || !form.last_name) {
-      setMessage('Tous les champs sauf le téléphone sont obligatoires.');
+    if (!form.email || !form.first_name || !form.last_name) {
+      setMessage('Le prénom, le nom et l\'email sont obligatoires.');
       return;
     }
     setCreating(true);
-    const { data, error } = await supabase.functions.invoke('create-manager', { body: form });
+    const { data, error } = await supabase.functions.invoke('create-manager', {
+      body: { ...form, redirect_url: `${window.location.origin}/reset-password` },
+    });
     setCreating(false);
     if (error || !data?.success) {
-      setMessage(`Erreur : ${data?.error ?? error?.message ?? 'création impossible'}`);
+      setMessage(`Erreur : ${data?.error ?? error?.message ?? 'envoi de l\'invitation impossible'}`);
       return;
     }
-    setMessage(`Compte manager créé pour ${form.email}. Transmettez-lui son mot de passe de façon sécurisée.`);
-    setForm({ email: '', password: '', first_name: '', last_name: '', phone: '' });
+    setMessage(`Invitation envoyée à ${form.email}. La personne recevra un email pour choisir son mot de passe et activer son compte.`);
+    setForm({ email: '', first_name: '', last_name: '', phone: '' });
     loadAll();
   };
 
@@ -102,7 +104,7 @@ export default function ManagersManager() {
       {/* Créer un manager */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <UserPlus className="w-5 h-5" /> Créer un compte manager
+          <UserPlus className="w-5 h-5" /> Inviter un manager
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <input className="border rounded-lg px-3 py-2" placeholder="Prénom *" value={form.first_name}
@@ -111,14 +113,12 @@ export default function ManagersManager() {
             onChange={e => setForm({ ...form, last_name: e.target.value })} />
           <input className="border rounded-lg px-3 py-2" placeholder="Email *" type="email" value={form.email}
             onChange={e => setForm({ ...form, email: e.target.value })} />
-          <input className="border rounded-lg px-3 py-2" placeholder="Mot de passe (8 caractères min.) *" type="password" value={form.password}
-            onChange={e => setForm({ ...form, password: e.target.value })} />
           <input className="border rounded-lg px-3 py-2" placeholder="Téléphone" value={form.phone}
             onChange={e => setForm({ ...form, phone: e.target.value })} />
         </div>
         <button onClick={createManager} disabled={creating}
           className="mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg font-medium">
-          {creating ? 'Création…' : 'Créer le manager'}
+          {creating ? 'Envoi…' : 'Envoyer l\'invitation'}
         </button>
       </div>
 

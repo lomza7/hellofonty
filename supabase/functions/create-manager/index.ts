@@ -48,23 +48,21 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Lire et valider la demande
-    const { email, password, first_name, last_name, phone } = await req.json();
-    if (!email || !password || !first_name || !last_name) {
-      return json(400, { success: false, error: "Champs requis : email, password, first_name, last_name" });
-    }
-    if (password.length < 8) {
-      return json(400, { success: false, error: "Le mot de passe doit faire au moins 8 caractères" });
+    const { email, first_name, last_name, phone, redirect_url } = await req.json();
+    if (!email || !first_name || !last_name) {
+      return json(400, { success: false, error: "Champs requis : email, first_name, last_name" });
     }
 
-    // 4. Créer le compte (email confirmé d'office : c'est l'admin qui le crée)
-    const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    // 4. Inviter la personne par email — elle choisira son propre mot de passe
+    const { data: created, error: createError } = await supabase.auth.admin.inviteUserByEmail(
       email,
-      password,
-      email_confirm: true,
-      user_metadata: { first_name, last_name, role: "manager" },
-    });
+      {
+        redirectTo: redirect_url ?? undefined,
+        data: { first_name, last_name, role: "manager" },
+      },
+    );
     if (createError || !created.user) {
-      return json(400, { success: false, error: createError?.message ?? "Création du compte impossible" });
+      return json(400, { success: false, error: createError?.message ?? "Envoi de l'invitation impossible" });
     }
 
     // 5. Créer ou mettre à jour le profil en 'manager'
@@ -77,7 +75,6 @@ Deno.serve(async (req: Request) => {
       role: "manager",
     });
     if (profileError) {
-      // rollback : ne pas laisser un compte auth orphelin
       await supabase.auth.admin.deleteUser(created.user.id);
       return json(400, { success: false, error: `Profil non créé : ${profileError.message}` });
     }
