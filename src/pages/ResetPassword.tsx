@@ -117,7 +117,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={`space-y-5 ${checkingSession || error ? 'opacity-50 pointer-events-none' : ''}`}
+        <form onSubmit={handleSubmit} className={`space-y-5 ${checkingSession || error ? 'opacity-50 pointer-events-none' : ''}`}>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
               {t('auth.newPassword')}
