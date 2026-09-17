@@ -34,13 +34,13 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) return json(401, { success: false, error: "Non autorisé" });
 
     // 2. Vérifier que l'appelant est le super-administrateur
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (!profile || profile.role !== "admin") {
+    if (profileError || !profile || profile.role !== "admin") {
       return json(403, {
         success: false,
         error: "Accès refusé. Seul le super-administrateur peut créer des comptes manager.",
