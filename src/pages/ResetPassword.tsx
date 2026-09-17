@@ -9,17 +9,47 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    let mounted = true;
+    const hasAuthToken = window.location.hash.includes('access_token=');
+    const code = new URLSearchParams(window.location.search).get('code');
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (session && (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY')) {
+        setError('');
+        setCheckingSession(false);
+      }
+    });
+
     const checkSession = async () => {
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!mounted) return;
+      if (session) {
+        setError('');
+        setCheckingSession(false);
+        return;
+      }
+
+      if (!hasAuthToken) {
         setError(`🔒 ${t('auth.invalidResetLink')}`);
+        setCheckingSession(false);
       }
     };
+
     checkSession();
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +99,12 @@ export default function ResetPassword() {
           </p>
         </div>
 
+        {checkingSession && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm">
+            Vérification du lien d'invitation…
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
             {error}
@@ -81,7 +117,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className={`space-y-5 ${checkingSession || error ? 'opacity-50 pointer-events-none' : ''}`}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
               {t('auth.newPassword')}

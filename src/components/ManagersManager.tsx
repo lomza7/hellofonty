@@ -58,7 +58,7 @@ export default function ManagersManager() {
     }
     setCreating(true);
     const { data, error } = await supabase.functions.invoke('create-manager', {
-      body: { ...form, redirect_url: `${window.location.origin}/reset-password` },
+      body: { ...form, redirect_url: 'https://www.hellofonty.fr/reset-password' },
     });
     setCreating(false);
     if (error || !data?.success) {
